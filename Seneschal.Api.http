@@ -1,6 +1,0 @@
-@Seneschal.Api_HostAddress = http://localhost:5077
-
-GET {{Seneschal.Api_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

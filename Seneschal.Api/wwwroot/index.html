@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seneschal</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+<div class="container">
+
+    <h1>Seneschal</h1>
+    <p class="subtitle">Capability Governance Platform</p>
+
+    <div class="cards">
+        <div class="card">
+            <h2 id="policyCount">-</h2>
+            <p>Policies</p>
+        </div>
+
+        <div class="card">
+            <h2 id="capabilityCount">-</h2>
+            <p>Capabilities</p>
+        </div>
+
+        <div class="card">
+            <h2 id="identityCount">-</h2>
+            <p>Identities</p>
+        </div>
+
+        <div class="card">
+            <h2 id="auditCount">-</h2>
+            <p>Audit Events</p>
+        </div>
+    </div>
+
+    <h2>Policy Simulator</h2>
+
+    <div class="simulator">
+        <div class="simulator-form">
+            <label>Identity</label>
+            <select id="simIdentity"></select>
+
+            <label>Capability</label>
+            <select id="simCapability"></select>
+
+            <label>Environment</label>
+            <select id="simEnvironment">
+                <option value="dev">dev</option>
+                <option value="test">test</option>
+                <option value="prod">prod</option>
+            </select>
+
+            <label>Resource</label>
+            <input id="simResource" value="payment-api" />
+
+            <button id="evaluateButton">Evaluate</button>
+        </div>
+
+        <div class="simulator-result" id="simResult">
+            <h3>Decision Result</h3>
+            <p class="muted">Run an evaluation to see the decision.</p>
+        </div>
+    </div>
+
+    <h2>Recent Audit Events</h2>
+
+    <table id="auditTable">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Identity</th>
+                <th>Capability</th>
+                <th>Decision</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
+

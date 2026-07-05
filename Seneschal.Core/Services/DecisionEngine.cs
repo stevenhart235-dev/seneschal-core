@@ -1,28 +1,57 @@
-using System.Diagnostics;
 using Seneschal.Core.Enums;
+using Seneschal.Core.Interfaces;
 using Seneschal.Core.Models;
 
 namespace Seneschal.Core.Services;
 
 public sealed class DecisionEngine
 {
-    public DecisionResult Evaluate(DecisionRequest request)
+    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyEvaluator _policyEvaluator;
+    private readonly IAuditSink _auditSink;
+
+    public DecisionEngine(
+        IPolicyRepository policyRepository,
+        IPolicyEvaluator policyEvaluator,
+        IAuditSink auditSink)
     {
-        var stopwatch = Stopwatch.StartNew();
+        _policyRepository = policyRepository;
+        _policyEvaluator = policyEvaluator;
+        _auditSink = auditSink;
+    }
 
-        stopwatch.Stop();
+    public async Task<DecisionResult> EvaluateAsync(
+        DecisionRequest request,
+        EnforcementMode mode = EnforcementMode.Enforce,
+        CancellationToken cancellationToken = default)
+    {
+        var policies =
+            await _policyRepository.GetPoliciesAsync(cancellationToken);
 
-        return new DecisionResult
+        var result =
+            _policyEvaluator.Evaluate(request, policies, mode);
+
+        var auditEvent = new AuditEvent
         {
-            DecisionId = Guid.NewGuid().ToString("N"),
-            RequestId = request.RequestId,
-            Timestamp = DateTimeOffset.UtcNow,
-            Decision = DecisionType.Allow,
-            Mode = EnforcementMode.LogOnly,
-            Reason = "No policies evaluated. Defaulting to log-only allow.",
-            MatchedPolicies = [],
-            Obligations = ["audit"],
-            LatencyMs = (int)stopwatch.ElapsedMilliseconds
+            Timestamp = result.Timestamp,
+            DecisionId = result.DecisionId,
+            RequestId = result.RequestId,
+
+            Identity = request.Identity,
+            Capability = request.Capability,
+            Intent = request.Intent,
+            Resource = request.Resource,
+
+            Decision = result.Decision,
+            Mode = result.Mode,
+
+            MatchedPolicies = result.MatchedPolicies,
+
+            LatencyMs = result.LatencyMs
         };
+
+        await _auditSink.WriteAsync(auditEvent, cancellationToken);
+
+        return result;
     }
 }

@@ -1,6 +1,9 @@
-﻿using System.Net.Http.Json;
+﻿using Seneschal.Core.Enums;
+using Seneschal.Core.Models;
+using Seneschal.Core.Repositories;
+using Seneschal.Core.Services;
 
-if (args.Length < 3)
+if (args.Length < 4)
 {
     Console.WriteLine("Usage:");
     Console.WriteLine("  seneschal evaluate <identity> <capability> <environment>");
@@ -15,54 +18,96 @@ if (!command.Equals("evaluate", StringComparison.OrdinalIgnoreCase))
     return;
 }
 
-var identity = args[1];
-var capability = args[2];
-var environment = args[3];
+var identityArg = args[1];
+var capabilityArg = args[2];
+var environmentArg = args[3];
 
-var request = new
+var policies = new[]
 {
-    identity,
-    capability,
-    context = new Dictionary<string, string>
+    new Policy
     {
-        ["environment"] = environment,
-        ["source"] = "cli"
+        Id = "prod-secret-read",
+        Name = "Production Secret Access",
+        Effect = DecisionType.RequireApproval,
+        Reason = "Production secrets require approval.",
+
+        Conditions = new Dictionary<string, string>
+        {
+            ["capability.id"] = "azure.keyvault.secret.read",
+            ["resource.environment"] = "production"
+        },
+
+        Obligations =
+        [
+            "audit",
+            "approval"
+        ]
     }
 };
 
-var client = new HttpClient
+var repository = new InMemoryPolicyRepository(policies);
+var evaluator = new PolicyEvaluator();
+var auditSink = new InMemoryAuditSink();
+
+var engine = new DecisionEngine(
+    repository,
+    evaluator,
+    auditSink);
+
+var request = new DecisionRequest
 {
-    BaseAddress = new Uri("http://localhost:5077")
+    RequestId = Guid.NewGuid().ToString("N"),
+    Timestamp = DateTimeOffset.UtcNow,
+
+    Identity = new Identity
+    {
+        Id = identityArg,
+        Type = IdentityType.Agent,
+        Owner = "cli",
+        Environment = environmentArg
+    },
+
+    Capability = new Capability
+    {
+        Id = capabilityArg,
+        Provider = "azure",
+        Category = "secret-management",
+        Risk = RiskLevel.High,
+        Description = "Read a secret value from Azure Key Vault."
+    },
+
+    Intent = new Intent
+    {
+        Action = "retrieve-secret",
+        Reason = "CLI evaluation request."
+    },
+
+    Resource = new Resource
+    {
+        Type = "keyvault-secret",
+        Id = "prod/payment-api/sql-password",
+        Environment = environmentArg
+    },
+
+    Context = new Dictionary<string, string>
+    {
+        ["source"] = "cli",
+        ["environment"] = environmentArg
+    }
 };
 
-var result = await client.PostAsJsonAsync("/evaluate", request);
-var body = await result.Content.ReadFromJsonAsync<DecisionResult>();
-
-if (body is null)
-{
-    Console.WriteLine("No response returned.");
-    return;
-}
+var result = await engine.EvaluateAsync(request);
 
 Console.WriteLine();
 Console.WriteLine("Seneschal Decision");
 Console.WriteLine("------------------");
-Console.WriteLine($"Identity:         {identity}");
-Console.WriteLine($"Capability:       {capability}");
-Console.WriteLine($"Environment:      {environment}");
-Console.WriteLine($"Decision:         {body.Decision}");
-Console.WriteLine($"Effective Action: {body.EffectiveAction}");
-Console.WriteLine($"Mode:             {body.Mode}");
-Console.WriteLine($"Policy Matched:   {body.PolicyMatched}");
-Console.WriteLine($"Reason:           {body.Reason}");
-Console.WriteLine($"Duration:         {body.DurationMs} ms");
-
-public class DecisionResult
-{
-    public string Decision { get; set; } = "";
-    public string Reason { get; set; } = "";
-    public string PolicyMatched { get; set; } = "";
-    public long DurationMs { get; set; }
-    public string EffectiveAction { get; set; } = "";
-    public string Mode { get; set; } = "";
-}
+Console.WriteLine($"Identity:         {request.Identity.Id}");
+Console.WriteLine($"Capability:       {request.Capability.Id}");
+Console.WriteLine($"Environment:      {environmentArg}");
+Console.WriteLine($"Decision:         {result.Decision}");
+Console.WriteLine($"Mode:             {result.Mode}");
+Console.WriteLine($"Policy Matched:   {string.Join(", ", result.MatchedPolicies)}");
+Console.WriteLine($"Reason:           {result.Reason}");
+Console.WriteLine($"Obligations:      {string.Join(", ", result.Obligations)}");
+Console.WriteLine($"Audit Events:     {auditSink.Events.Count}");
+Console.WriteLine($"Duration:         {result.LatencyMs} ms");

@@ -1,6 +1,10 @@
 using System.Text.Json;
+using Seneschal.Api.Mappers;
 using Seneschal.Api.Models;
 using Seneschal.Api.Services;
+using Seneschal.Core.Interfaces;
+using Seneschal.Core.Repositories;
+using Seneschal.Core.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +21,16 @@ builder.Services.AddSingleton(new RuntimeSettings
 });
 builder.Services.AddSingleton<CapabilityLoader>();
 builder.Services.AddSingleton<IdentityLoader>();
+builder.Services.AddSingleton<ICapabilityCatalog>(services =>
+    new InMemoryCapabilityCatalog(
+        services
+            .GetRequiredService<CapabilityLoader>()
+            .GetCapabilities()
+            .Select(CapabilityMapper.ToCore)));
+builder.Services.AddSingleton<IGovernanceGraph>(
+    new InMemoryGovernanceGraph(
+        Array.Empty<Seneschal.Core.Models.GovernanceRelationship>()));
+builder.Services.AddSingleton<ICapabilityExplorer, CapabilityExplorer>();
 
 var app = builder.Build();
 
@@ -58,6 +72,25 @@ app.MapGet("/capabilities",
 {
     return Results.Ok(loader.GetCapabilities());
 });
+
+app.MapGet(
+    "/capabilities/{capabilityId}/overview",
+    async (
+        string capabilityId,
+        ICapabilityExplorer explorer,
+        CancellationToken cancellationToken) =>
+    {
+        var overview = await explorer.GetOverviewAsync(
+            new Seneschal.Core.Models.CapabilityExplorerQuery
+            {
+                CapabilityId = capabilityId
+            },
+            cancellationToken);
+
+        return overview is null
+            ? Results.NotFound()
+            : Results.Ok(overview);
+    });
 
 app.MapGet("/identities", (IdentityLoader loader) =>
 {

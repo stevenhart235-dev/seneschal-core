@@ -109,5 +109,24 @@ Console.WriteLine($"Mode:             {result.Mode}");
 Console.WriteLine($"Policy Matched:   {string.Join(", ", result.MatchedPolicies)}");
 Console.WriteLine($"Reason:           {result.Reason}");
 Console.WriteLine($"Obligations:      {string.Join(", ", result.Obligations)}");
+Console.WriteLine();
+Console.WriteLine("Policy Evaluation");
+Console.WriteLine("-----------------");
+
+if (result.Evaluation.Count == 0)
+{
+    Console.WriteLine("No policy conditions evaluated.");
+}
+else
+{
+    foreach (var step in result.Evaluation)
+    {
+        var symbol = step.Matched ? "✓" : "✗";
+
+        Console.WriteLine($"{symbol} {step.Property}");
+        Console.WriteLine($"  Expected: {step.Expected}");
+        Console.WriteLine($"  Actual:   {step.Actual}");
+    }
+}
 Console.WriteLine($"Audit Events:     {auditSink.Events.Count}");
 Console.WriteLine($"Duration:         {result.LatencyMs} ms");

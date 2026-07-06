@@ -11,20 +11,26 @@ public sealed class PolicyEvaluator : IPolicyEvaluator
         IEnumerable<Policy> policies,
         EnforcementMode mode)
     {
-        var matchedPolicy = FindMatchingPolicy(request, policies);
-
-        if (matchedPolicy is null)
+        foreach (var policy in policies)
         {
+            var evaluation = EvaluateConditions(request, policy);
+
+            if (!evaluation.Matched)
+            {
+                continue;
+            }
+
             return new DecisionResult
             {
                 DecisionId = Guid.NewGuid().ToString("N"),
                 RequestId = request.RequestId,
                 Timestamp = DateTimeOffset.UtcNow,
-                Decision = DecisionType.Allow,
+                Decision = policy.Effect,
                 Mode = mode,
-                Reason = "No matching policy found.",
-                MatchedPolicies = [],
-                Obligations = ["audit"],
+                Reason = policy.Reason,
+                MatchedPolicies = [policy.Id],
+                Obligations = policy.Obligations,
+                Evaluation = evaluation.Steps,
                 LatencyMs = 0
             };
         }
@@ -34,57 +40,64 @@ public sealed class PolicyEvaluator : IPolicyEvaluator
             DecisionId = Guid.NewGuid().ToString("N"),
             RequestId = request.RequestId,
             Timestamp = DateTimeOffset.UtcNow,
-            Decision = matchedPolicy.Effect,
+            Decision = DecisionType.Allow,
             Mode = mode,
-            Reason = matchedPolicy.Reason,
-            MatchedPolicies = [matchedPolicy.Id],
-            Obligations = matchedPolicy.Obligations,
+            Reason = "No matching policy found.",
+            MatchedPolicies = [],
+            Obligations = ["audit"],
+            Evaluation = [],
             LatencyMs = 0
         };
     }
 
-    private static Policy? FindMatchingPolicy(
-        DecisionRequest request,
-        IEnumerable<Policy> policies)
+    private static (
+        bool Matched,
+        List<EvaluationStep> Steps)
+        EvaluateConditions(DecisionRequest request, Policy policy)
     {
-        foreach (var policy in policies)
-        {
-            if (Matches(request, policy))
-            {
-                return policy;
-            }
-        }
+        var steps = new List<EvaluationStep>();
 
-        return null;
-    }
-
-    private static bool Matches(DecisionRequest request, Policy policy)
-    {
         foreach (var condition in policy.Conditions)
         {
-            var actualValue = condition.Key switch
-            {
-                "identity.id" => request.Identity.Id,
-                "identity.type" => request.Identity.Type.ToString(),
-                "identity.owner" => request.Identity.Owner,
-                "identity.environment" => request.Identity.Environment,
-                "capability.id" => request.Capability.Id,
-                "capability.provider" => request.Capability.Provider,
-                "capability.category" => request.Capability.Category,
-                "capability.risk" => request.Capability.Risk.ToString(),
-                "intent.action" => request.Intent.Action,
-                "resource.type" => request.Resource.Type,
-                "resource.id" => request.Resource.Id,
-                "resource.environment" => request.Resource.Environment,
-                _ => null
-            };
+            var actualValue = GetActualValue(request, condition.Key);
+            var expectedValue = condition.Value;
 
-            if (!string.Equals(actualValue, condition.Value, StringComparison.OrdinalIgnoreCase))
+            var matched = string.Equals(
+                actualValue,
+                expectedValue,
+                StringComparison.OrdinalIgnoreCase);
+
+            steps.Add(new EvaluationStep
             {
-                return false;
-            }
+                Property = condition.Key,
+                Expected = expectedValue,
+                Actual = actualValue ?? "<null>",
+                Matched = matched
+            });
         }
 
-        return true;
+        return (steps.All(step => step.Matched), steps);
+    }
+
+    private static string? GetActualValue(
+        DecisionRequest request,
+        string property)
+    {
+        return property switch
+        {
+            "identity.id" => request.Identity.Id,
+            "identity.type" => request.Identity.Type.ToString(),
+            "identity.owner" => request.Identity.Owner,
+            "identity.environment" => request.Identity.Environment,
+            "capability.id" => request.Capability.Id,
+            "capability.provider" => request.Capability.Provider,
+            "capability.category" => request.Capability.Category,
+            "capability.risk" => request.Capability.Risk.ToString(),
+            "intent.action" => request.Intent.Action,
+            "resource.type" => request.Resource.Type,
+            "resource.id" => request.Resource.Id,
+            "resource.environment" => request.Resource.Environment,
+            _ => null
+        };
     }
 }

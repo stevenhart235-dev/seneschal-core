@@ -15,5 +15,6 @@ public sealed record DecisionResult
     public List<string> MatchedPolicies { get; init; } = new();
     public List<string> Obligations { get; init; } = new();
 
+    public List<EvaluationStep> Evaluation { get; init; } = new();
     public int LatencyMs { get; init; }
 }

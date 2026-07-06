@@ -21,15 +21,21 @@ builder.Services.AddSingleton(new RuntimeSettings
 });
 builder.Services.AddSingleton<CapabilityLoader>();
 builder.Services.AddSingleton<IdentityLoader>();
+builder.Services.AddSingleton<PolicyProjector>();
 builder.Services.AddSingleton<ICapabilityCatalog>(services =>
     new InMemoryCapabilityCatalog(
         services
             .GetRequiredService<CapabilityLoader>()
             .GetCapabilities()
             .Select(CapabilityMapper.ToCore)));
-builder.Services.AddSingleton<IGovernanceGraph>(
+builder.Services.AddSingleton<IGovernanceGraph>(services =>
     new InMemoryGovernanceGraph(
-        Array.Empty<Seneschal.Core.Models.GovernanceRelationship>()));
+        services
+            .GetRequiredService<PolicyProjector>()
+            .Project(
+                services
+                    .GetRequiredService<PolicyLoader>()
+                    .GetPolicies())));
 builder.Services.AddSingleton<ICapabilityExplorer, CapabilityExplorer>();
 
 var app = builder.Build();

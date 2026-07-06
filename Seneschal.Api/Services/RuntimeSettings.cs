@@ -1,4 +1,4 @@
-using Seneschal.Api.Models;
+using Seneschal.Core.Enums;
 
 namespace Seneschal.Api.Services;
 

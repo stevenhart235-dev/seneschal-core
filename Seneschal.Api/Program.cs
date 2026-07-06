@@ -5,12 +5,15 @@ using Seneschal.Api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<PolicyLoader>();
-builder.Services.AddSingleton<PolicyEvaluator>();
+builder.Services.AddSingleton<
+    Seneschal.Core.Interfaces.IPolicyEvaluator,
+    Seneschal.Core.Services.PolicyEvaluator>();
+builder.Services.AddSingleton<CoreDecisionService>();
 builder.Services.AddSingleton<PolicyValidator>();
 builder.Services.AddSingleton<AuditLogger>();
 builder.Services.AddSingleton(new RuntimeSettings
 {
-    Mode = EnforcementMode.LogOnly
+    Mode = Seneschal.Core.Enums.EnforcementMode.LogOnly
 });
 builder.Services.AddSingleton<CapabilityLoader>();
 builder.Services.AddSingleton<IdentityLoader>();
@@ -22,9 +25,9 @@ app.UseStaticFiles();
 
 app.Services.GetRequiredService<PolicyValidator>();
 
-app.MapPost("/evaluate", (DecisionRequest request, PolicyEvaluator evaluator, AuditLogger auditLogger) =>
+app.MapPost("/evaluate", (DecisionRequest request, CoreDecisionService decisionService, AuditLogger auditLogger) =>
 {
-    var result = evaluator.Evaluate(request);
+    var result = decisionService.Evaluate(request);
     auditLogger.Log(request, result);
 
     return Results.Ok(result);
@@ -62,3 +65,5 @@ app.MapGet("/identities", (IdentityLoader loader) =>
 });
 
 app.Run();
+
+public partial class Program;

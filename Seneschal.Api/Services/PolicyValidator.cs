@@ -1,13 +1,9 @@
-using Seneschal.Api.Models;
+using Seneschal.Api.Mappers;
 
 namespace Seneschal.Api.Services;
 
 public class PolicyValidator
 {
-    private static readonly HashSet<string> ValidDecisions = new(
-        new[] { "allow", "deny", "requires_approval" },
-        StringComparer.OrdinalIgnoreCase);
-
     public PolicyValidator(
         PolicyLoader policyLoader,
         CapabilityLoader capabilityLoader,
@@ -39,9 +35,16 @@ public class PolicyValidator
                 errors.Add($"Policy '{policy.Name}' references unknown capability '{policy.Capability}'.");
             }
 
-            if (!ValidDecisions.Contains(policy.Decision))
+            try
             {
-                errors.Add($"Policy '{policy.Name}' has invalid decision '{policy.Decision}'. Valid decisions: allow, deny, requires_approval.");
+                _ = DecisionTypeMapper.ToCore(policy.Decision);
+            }
+            catch (ArgumentException)
+            {
+                errors.Add(
+                    $"Policy '{policy.Name}' has invalid decision " +
+                    $"'{policy.Decision}'. Valid decisions: allow, deny, " +
+                    "warn, log_only, requires_approval.");
             }
 
             if (string.IsNullOrWhiteSpace(policy.Environment))

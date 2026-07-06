@@ -1,0 +1,66 @@
+using Seneschal.Core.Interfaces;
+using Seneschal.Core.Models;
+
+namespace Seneschal.Core.Repositories;
+
+public sealed class InMemoryCapabilityCatalog : ICapabilityCatalog
+{
+    private readonly IReadOnlyCollection<CapabilityCatalogEntry> _entries;
+    private readonly IReadOnlyDictionary<string, CapabilityCatalogEntry> _entriesById;
+
+    public InMemoryCapabilityCatalog(IEnumerable<Capability> capabilities)
+    {
+        ArgumentNullException.ThrowIfNull(capabilities);
+
+        var entries = capabilities
+            .Select(capability => new CapabilityCatalogEntry
+            {
+                Capability = capability
+            })
+            .ToList();
+
+        _entriesById = entries.ToDictionary(
+            entry => entry.Capability.Id,
+            StringComparer.OrdinalIgnoreCase);
+        _entries = entries;
+    }
+
+    public Task<CapabilityCatalogEntry?> GetByIdAsync(
+        string capabilityId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(capabilityId);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        _entriesById.TryGetValue(capabilityId, out var entry);
+        return Task.FromResult(entry);
+    }
+
+    public Task<IReadOnlyCollection<CapabilityCatalogEntry>> SearchAsync(
+        CapabilityCatalogQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        IEnumerable<CapabilityCatalogEntry> matches = _entries;
+
+        if (!string.IsNullOrWhiteSpace(query.Owner))
+        {
+            matches = matches.Where(entry =>
+                string.Equals(
+                    entry.Capability.Owner,
+                    query.Owner,
+                    StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (query.RiskLevels.Count > 0)
+        {
+            matches = matches.Where(entry =>
+                query.RiskLevels.Contains(entry.Capability.RiskLevel));
+        }
+
+        return Task.FromResult<IReadOnlyCollection<CapabilityCatalogEntry>>(
+            matches.ToList());
+    }
+}

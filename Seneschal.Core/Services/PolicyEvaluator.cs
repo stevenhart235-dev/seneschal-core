@@ -10,8 +10,10 @@ public sealed class PolicyEvaluator : IPolicyEvaluator
         DecisionRequest request,
         IEnumerable<Policy> policies,
         EnforcementMode mode)
-    {foreach (var policy in policies.OrderByDescending(policy => policy.Priority))
-        
+    {
+        var matches = new List<PolicyMatch>();
+
+        foreach (var policy in policies)
         {
             var evaluation = EvaluateConditions(request, policy);
 
@@ -20,33 +22,80 @@ public sealed class PolicyEvaluator : IPolicyEvaluator
                 continue;
             }
 
+            matches.Add(new PolicyMatch
+            {
+                PolicyId = policy.Id,
+                PolicyName = policy.Name,
+                Priority = policy.Priority,
+                Effect = policy.Effect,
+                Reason = policy.Reason,
+                Obligations = policy.Obligations,
+                Evaluation = evaluation.Steps
+            });
+        }
+
+        if (matches.Count == 0)
+        {
             return new DecisionResult
             {
                 DecisionId = Guid.NewGuid().ToString("N"),
                 RequestId = request.RequestId,
                 Timestamp = DateTimeOffset.UtcNow,
-                Decision = policy.Effect,
+                Decision = DecisionType.Allow,
                 Mode = mode,
-                Reason = policy.Reason,
-                MatchedPolicies = [policy.Id],
-                Obligations = policy.Obligations,
-                Evaluation = evaluation.Steps,
+                Reason = "No matching policy found.",
+                MatchedPolicies = [],
+                MatchedPolicyDetails = [],
+                Obligations = ["audit"],
+                Evaluation = [],
                 LatencyMs = 0
             };
         }
+
+        var winningMatch = ResolveWinningPolicy(matches);
 
         return new DecisionResult
         {
             DecisionId = Guid.NewGuid().ToString("N"),
             RequestId = request.RequestId,
             Timestamp = DateTimeOffset.UtcNow,
-            Decision = DecisionType.Allow,
+            Decision = winningMatch.Effect,
             Mode = mode,
-            Reason = "No matching policy found.",
-            MatchedPolicies = [],
-            Obligations = ["audit"],
-            Evaluation = [],
+            Reason = winningMatch.Reason,
+            MatchedPolicies = matches
+                .OrderByDescending(match => match.Priority)
+                .Select(match => match.PolicyId)
+                .ToList(),
+            MatchedPolicyDetails = matches
+                .OrderByDescending(match => match.Priority)
+                .ToList(),
+            Obligations = matches
+                .SelectMany(match => match.Obligations)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+            Evaluation = winningMatch.Evaluation,
             LatencyMs = 0
+        };
+    }
+
+    private static PolicyMatch ResolveWinningPolicy(IEnumerable<PolicyMatch> matches)
+    {
+        return matches
+            .OrderByDescending(match => match.Priority)
+            .ThenByDescending(match => GetDecisionSeverity(match.Effect))
+            .First();
+    }
+
+    private static int GetDecisionSeverity(DecisionType decision)
+    {
+        return decision switch
+        {
+            DecisionType.Deny => 5,
+            DecisionType.RequireApproval => 4,
+            DecisionType.Warn => 3,
+            DecisionType.Allow => 2,
+            DecisionType.LogOnly => 1,
+            _ => 0
         };
     }
 

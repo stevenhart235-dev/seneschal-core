@@ -23,6 +23,7 @@ public sealed class DecisionResolverTests
 
         Assert.Equal(DecisionType.Allow, result.Decision);
         Assert.Equal("Reason for higher-allow", result.Reason);
+        Assert.Equal("higher-allow", result.WinningPolicy?.PolicyId);
     }
 
     [Theory]
@@ -44,6 +45,7 @@ public sealed class DecisionResolverTests
 
         Assert.Equal(expectedWinner, result.Decision);
         Assert.Equal("Reason for expected-winner", result.Reason);
+        Assert.Equal("expected-winner", result.WinningPolicy?.PolicyId);
     }
 
     [Fact]
@@ -71,6 +73,7 @@ public sealed class DecisionResolverTests
         Assert.Equal(DecisionType.Allow, result.Decision);
         Assert.Equal(EnforcementMode.LogOnly, result.Mode);
         Assert.Equal("No matching policy found.", result.Reason);
+        Assert.Null(result.WinningPolicy);
         Assert.Empty(result.MatchedPolicies);
         Assert.Empty(result.MatchedPolicyDetails);
         Assert.Equal(["audit"], result.Obligations);

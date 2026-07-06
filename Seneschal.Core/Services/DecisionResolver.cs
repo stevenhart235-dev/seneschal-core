@@ -35,6 +35,7 @@ public sealed class DecisionResolver
                 Decision = DecisionType.Allow,
                 Mode = mode,
                 Reason = "No matching policy found.",
+                WinningPolicy = null,
                 MatchedPolicies = [],
                 MatchedPolicyDetails = [],
                 Obligations = ["audit"],
@@ -53,6 +54,7 @@ public sealed class DecisionResolver
             Decision = winningMatch.Effect,
             Mode = mode,
             Reason = winningMatch.Reason,
+            WinningPolicy = winningMatch,
             MatchedPolicies = matchList
                 .OrderByDescending(match => match.Priority)
                 .Select(match => match.PolicyId)

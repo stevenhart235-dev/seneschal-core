@@ -342,19 +342,75 @@ static void WriteCapabilityOverview(CapabilityOverview overview)
     }
 
     foreach (var group in overview.Relationships
-        .GroupBy(relationship => relationship.Type)
-        .OrderBy(group => group.Key.ToString()))
+        .GroupBy(GetRelationshipGroupLabel)
+        .OrderBy(group => GetRelationshipGroupOrder(group.Key))
+        .ThenBy(group => group.Key))
     {
         Console.WriteLine(group.Key);
 
         foreach (var relationship in group.OrderBy(relationship => relationship.Id))
         {
-            Console.WriteLine(
-                $"  {FormatEntity(relationship.From)} -> {FormatEntity(relationship.To)}");
+            Console.WriteLine($"  {FormatRelationshipItem(relationship)}");
             Console.WriteLine(
                 $"    Origin: {relationship.Origin}; Source: {relationship.SourceSystem ?? "unknown"}");
         }
     }
+}
+
+static string GetRelationshipGroupLabel(GovernanceRelationship relationship)
+{
+    return relationship.Type switch
+    {
+        GovernanceRelationshipType.IdentityAssignedCapability =>
+            "Assigned Identities",
+        GovernanceRelationshipType.IdentityInvokedCapability =>
+            "Observed Identities",
+        GovernanceRelationshipType.PolicyAppliesToCapability =>
+            "Governing Policies",
+        GovernanceRelationshipType.CapabilityTargetsResource or
+            GovernanceRelationshipType.PolicyAppliesToResource =>
+            "Resources",
+        _ => relationship.Type.ToString()
+    };
+}
+
+static int GetRelationshipGroupOrder(string groupLabel)
+{
+    return groupLabel switch
+    {
+        "Assigned Identities" => 0,
+        "Observed Identities" => 1,
+        "Governing Policies" => 2,
+        "Resources" => 3,
+        _ => 4
+    };
+}
+
+static string FormatRelationshipItem(GovernanceRelationship relationship)
+{
+    return relationship.Type switch
+    {
+        GovernanceRelationshipType.IdentityAssignedCapability or
+            GovernanceRelationshipType.IdentityInvokedCapability =>
+            FormatRelatedEntity(relationship, GovernanceEntityType.Identity),
+        GovernanceRelationshipType.PolicyAppliesToCapability =>
+            FormatRelatedEntity(relationship, GovernanceEntityType.Policy),
+        GovernanceRelationshipType.CapabilityTargetsResource or
+            GovernanceRelationshipType.PolicyAppliesToResource =>
+            FormatRelatedEntity(relationship, GovernanceEntityType.Resource),
+        _ => $"{FormatEntity(relationship.From)} -> {FormatEntity(relationship.To)}"
+    };
+}
+
+static string FormatRelatedEntity(
+    GovernanceRelationship relationship,
+    GovernanceEntityType entityType)
+{
+    var entity = relationship.From.Type == entityType
+        ? relationship.From
+        : relationship.To;
+
+    return FormatEntity(entity);
 }
 
 static string FormatEntity(GovernanceEntityReference entity)

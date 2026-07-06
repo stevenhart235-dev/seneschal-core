@@ -10,8 +10,8 @@ public sealed class PolicyEvaluator : IPolicyEvaluator
         DecisionRequest request,
         IEnumerable<Policy> policies,
         EnforcementMode mode)
-    {
-        foreach (var policy in policies)
+    {foreach (var policy in policies.OrderByDescending(policy => policy.Priority))
+        
         {
             var evaluation = EvaluateConditions(request, policy);
 

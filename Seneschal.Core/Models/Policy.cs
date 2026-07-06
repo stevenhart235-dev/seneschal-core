@@ -11,4 +11,5 @@ public sealed record Policy
 
     public Dictionary<string, string> Conditions { get; init; } = new();
     public List<string> Obligations { get; init; } = new();
+    public int Priority { get; init; } = 100;
 }

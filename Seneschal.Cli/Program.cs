@@ -26,9 +26,31 @@ var policies = new[]
 {
     new Policy
     {
+        Id = "platform-secret-access",
+        Name = "Platform Team Secret Access",
+        Effect = DecisionType.Allow,
+        Priority = 100,
+        Reason = "Platform-owned identities are allowed to access production secrets.",
+
+        Conditions = new Dictionary<string, string>
+        {
+            ["identity.owner"] = "platform",
+            ["capability.id"] = "azure.keyvault.secret.read",
+            ["resource.environment"] = "production"
+        },
+
+        Obligations =
+        [
+            "audit"
+        ]
+    },
+
+    new Policy
+    {
         Id = "prod-secret-read",
         Name = "Production Secret Access",
         Effect = DecisionType.RequireApproval,
+        Priority = 50,
         Reason = "Production secrets require approval.",
 
         Conditions = new Dictionary<string, string>
@@ -63,7 +85,7 @@ var request = new DecisionRequest
     {
         Id = identityArg,
         Type = IdentityType.Agent,
-        Owner = "cli",
+        Owner = "platform",
         Environment = environmentArg
     },
 

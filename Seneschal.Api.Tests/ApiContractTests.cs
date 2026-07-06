@@ -51,7 +51,7 @@ public sealed class ApiContractTests :
     {
         using var response = await PostEvaluationAsync(
             "SupportAgent",
-            "ReadSecret",
+            "azure.keyvault.secret.read",
             "prod");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

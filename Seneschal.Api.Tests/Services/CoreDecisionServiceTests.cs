@@ -73,7 +73,7 @@ public sealed class CoreDecisionServiceTests :
         var result = _service.Evaluate(
             CreateRequest(
                 "SupportAgent",
-                "ReadSecret",
+                "azure.keyvault.secret.read",
                 "prod"));
 
         Assert.Equal("requires_approval", result.Decision);

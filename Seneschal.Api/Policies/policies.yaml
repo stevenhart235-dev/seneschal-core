@@ -15,7 +15,7 @@ policies:
 
   - name: Support secret reads require approval
     identity: SupportAgent
-    capability: ReadSecret
+    capability: azure.keyvault.secret.read
     environment: prod
     decision: requires_approval
     reason: Reading production secrets requires approval

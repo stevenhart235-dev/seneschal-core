@@ -1,0 +1,145 @@
+@page "/capability-explorer"
+@model Seneschal.Api.Pages.CapabilityExplorerModel
+@{
+    Layout = null;
+    var capability = Model.Overview?.CatalogEntry.Capability;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seneschal Capability Explorer</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+    <main class="container explorer-page">
+        <a class="nav-link" href="/">← Dashboard</a>
+
+        <header class="page-header">
+            <h1>Seneschal Capability Explorer</h1>
+            <p class="subtitle">
+                Search for a capability to inspect its catalog metadata,
+                governance summary, and projected relationships.
+            </p>
+        </header>
+
+        <form class="search-panel" method="get">
+            <label for="capabilityId">Capability ID</label>
+            <div class="search-row">
+                <input
+                    id="capabilityId"
+                    name="capabilityId"
+                    value="@Model.CapabilityId"
+                    placeholder="DeployApplication" />
+                <button type="submit">Search</button>
+            </div>
+        </form>
+
+        @if (Model.CapabilityWasRequested && Model.Overview is null)
+        {
+            <section class="notice">
+                <h2>Capability not found</h2>
+                <p>
+                    No capability was found for
+                    <span class="code">@Model.CapabilityId</span>.
+                    Check the capability ID and try again.
+                </p>
+            </section>
+        }
+        else if (Model.Overview is not null && capability is not null)
+        {
+            <section class="panel">
+                <h2>Capability Metadata</h2>
+                <dl class="metadata-grid">
+                    <dt>Id</dt>
+                    <dd>@capability.Id</dd>
+
+                    <dt>Name</dt>
+                    <dd>@capability.Name</dd>
+
+                    <dt>Provider</dt>
+                    <dd>@capability.Provider</dd>
+
+                    <dt>Category</dt>
+                    <dd>@capability.Category</dd>
+
+                    <dt>Risk</dt>
+                    <dd>@capability.RiskLevel</dd>
+
+                    <dt>Owner</dt>
+                    <dd>@capability.Owner</dd>
+
+                    <dt>Version</dt>
+                    <dd>@capability.Version</dd>
+
+                    <dt>Description</dt>
+                    <dd>@capability.Description</dd>
+
+                    <dt>Tags</dt>
+                    <dd>@string.Join(", ", capability.Tags)</dd>
+                </dl>
+            </section>
+
+            <section class="panel">
+                <h2>Governance Summary</h2>
+                <div class="summary-grid">
+                    <div>
+                        <strong>@Model.Overview.Summary.AssignedIdentityCount</strong>
+                        <span>Assigned Identities</span>
+                    </div>
+                    <div>
+                        <strong>@Model.Overview.Summary.ObservedIdentityCount</strong>
+                        <span>Observed Identities</span>
+                    </div>
+                    <div>
+                        <strong>@Model.Overview.Summary.ResourceCount</strong>
+                        <span>Resources</span>
+                    </div>
+                    <div>
+                        <strong>@Model.Overview.Summary.GoverningPolicyCount</strong>
+                        <span>Governing Policies</span>
+                    </div>
+                </div>
+                <p class="muted">
+                    Origins:
+                    @string.Join(", ", Model.Overview.Summary.Origins)
+                </p>
+            </section>
+
+            <section class="panel">
+                <h2>Relationships</h2>
+                @{
+                    var groups = Model.GetRelationshipGroups();
+                }
+
+                @if (groups.Count == 0)
+                {
+                    <p class="muted">No relationships found.</p>
+                }
+                else
+                {
+                    foreach (var group in groups)
+                    {
+                        <section class="relationship-group">
+                            <h3>@group.Label</h3>
+                            <ul>
+                                @foreach (var item in group.Items)
+                                {
+                                    <li>
+                                        <span>@item.Label</span>
+                                        <small>
+                                            Origin: @item.Origin;
+                                            Source: @item.SourceSystem
+                                        </small>
+                                    </li>
+                                }
+                            </ul>
+                        </section>
+                    }
+                }
+            </section>
+        }
+    </main>
+</body>
+</html>

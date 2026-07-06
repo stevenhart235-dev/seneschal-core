@@ -9,7 +9,7 @@ capabilities:
     risk: Critical
     category: Database
 
-  - name: ReadSecret
+  - name: azure.keyvault.secret.read
     description: Read a production secret
     risk: High
     category: Security

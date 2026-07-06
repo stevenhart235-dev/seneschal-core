@@ -88,6 +88,24 @@ public sealed class CapabilityOverviewEndpointTests :
     }
 
     [Fact]
+    public async Task Overview_CanonicalSecretCapabilityReturnsReadModel()
+    {
+        using var response = await _client.GetAsync(
+            "/capabilities/azure.keyvault.secret.read/overview");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        using var document = await ReadJsonAsync(response);
+        var capability = document.RootElement
+            .GetProperty("catalogEntry")
+            .GetProperty("capability");
+
+        Assert.Equal(
+            "azure.keyvault.secret.read",
+            capability.GetProperty("id").GetString());
+    }
+
+    [Fact]
     public async Task Overview_ExposesProjectionWithoutChangingEvaluation()
     {
         using (var overviewResponse = await _client.GetAsync(

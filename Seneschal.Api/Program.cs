@@ -8,6 +8,7 @@ using Seneschal.Core.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddRazorPages();
 builder.Services.AddSingleton<PolicyLoader>();
 builder.Services.AddSingleton<
     Seneschal.Core.Interfaces.IPolicyEvaluator,
@@ -102,6 +103,8 @@ app.MapGet("/identities", (IdentityLoader loader) =>
 {
     return Results.Ok(loader.GetIdentities());
 });
+
+app.MapRazorPages();
 
 app.Run();
 

@@ -24,7 +24,7 @@ public sealed class DtoMapperTests
         var request = new ApiDecisionRequest
         {
             Identity = "SupportAgent",
-            Capability = "ReadSecret",
+            Capability = "azure.keyvault.secret.read",
             Context = new Dictionary<string, string>
             {
                 ["environment"] = "prod",
@@ -43,11 +43,11 @@ public sealed class DtoMapperTests
         Assert.Equal("SupportAgent", result.Identity.Id);
         Assert.Equal(IdentityType.Agent, result.Identity.Type);
         Assert.Equal("prod", result.Identity.Environment);
-        Assert.Equal("ReadSecret", result.Capability.Id);
-        Assert.Equal("ReadSecret", result.Capability.Name);
+        Assert.Equal("azure.keyvault.secret.read", result.Capability.Id);
+        Assert.Equal("azure.keyvault.secret.read", result.Capability.Name);
         Assert.Equal("api", result.Capability.Provider);
         Assert.Equal(RiskLevel.Low, result.Capability.RiskLevel);
-        Assert.Equal("ReadSecret", result.Intent.Action);
+        Assert.Equal("azure.keyvault.secret.read", result.Intent.Action);
         Assert.Equal("payment-secret", result.Resource.Id);
         Assert.Equal("prod", result.Resource.Environment);
         Assert.Equal("contract-test", result.Context["source"]);

@@ -860,6 +860,240 @@ button {
     height: 1px;
 }
 
+.graph-page {
+    max-width: 1180px;
+    margin: 0;
+}
+
+.graph-page-header {
+    align-items: flex-start;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+}
+
+.graph-panel {
+    padding: 12px;
+}
+
+.graph-toolbar {
+    align-items: flex-start;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.graph-toolbar h2,
+.graph-toolbar p {
+    margin-bottom: 0;
+}
+
+.graph-toolbar-actions button {
+    margin-top: 0;
+}
+
+.graph-legend {
+    align-items: center;
+    background: #0F172A;
+    border: 1px solid #374151;
+    border-radius: 999px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    list-style: none;
+    margin: 0;
+    padding: 8px 10px;
+}
+
+.graph-legend li {
+    align-items: center;
+    color: #CBD5E1;
+    display: inline-flex;
+    font-size: 12px;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.legend-marker {
+    border: 2px solid #93C5FD;
+    display: inline-block;
+    height: 11px;
+    width: 11px;
+}
+
+.legend-capability {
+    background: #1E3A8A;
+    border-color: #60A5FA;
+    border-radius: 4px;
+    width: 18px;
+}
+
+.legend-identity {
+    background: #064E3B;
+    border-color: #34D399;
+    border-radius: 999px;
+}
+
+.legend-policy {
+    background: #312E81;
+    border-color: #A5B4FC;
+    transform: rotate(45deg);
+}
+
+.legend-resource {
+    background: #78350F;
+    border-color: #FBBF24;
+    clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+    width: 14px;
+}
+
+.interactive-graph {
+    background:
+        radial-gradient(circle at 1px 1px, #1F2937 1px, transparent 0),
+        #0F172A;
+    background-size: 18px 18px;
+    border: 1px solid #374151;
+    border-radius: 12px;
+    height: 620px;
+    min-height: 420px;
+    width: 100%;
+}
+
+.graph-empty-state {
+    background: #0F172A;
+    border: 1px solid #374151;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.graph-inspector-panel {
+    display: grid;
+    gap: 12px;
+}
+
+.graph-inspector-header {
+    align-items: flex-start;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+}
+
+.graph-inspector-header h2,
+.graph-inspector-header p {
+    margin-bottom: 0;
+}
+
+.graph-inspector-type {
+    flex: 0 0 auto;
+}
+
+.graph-inspector-type-capability {
+    background: #1E3A8A;
+    color: #DBEAFE;
+}
+
+.graph-inspector-type-identity {
+    background: #064E3B;
+    color: #D1FAE5;
+}
+
+.graph-inspector-type-policy {
+    background: #312E81;
+    color: #E0E7FF;
+}
+
+.graph-inspector-type-resource {
+    background: #78350F;
+    color: #FEF3C7;
+}
+
+.graph-inspector-details {
+    background: #111827;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.graph-inspector-fields {
+    border-bottom: 1px solid #273449;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+}
+
+.graph-inspector-fields dd {
+    overflow-wrap: anywhere;
+}
+
+.graph-inspector-section {
+    margin-top: 12px;
+}
+
+.graph-inspector-section h3 {
+    color: #CBD5E1;
+    font-size: 14px;
+    margin: 0 0 8px 0;
+}
+
+.graph-metadata-grid {
+    background: #0F172A;
+    border: 1px solid #273449;
+    border-radius: 8px;
+    grid-template-columns: 150px 1fr;
+    padding: 10px;
+}
+
+.graph-metadata-grid p {
+    margin: 0;
+}
+
+.connected-node-groups {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.connected-node-group {
+    background: #0F172A;
+    border: 1px solid #273449;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.connected-node-group h4 {
+    color: #9CA3AF;
+    font-size: 12px;
+    margin: 0 0 6px 0;
+    text-transform: uppercase;
+}
+
+.connected-node-group ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.connected-node-group li {
+    display: grid;
+    gap: 2px;
+    margin-bottom: 6px;
+}
+
+.connected-node-group li:last-child {
+    margin-bottom: 0;
+}
+
+.connected-node-group span {
+    color: #F9FAFB;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.connected-node-group small {
+    color: #94A3B8;
+    overflow-wrap: anywhere;
+}
+
 .code {
     background: #111827;
     border-radius: 4px;

@@ -39,6 +39,7 @@ builder.Services.AddSingleton<IGovernanceGraph>(services =>
                     .GetRequiredService<PolicyLoader>()
                     .GetPolicies())));
 builder.Services.AddSingleton<ICapabilityExplorer, CapabilityExplorer>();
+builder.Services.AddSingleton<GraphBuilder>();
 
 var app = builder.Build();
 
@@ -162,6 +163,46 @@ app.MapGet("/identities", (IdentityLoader loader) =>
     return Results.Ok(loader.GetIdentities());
 });
 
+app.MapGet(
+    "/graph",
+    async (
+        GraphBuilder graphBuilder,
+        CapabilityLoader capabilityLoader,
+        IdentityLoader identityLoader,
+        PolicyLoader policyLoader,
+        IGovernanceGraph governanceGraph,
+        CancellationToken cancellationToken) =>
+    {
+        var apiPolicies = policyLoader.GetPolicies();
+        var graph = await graphBuilder.BuildAsync(
+            capabilityLoader
+                .GetCapabilities()
+                .Select(CapabilityMapper.ToCore),
+            identityLoader
+                .GetIdentities()
+                .Select(ToCoreIdentity),
+            policyLoader
+                .GetCorePolicies()
+                .Where(policy => !string.Equals(
+                    policy.Id,
+                    "default-deny",
+                    StringComparison.OrdinalIgnoreCase)),
+            apiPolicies
+                .Where(policy => !string.IsNullOrWhiteSpace(policy.Environment))
+                .Select(policy => policy.Environment)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(environment => new Seneschal.Core.Models.Resource
+                {
+                    Type = "environment",
+                    Id = environment,
+                    Environment = environment
+                }),
+            governanceGraph,
+            cancellationToken);
+
+        return Results.Ok(graph);
+    });
+
 app.MapRazorPages();
 
 app.Run();
@@ -171,6 +212,26 @@ static bool AcceptsHtml(HttpRequest request)
     return request.Headers.Accept.ToString().Contains(
         "text/html",
         StringComparison.OrdinalIgnoreCase);
+}
+
+static Seneschal.Core.Models.Identity ToCoreIdentity(
+    IdentityDefinition identity)
+{
+    if (!Enum.TryParse<Seneschal.Core.Enums.IdentityType>(
+            identity.Type,
+            ignoreCase: true,
+            out var identityType))
+    {
+        identityType = Seneschal.Core.Enums.IdentityType.Agent;
+    }
+
+    return new Seneschal.Core.Models.Identity
+    {
+        Id = identity.Name,
+        Type = identityType,
+        Owner = identity.Description,
+        Environment = string.Empty
+    };
 }
 
 public partial class Program;

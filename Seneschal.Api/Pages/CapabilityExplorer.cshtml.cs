@@ -82,6 +82,64 @@ public sealed class CapabilityExplorerModel : PageModel
             .ToList();
     }
 
+    public IReadOnlyCollection<GraphNodeGroup> GetGraphNodeGroups()
+    {
+        if (Overview is null || Overview.Relationships.Count == 0)
+        {
+            return [];
+        }
+
+        var relatedEntities = Overview.Relationships
+            .SelectMany(relationship => new[]
+            {
+                relationship.From,
+                relationship.To
+            })
+            .Where(entity =>
+                entity.Type != GovernanceEntityType.Capability ||
+                !string.Equals(
+                    entity.Id,
+                    Overview.CatalogEntry.Capability.Id,
+                    StringComparison.OrdinalIgnoreCase))
+            .DistinctBy(entity => FormatEntity(entity))
+            .GroupBy(entity => entity.Type)
+            .OrderBy(group => GetGraphGroupOrder(group.Key))
+            .Select(group => new GraphNodeGroup(
+                GraphGroupLabel(group.Key),
+                group
+                    .OrderBy(entity => entity.Id, StringComparer.OrdinalIgnoreCase)
+                    .Select(entity => new GraphNode(
+                        entity.Type.ToString(),
+                        FormatEntity(entity)))
+                    .ToList()))
+            .Where(group => group.Nodes.Count > 0)
+            .ToList();
+
+        return relatedEntities;
+    }
+
+    private static int GetGraphGroupOrder(GovernanceEntityType entityType)
+    {
+        return entityType switch
+        {
+            GovernanceEntityType.Identity => 0,
+            GovernanceEntityType.Policy => 1,
+            GovernanceEntityType.Resource => 2,
+            _ => 3
+        };
+    }
+
+    private static string GraphGroupLabel(GovernanceEntityType entityType)
+    {
+        return entityType switch
+        {
+            GovernanceEntityType.Identity => "Related Identities",
+            GovernanceEntityType.Policy => "Related Policies",
+            GovernanceEntityType.Resource => "Related Resources",
+            _ => $"Related {entityType}"
+        };
+    }
+
     private static string GetRelationshipGroupLabel(
         GovernanceRelationship relationship)
     {
@@ -158,3 +216,11 @@ public sealed record RelationshipItem(
     string Label,
     string Origin,
     string SourceSystem);
+
+public sealed record GraphNodeGroup(
+    string Label,
+    IReadOnlyCollection<GraphNode> Nodes);
+
+public sealed record GraphNode(
+    string Type,
+    string Label);

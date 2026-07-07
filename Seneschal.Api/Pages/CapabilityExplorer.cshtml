@@ -189,6 +189,51 @@
                     }
                 }
             </section>
+
+            <section class="panel">
+                <h2>Graph View</h2>
+                @{
+                    var graphGroups = Model.GetGraphNodeGroups();
+                }
+
+                @if (graphGroups.Count == 0)
+                {
+                    <p class="muted">
+                        No graph relationships are available for this
+                        capability yet.
+                    </p>
+                }
+                else
+                {
+                    <div class="ego-graph" aria-label="Capability ego graph">
+                        <div class="graph-center">
+                            <span class="graph-node graph-node-capability">
+                                @capability.Id
+                            </span>
+                        </div>
+
+                        <div class="graph-spokes">
+                            @foreach (var graphGroup in graphGroups)
+                            {
+                                <section class="graph-node-group">
+                                    <h3>@graphGroup.Label</h3>
+                                    <ul>
+                                        @foreach (var node in graphGroup.Nodes)
+                                        {
+                                            <li>
+                                                <span class="graph-connector" aria-hidden="true"></span>
+                                                <span class="graph-node graph-node-@node.Type.ToLowerInvariant()">
+                                                    @node.Label
+                                                </span>
+                                            </li>
+                                        }
+                                    </ul>
+                                </section>
+                            }
+                        </div>
+                    </div>
+                }
+            </section>
         }
 
         <footer class="app-footer">Seneschal v0.2.1-alpha</footer>

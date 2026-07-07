@@ -34,6 +34,11 @@ public sealed class CapabilityExplorerPageTests :
         Assert.Contains("Assigned Identities", html);
         Assert.Contains("Governing Policies", html);
         Assert.Contains("PolicyProjection", html);
+        Assert.Contains("Graph View", html);
+        Assert.Contains("aria-label=\"Capability ego graph\"", html);
+        Assert.Contains("graph-node graph-node-capability", html);
+        Assert.Contains("Related Identities", html);
+        Assert.Contains("Related Policies", html);
         Assert.Contains("Seneschal v0.2.1-alpha", html);
     }
 

@@ -1,0 +1,158 @@
+@page "/capability-activity"
+@model Seneschal.Api.Pages.CapabilityActivityModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seneschal Capability Activity</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">Seneschal</div>
+            <nav class="sidebar-nav" aria-label="Primary navigation">
+                <a href="/dashboard">Dashboard</a>
+                <a class="active" href="/capability-activity">Capabilities</a>
+                <a href="/policies">Policies</a>
+                <a href="/identity-activity">Identities</a>
+                <a href="#">Resources</a>
+                <a href="/audit">Audit</a>
+            </nav>
+        </aside>
+
+        <main class="container explorer-page">
+            <header class="page-header graph-page-header">
+                <div>
+                    <h1>Capability Activity</h1>
+                    <p class="subtitle">
+                        Understand which capabilities are being exercised and
+                        where denials or pending approvals are happening.
+                    </p>
+                </div>
+                <a class="button-link" href="/dashboard">Back to Dashboard</a>
+            </header>
+
+            @if (!Model.HasActivity)
+            {
+                <section class="panel">
+                    <h2>No Runtime Activity Yet</h2>
+                    <div class="empty-state">
+                        <p class="muted">
+                            Capability activity appears automatically after
+                            runtime evaluations are recorded.
+                        </p>
+                        <p class="muted">
+                            Applications, middleware, the sample API, and users
+                            create activity by calling
+                            <span class="code">/evaluate</span>.
+                        </p>
+                    </div>
+                </section>
+            }
+            else
+            {
+                <section class="panel">
+                    <h2>Capabilities by Runtime Activity</h2>
+                    <table class="activity-table">
+                        <thead>
+                            <tr>
+                                <th>Capability</th>
+                                <th>Total Requests</th>
+                                <th>Allowed</th>
+                                <th>Denied</th>
+                                <th>Pending Approval</th>
+                                <th>Last Used</th>
+                                <th>Avg Duration ms</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var capability in Model.Capabilities)
+                            {
+                                <tr>
+                                    <td>
+                                        <a class="table-link" href="/capability-activity?capabilityId=@Uri.EscapeDataString(capability.CapabilityId)">
+                                            @capability.CapabilityId
+                                        </a>
+                                    </td>
+                                    <td>@capability.TotalRequests</td>
+                                    <td>@capability.AllowedCount</td>
+                                    <td>@capability.DeniedCount</td>
+                                    <td>@capability.PendingApprovalCount</td>
+                                    <td>@(capability.LastUsedUtc?.ToString("u") ?? "n/a")</td>
+                                    <td>@capability.AverageEvaluationDurationMs.ToString("0.##")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </section>
+
+                @if (Model.CapabilityWasRequested && Model.SelectedCapability is null)
+                {
+                    <section class="notice">
+                        <h2>Capability not found</h2>
+                        <p class="muted">
+                            No runtime activity was found for
+                            <span class="code">@Model.CapabilityId</span>.
+                        </p>
+                    </section>
+                }
+                else if (Model.SelectedCapability is not null)
+                {
+                    var capability = Model.SelectedCapability;
+                    <section class="panel identity-detail-panel">
+                        <div class="dashboard-section-header">
+                            <div>
+                                <h2>@capability.CapabilityId</h2>
+                                <p class="muted">
+                                    Runtime activity summary for the selected
+                                    capability.
+                                </p>
+                            </div>
+                            <a class="button-link" href="/audit?capabilityId=@Uri.EscapeDataString(capability.CapabilityId)">
+                                View Audit Events
+                            </a>
+                        </div>
+
+                        <section class="dashboard-grid activity-metric-grid">
+                            <article class="dashboard-card activity-card">
+                                <strong>@capability.TotalRequests</strong>
+                                <span>Total Requests</span>
+                            </article>
+                            <article class="dashboard-card activity-card">
+                                <strong>@capability.AllowedCount</strong>
+                                <span>Allowed Count</span>
+                            </article>
+                            <article class="dashboard-card activity-card">
+                                <strong>@capability.DeniedCount</strong>
+                                <span>Denied Count</span>
+                            </article>
+                            <article class="dashboard-card activity-card">
+                                <strong>@capability.PendingApprovalCount</strong>
+                                <span>Pending Approval Count</span>
+                            </article>
+                        </section>
+
+                        <section class="dashboard-grid activity-metric-grid">
+                            <article class="dashboard-card activity-card">
+                                <strong>@(capability.LastUsedUtc?.ToString("u") ?? "n/a")</strong>
+                                <span>Last Used</span>
+                            </article>
+                            <article class="dashboard-card activity-card">
+                                <strong>@capability.AverageEvaluationDurationMs.ToString("0.##")</strong>
+                                <span>Average Evaluation Duration ms</span>
+                            </article>
+                        </section>
+                    </section>
+                }
+            }
+
+            <footer class="app-footer">Seneschal v0.2.1-alpha</footer>
+        </main>
+    </div>
+</body>
+</html>

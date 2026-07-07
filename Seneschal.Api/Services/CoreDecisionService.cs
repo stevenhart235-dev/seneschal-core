@@ -14,17 +14,20 @@ public sealed class CoreDecisionService
     private readonly CorePolicyEvaluator _policyEvaluator;
     private readonly RuntimeSettings _settings;
     private readonly IAuditSink? _auditSink;
+    private readonly IActivityStore? _activityStore;
 
     public CoreDecisionService(
         PolicyLoader policyLoader,
         CorePolicyEvaluator policyEvaluator,
         RuntimeSettings settings,
-        IAuditSink? auditSink = null)
+        IAuditSink? auditSink = null,
+        IActivityStore? activityStore = null)
     {
         _policyLoader = policyLoader;
         _policyEvaluator = policyEvaluator;
         _settings = settings;
         _auditSink = auditSink;
+        _activityStore = activityStore;
     }
 
     public ApiDecisionResult Evaluate(ApiDecisionRequest request)
@@ -62,7 +65,7 @@ public sealed class CoreDecisionService
         DecisionRequest request,
         DecisionResult result)
     {
-        if (_auditSink is null)
+        if (_auditSink is null && _activityStore is null)
         {
             return;
         }
@@ -83,6 +86,7 @@ public sealed class CoreDecisionService
             EvaluationDurationMs = result.LatencyMs
         };
 
-        _auditSink.WriteAsync(auditEvent).GetAwaiter().GetResult();
+        _auditSink?.WriteAsync(auditEvent).GetAwaiter().GetResult();
+        _activityStore?.RecordAsync(auditEvent).GetAwaiter().GetResult();
     }
 }

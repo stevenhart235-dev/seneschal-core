@@ -1,0 +1,170 @@
+@page "/identity-activity"
+@model Seneschal.Api.Pages.IdentityActivityModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seneschal Identity Activity</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">Seneschal</div>
+            <nav class="sidebar-nav" aria-label="Primary navigation">
+                <a href="/dashboard">Dashboard</a>
+                <a href="/capability-explorer">Capabilities</a>
+                <a href="/policies">Policies</a>
+                <a class="active" href="/identity-activity">Identities</a>
+                <a href="#">Resources</a>
+                <a href="/audit">Audit</a>
+            </nav>
+        </aside>
+
+        <main class="container explorer-page">
+            <header class="page-header graph-page-header">
+                <div>
+                    <h1>Identity Activity</h1>
+                    <p class="subtitle">
+                        Understand which identities are most active and where
+                        runtime decisions are denied or pending approval.
+                    </p>
+                </div>
+                <a class="button-link" href="/dashboard">Back to Dashboard</a>
+            </header>
+
+            @if (!Model.HasActivity)
+            {
+                <section class="panel">
+                    <h2>No Runtime Activity Yet</h2>
+                    <div class="empty-state">
+                        <p class="muted">
+                            Identity activity appears automatically after
+                            runtime evaluations are recorded.
+                        </p>
+                        <p class="muted">
+                            Applications, middleware, the sample API, and users
+                            create activity by calling
+                            <span class="code">/evaluate</span>.
+                        </p>
+                    </div>
+                </section>
+            }
+            else
+            {
+                <section class="panel">
+                    <h2>Identities by Runtime Activity</h2>
+                    <table class="activity-table">
+                        <thead>
+                            <tr>
+                                <th>Identity</th>
+                                <th>Total Requests</th>
+                                <th>Distinct Capabilities</th>
+                                <th>Denied</th>
+                                <th>Pending Approval</th>
+                                <th>Last Used</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var identity in Model.Identities)
+                            {
+                                <tr>
+                                    <td>
+                                        <a class="table-link" href="/identity-activity?identityId=@Uri.EscapeDataString(identity.IdentityId)">
+                                            @identity.IdentityId
+                                        </a>
+                                    </td>
+                                    <td>@identity.TotalRequests</td>
+                                    <td>@identity.DistinctCapabilitiesUsed.Count</td>
+                                    <td>@identity.DeniedCount</td>
+                                    <td>@identity.PendingApprovalCount</td>
+                                    <td>@(identity.LastUsedUtc?.ToString("u") ?? "n/a")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </section>
+
+                @if (Model.IdentityWasRequested && Model.SelectedIdentity is null)
+                {
+                    <section class="notice">
+                        <h2>Identity not found</h2>
+                        <p class="muted">
+                            No runtime activity was found for
+                            <span class="code">@Model.IdentityId</span>.
+                        </p>
+                    </section>
+                }
+                else if (Model.SelectedIdentity is not null)
+                {
+                    var identity = Model.SelectedIdentity;
+                    <section class="panel identity-detail-panel">
+                        <div class="dashboard-section-header">
+                            <div>
+                                <h2>@identity.IdentityId</h2>
+                                <p class="muted">
+                                    Runtime activity summary for the selected
+                                    identity.
+                                </p>
+                            </div>
+                            <a class="button-link" href="/audit?identityId=@Uri.EscapeDataString(identity.IdentityId)">
+                                View Audit Events
+                            </a>
+                        </div>
+
+                        <section class="dashboard-grid activity-metric-grid">
+                            <article class="dashboard-card activity-card">
+                                <strong>@identity.TotalRequests</strong>
+                                <span>Total Requests</span>
+                            </article>
+                            <article class="dashboard-card activity-card">
+                                <strong>@identity.DistinctCapabilitiesUsed.Count</strong>
+                                <span>Distinct Capabilities Used</span>
+                            </article>
+                            <article class="dashboard-card activity-card">
+                                <strong>@identity.DeniedCount</strong>
+                                <span>Denied Count</span>
+                            </article>
+                            <article class="dashboard-card activity-card">
+                                <strong>@identity.PendingApprovalCount</strong>
+                                <span>Pending Approval Count</span>
+                            </article>
+                        </section>
+
+                        <section class="graph-inspector-section">
+                            <h3>Capabilities Used</h3>
+                            @if (identity.DistinctCapabilitiesUsed.Count == 0)
+                            {
+                                <p class="muted">
+                                    No capabilities have been observed for this
+                                    identity yet.
+                                </p>
+                            }
+                            else
+                            {
+                                <ul class="compact-list identity-capability-list">
+                                    @foreach (var capability in identity.DistinctCapabilitiesUsed)
+                                    {
+                                        <li>
+                                            <a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(capability)">
+                                                @capability
+                                            </a>
+                                            <span>observed</span>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </section>
+                    </section>
+                }
+            }
+
+            <footer class="app-footer">Seneschal v0.2.1-alpha</footer>
+        </main>
+    </div>
+</body>
+</html>

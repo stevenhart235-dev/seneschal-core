@@ -17,6 +17,7 @@ builder.Services.AddSingleton<PolicyValidator>();
 builder.Services.AddSingleton<IAuditEventStore, InMemoryAuditEventStore>();
 builder.Services.AddSingleton<IAuditSink>(
     services => services.GetRequiredService<IAuditEventStore>());
+builder.Services.AddSingleton<IActivityStore, InMemoryActivityStore>();
 builder.Services.AddSingleton(new RuntimeSettings
 {
     Mode = Seneschal.Core.Enums.EnforcementMode.LogOnly
@@ -53,6 +54,13 @@ app.MapPost("/evaluate", (DecisionRequest request, CoreDecisionService decisionS
     var result = decisionService.Evaluate(request);
 
     return Results.Ok(result);
+});
+
+app.MapGet("/activity", async (
+    IActivityStore activityStore,
+    CancellationToken cancellationToken) =>
+{
+    return Results.Ok(await activityStore.GetSnapshotAsync(cancellationToken));
 });
 
 app.MapGet("/audit", async (

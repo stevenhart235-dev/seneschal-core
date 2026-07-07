@@ -29,9 +29,150 @@
             <header class="page-header">
                 <h1>Seneschal Dashboard</h1>
                 <p class="subtitle">
-                    A compact view of the configured governance inventory.
+                    Runtime activity and configured governance inventory.
                 </p>
             </header>
+
+            <section class="panel runtime-activity-panel">
+                <div class="dashboard-section-header">
+                    <div>
+                        <h2>Runtime Activity</h2>
+                        <p class="muted">
+                            Recent capability decisions observed through
+                            Seneschal's runtime evaluation path.
+                        </p>
+                    </div>
+                    <div class="runtime-action-row">
+                        <a class="button-link" href="/capability-activity">
+                            Capability Activity
+                        </a>
+                        <a class="button-link" href="/identity-activity">
+                            Identity Activity
+                        </a>
+                        <a class="button-link" href="/activity">View JSON</a>
+                    </div>
+                </div>
+
+                @if (!Model.HasRuntimeActivity)
+                {
+                    <div class="empty-state runtime-empty-state">
+                        <p class="muted">
+                            No runtime activity has been observed yet.
+                        </p>
+                        <p class="muted">
+                            Activity appears automatically after applications,
+                            middleware, the sample API, or users call
+                            <span class="code">/evaluate</span>.
+                        </p>
+                        <p class="muted">
+                            Try:
+                            <span class="code">seneschal evaluate payment-agent azure.keyvault.secret.read production</span>
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <section class="dashboard-grid activity-metric-grid">
+                        <article class="dashboard-card activity-card">
+                            <strong>@Model.TotalRuntimeDecisions</strong>
+                            <span>Total Runtime Decisions</span>
+                        </article>
+                        <article class="dashboard-card activity-card">
+                            <strong>@Model.AllowedRuntimeDecisions</strong>
+                            <span>Allowed Decisions</span>
+                        </article>
+                        <article class="dashboard-card activity-card">
+                            <strong>@Model.DeniedRuntimeDecisions</strong>
+                            <span>Denied Decisions</span>
+                        </article>
+                        <article class="dashboard-card activity-card">
+                            <strong>@Model.PendingApprovalRuntimeDecisions</strong>
+                            <span>Pending Approval Decisions</span>
+                        </article>
+                    </section>
+
+                    <section class="dashboard-grid activity-metric-grid">
+                        <article class="dashboard-card activity-card">
+                            <strong>@(Model.MostActiveCapability?.CapabilityId ?? "n/a")</strong>
+                            <span>Most Active Capability</span>
+                        </article>
+                        <article class="dashboard-card activity-card">
+                            <strong>@(Model.MostActiveIdentity?.IdentityId ?? "n/a")</strong>
+                            <span>Most Active Identity</span>
+                        </article>
+                        <article class="dashboard-card activity-card">
+                            <strong>@(Model.MostMatchedPolicy?.PolicyId ?? "n/a")</strong>
+                            <span>Most Matched Policy</span>
+                        </article>
+                        <article class="dashboard-card activity-card">
+                            <strong>@Model.AverageEvaluationDurationMs.ToString("0.##")</strong>
+                            <span>Avg Evaluation Duration ms</span>
+                        </article>
+                    </section>
+                }
+            </section>
+
+            @if (Model.HasRuntimeActivity)
+            {
+                <section class="dashboard-columns activity-columns">
+                    <article class="panel">
+                        <h2>Top Capabilities</h2>
+                        <ul class="compact-list activity-list">
+                            @foreach (var capability in Model.TopCapabilitiesByRequestCount)
+                            {
+                                <li>
+                                    <a href="/capability-activity?capabilityId=@Uri.EscapeDataString(capability.CapabilityId)">
+                                        @capability.CapabilityId
+                                    </a>
+                                    <span>@capability.TotalRequests requests</span>
+                                </li>
+                            }
+                        </ul>
+                    </article>
+
+                    <article class="panel">
+                        <h2>Most Denied Capabilities</h2>
+                        @if (Model.MostDeniedCapabilities.Count == 0)
+                        {
+                            <p class="muted empty-state">
+                                No denied capability decisions have been observed.
+                            </p>
+                        }
+                        else
+                        {
+                            <ul class="compact-list activity-list">
+                                @foreach (var capability in Model.MostDeniedCapabilities)
+                                {
+                                    <li>
+                                        <a href="/capability-activity?capabilityId=@Uri.EscapeDataString(capability.CapabilityId)">
+                                            @capability.CapabilityId
+                                        </a>
+                                        <span>@capability.DeniedCount denied</span>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </article>
+
+                    <article class="panel activity-wide-panel">
+                        <h2>Most Active Identities</h2>
+                        <ul class="compact-list activity-list">
+                            @foreach (var identity in Model.MostActiveIdentities)
+                            {
+                                <li>
+                                    <a href="/identity-activity?identityId=@Uri.EscapeDataString(identity.IdentityId)">
+                                        @identity.IdentityId
+                                    </a>
+                                    <span>
+                                        @identity.TotalRequests requests ·
+                                        @identity.DistinctCapabilitiesUsed.Count capabilities
+                                    </span>
+                                </li>
+                            }
+                        </ul>
+                    </article>
+                </section>
+            }
 
             <section class="dashboard-grid">
                 <article class="dashboard-card">

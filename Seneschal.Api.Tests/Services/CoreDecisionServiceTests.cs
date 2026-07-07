@@ -130,6 +130,42 @@ public sealed class CoreDecisionServiceTests :
         Assert.True(auditEvent.EvaluationDurationMs >= 0);
     }
 
+    [Fact]
+    public async Task Evaluate_RecordsActivityWhenActivityStoreIsRegistered()
+    {
+        var activityStore = new InMemoryActivityStore();
+        var service = new CoreDecisionService(
+            new PolicyLoader(),
+            new CorePolicyEvaluator(),
+            new RuntimeSettings
+            {
+                Mode = CoreEnforcementMode.LogOnly
+            },
+            activityStore: activityStore);
+
+        var result = service.Evaluate(
+            CreateRequest(
+                "Developer",
+                "DeployApplication",
+                "dev"));
+
+        var snapshot = await activityStore.GetSnapshotAsync();
+        var capability = Assert.Single(snapshot.Capabilities);
+        var identity = Assert.Single(snapshot.Identities);
+        var policy = snapshot.Policies.Single(policy =>
+            policy.PolicyId == "Developers can deploy to dev");
+
+        Assert.Equal("allow", result.Decision);
+        Assert.Equal("DeployApplication", capability.CapabilityId);
+        Assert.Equal(1, capability.TotalRequests);
+        Assert.Equal(1, capability.AllowedCount);
+        Assert.Equal("Developer", identity.IdentityId);
+        Assert.Equal(1, identity.TotalRequests);
+        Assert.Contains("DeployApplication", identity.DistinctCapabilitiesUsed);
+        Assert.Equal("Developers can deploy to dev", policy.PolicyId);
+        Assert.Equal(1, policy.MatchCount);
+    }
+
     private static ApiDecisionRequest CreateRequest(
         string identity,
         string capability,

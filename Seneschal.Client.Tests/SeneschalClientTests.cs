@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Options;
 using Seneschal.Client.Models;
 using Xunit;
 
@@ -8,6 +9,20 @@ namespace Seneschal.Client.Tests;
 
 public sealed class SeneschalClientTests
 {
+    [Fact]
+    public void PublicConstructors_ExposeSingleTypedHttpClientConstructor()
+    {
+        var constructor = Assert.Single(typeof(SeneschalClient).GetConstructors());
+        var parameters = constructor.GetParameters();
+
+        Assert.Collection(
+            parameters,
+            parameter => Assert.Equal(typeof(HttpClient), parameter.ParameterType),
+            parameter => Assert.Equal(
+                typeof(IOptions<SeneschalClientOptions>),
+                parameter.ParameterType));
+    }
+
     [Fact]
     public async Task EvaluateAsync_PostsRequestAndDeserializesDecision()
     {
@@ -27,7 +42,7 @@ public sealed class SeneschalClientTests
                     """)
             });
         using var httpClient = new HttpClient(handler);
-        var client = new SeneschalClient(
+        var client = SeneschalClient.Create(
             httpClient,
             new Uri("https://seneschal.example"));
 
@@ -80,11 +95,11 @@ public sealed class SeneschalClientTests
         using var httpClient = new HttpClient(handler);
         var client = new SeneschalClient(
             httpClient,
-            new SeneschalClientOptions
+            Options.Create(new SeneschalClientOptions
             {
                 BaseUrl = new Uri("https://seneschal.example"),
                 ApiKey = "secret-token"
-            });
+            }));
 
         await client.EvaluateAsync(CreateRequest());
 
@@ -104,7 +119,7 @@ public sealed class SeneschalClientTests
                 Content = JsonContent("boom")
             });
         using var httpClient = new HttpClient(handler);
-        var client = new SeneschalClient(
+        var client = SeneschalClient.Create(
             httpClient,
             new Uri("https://seneschal.example"));
 
@@ -125,7 +140,7 @@ public sealed class SeneschalClientTests
                 Content = JsonContent("{not-json")
             });
         using var httpClient = new HttpClient(handler);
-        var client = new SeneschalClient(
+        var client = SeneschalClient.Create(
             httpClient,
             new Uri("https://seneschal.example"));
 
@@ -141,7 +156,7 @@ public sealed class SeneschalClientTests
         var handler = new StubHttpMessageHandler(_ =>
             throw new HttpRequestException("network down"));
         using var httpClient = new HttpClient(handler);
-        var client = new SeneschalClient(
+        var client = SeneschalClient.Create(
             httpClient,
             new Uri("https://seneschal.example"));
 

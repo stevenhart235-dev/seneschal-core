@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.Options;
 using Seneschal.Client.Models;
 
 namespace Seneschal.Client;
@@ -33,39 +34,42 @@ public sealed class SeneschalClient : ISeneschalClient
     /// </exception>
     public SeneschalClient(
         HttpClient httpClient,
-        SeneschalClientOptions options)
+        IOptions<SeneschalClientOptions> options)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(options);
 
+        var value = options.Value;
+
         _httpClient = httpClient;
-        _options = options;
-        _baseUrl = options.BaseUrl ?? httpClient.BaseAddress ??
+        _options = value;
+        _baseUrl = value.BaseUrl ?? httpClient.BaseAddress ??
             throw new ArgumentException(
                 "A Seneschal base URL must be provided.",
                 nameof(options));
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SeneschalClient"/> class.
+    /// Creates a client from explicit connection settings.
     /// </summary>
     /// <param name="httpClient">The HTTP client used to call Seneschal.</param>
     /// <param name="baseUrl">The base URL of the Seneschal API.</param>
     /// <param name="apiKey">
     /// Optional API key placeholder for future authenticated deployments.
     /// </param>
-    public SeneschalClient(
+    /// <returns>A configured Seneschal client.</returns>
+    public static SeneschalClient Create(
         HttpClient httpClient,
         Uri baseUrl,
         string? apiKey = null)
-        : this(
+    {
+        return new SeneschalClient(
             httpClient,
-            new SeneschalClientOptions
+            Options.Create(new SeneschalClientOptions
             {
                 BaseUrl = baseUrl,
                 ApiKey = apiKey
-            })
-    {
+            }));
     }
 
     /// <inheritdoc />

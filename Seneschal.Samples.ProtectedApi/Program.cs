@@ -16,10 +16,10 @@ if (!Uri.TryCreate(
         "Seneschal:BaseUrl must be an absolute URL.");
 }
 
-builder.Services.AddSingleton(new SeneschalClientOptions
+builder.Services.Configure<SeneschalClientOptions>(options =>
 {
-    BaseUrl = seneschalUri,
-    ApiKey = builder.Configuration["Seneschal:ApiKey"]
+    options.BaseUrl = seneschalUri;
+    options.ApiKey = builder.Configuration["Seneschal:ApiKey"];
 });
 builder.Services.AddHttpClient<ISeneschalClient, SeneschalClient>();
 
@@ -51,10 +51,12 @@ app.MapPost(
         if (IsAllow(decision.Decision))
         {
             return Results.Ok(new DeployAcceptedResponse(
-                "Deployment started.",
-                decision.Decision,
+                "Deployment started by manual client evaluation.",
+                "Allow",
                 decision.Reason,
-                decision.PolicyMatched));
+                string.IsNullOrWhiteSpace(decision.PolicyMatched)
+                    ? "n/a"
+                    : decision.PolicyMatched));
         }
 
         if (IsDeny(decision.Decision))

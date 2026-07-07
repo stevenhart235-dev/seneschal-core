@@ -347,6 +347,91 @@ button {
     flex: 1;
 }
 
+.policy-grid {
+    display: grid;
+    gap: 18px;
+}
+
+.policy-card {
+    background: #1F2937;
+    border: 1px solid #374151;
+    border-radius: 10px;
+    padding: 24px;
+}
+
+.policy-card-header {
+    align-items: flex-start;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+}
+
+.policy-card h2 {
+    font-size: 22px;
+    margin: 0;
+}
+
+.policy-reason {
+    color: #D1D5DB;
+    line-height: 1.5;
+}
+
+.decision-badge {
+    white-space: nowrap;
+}
+
+.decision-allow {
+    background: #064E3B;
+    color: #D1FAE5;
+}
+
+.decision-deny {
+    background: #7F1D1D;
+    color: #FEE2E2;
+}
+
+.decision-requires-approval {
+    background: #78350F;
+    color: #FEF3C7;
+}
+
+.decision-warn,
+.decision-log-only {
+    background: #1E3A8A;
+    color: #DBEAFE;
+}
+
+.policy-relations {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(3, 1fr);
+    margin-top: 20px;
+}
+
+.policy-relations div {
+    background: #111827;
+    border-radius: 8px;
+    padding: 14px;
+}
+
+.policy-relations h3 {
+    color: #9CA3AF;
+    font-size: 13px;
+    margin: 0 0 10px 0;
+    text-transform: uppercase;
+}
+
+.policy-relations ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.policy-relations li {
+    color: #F9FAFB;
+    margin-bottom: 8px;
+}
+
 .button-link {
     background: #2563EB;
     border-radius: 6px;

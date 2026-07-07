@@ -69,8 +69,22 @@ app.MapGet("/audit", () =>
     return Results.Ok(events);
 });
 
-app.MapGet("/policies", (PolicyLoader policyLoader) =>
+app.MapGet("/policies", async (
+    HttpRequest request,
+    PolicyLoader policyLoader,
+    IGovernanceGraph governanceGraph,
+    CancellationToken cancellationToken) =>
 {
+    if (AcceptsHtml(request))
+    {
+        return Results.Content(
+            await PolicyExplorerPageRenderer.RenderAsync(
+                policyLoader.GetPolicies(),
+                governanceGraph,
+                cancellationToken),
+            "text/html; charset=utf-8");
+    }
+
     return Results.Ok(policyLoader.GetPolicies());
 });
 
@@ -107,5 +121,12 @@ app.MapGet("/identities", (IdentityLoader loader) =>
 app.MapRazorPages();
 
 app.Run();
+
+static bool AcceptsHtml(HttpRequest request)
+{
+    return request.Headers.Accept.ToString().Contains(
+        "text/html",
+        StringComparison.OrdinalIgnoreCase);
+}
 
 public partial class Program;

@@ -13,9 +13,20 @@
     <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-    <main class="container explorer-page">
-        <a class="nav-link" href="/">← Dashboard</a>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">Seneschal</div>
+            <nav class="sidebar-nav" aria-label="Primary navigation">
+                <a href="/">Dashboard</a>
+                <a class="active" href="/capability-explorer">Capabilities</a>
+                <a href="/policies">Policies</a>
+                <a href="/identities">Identities</a>
+                <a href="#">Resources</a>
+                <a href="/audit">Audit</a>
+            </nav>
+        </aside>
 
+    <main class="container explorer-page">
         <header class="page-header">
             <h1>Seneschal Capability Explorer</h1>
             <p class="subtitle">
@@ -81,6 +92,15 @@
         {
             <section class="panel">
                 <h2>Capability Metadata</h2>
+
+                <div class="badge-row">
+                    <span class="badge badge-provider">@capability.Provider</span>
+                    <span class="badge badge-category">@capability.Category</span>
+                    <span class="badge risk-badge risk-@capability.RiskLevel.ToString().ToLowerInvariant()">
+                        @capability.RiskLevel risk
+                    </span>
+                </div>
+
                 <dl class="metadata-grid">
                     <dt>Id</dt>
                     <dd>@capability.Id</dd>
@@ -88,45 +108,45 @@
                     <dt>Name</dt>
                     <dd>@capability.Name</dd>
 
-                    <dt>Provider</dt>
-                    <dd>@capability.Provider</dd>
-
-                    <dt>Category</dt>
-                    <dd>@capability.Category</dd>
-
-                    <dt>Risk</dt>
-                    <dd>@capability.RiskLevel</dd>
-
-                    <dt>Owner</dt>
-                    <dd>@capability.Owner</dd>
-
-                    <dt>Version</dt>
-                    <dd>@capability.Version</dd>
-
                     <dt>Description</dt>
                     <dd>@capability.Description</dd>
 
-                    <dt>Tags</dt>
-                    <dd>@string.Join(", ", capability.Tags)</dd>
+                    @if (!string.IsNullOrWhiteSpace(capability.Owner))
+                    {
+                        <dt>Owner</dt>
+                        <dd>@capability.Owner</dd>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(capability.Version))
+                    {
+                        <dt>Version</dt>
+                        <dd>@capability.Version</dd>
+                    }
+
+                    @if (capability.Tags.Count > 0)
+                    {
+                        <dt>Tags</dt>
+                        <dd>@string.Join(", ", capability.Tags)</dd>
+                    }
                 </dl>
             </section>
 
             <section class="panel">
                 <h2>Governance Summary</h2>
                 <div class="summary-grid">
-                    <div>
+                    <div class="summary-card">
                         <strong>@Model.Overview.Summary.AssignedIdentityCount</strong>
                         <span>Assigned Identities</span>
                     </div>
-                    <div>
+                    <div class="summary-card">
                         <strong>@Model.Overview.Summary.ObservedIdentityCount</strong>
                         <span>Observed Identities</span>
                     </div>
-                    <div>
+                    <div class="summary-card">
                         <strong>@Model.Overview.Summary.ResourceCount</strong>
                         <span>Resources</span>
                     </div>
-                    <div>
+                    <div class="summary-card">
                         <strong>@Model.Overview.Summary.GoverningPolicyCount</strong>
                         <span>Governing Policies</span>
                     </div>
@@ -151,7 +171,7 @@
                 {
                     foreach (var group in groups)
                     {
-                        <section class="relationship-group">
+                        <section class="relationship-group relationship-card">
                             <h3>@group.Label</h3>
                             <ul>
                                 @foreach (var item in group.Items)
@@ -170,6 +190,9 @@
                 }
             </section>
         }
+
+        <footer class="app-footer">Seneschal v0.2.1-alpha</footer>
     </main>
+    </div>
 </body>
 </html>

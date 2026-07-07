@@ -24,12 +24,17 @@ public sealed class CapabilityExplorerPageTests :
         var html = await response.Content.ReadAsStringAsync();
 
         Assert.Contains("Seneschal Capability Explorer", html);
+        Assert.Contains("Dashboard", html);
+        Assert.Contains("Capabilities", html);
+        Assert.Contains("class=\"active\"", html);
         Assert.Contains("DeployApplication", html);
         Assert.Contains("Capability Metadata", html);
+        Assert.Contains("badge risk-badge risk-medium", html);
         Assert.Contains("Governance Summary", html);
         Assert.Contains("Assigned Identities", html);
         Assert.Contains("Governing Policies", html);
         Assert.Contains("PolicyProjection", html);
+        Assert.Contains("Seneschal v0.2.1-alpha", html);
     }
 
     [Fact]

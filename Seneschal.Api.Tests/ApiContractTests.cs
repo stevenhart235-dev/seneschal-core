@@ -143,18 +143,22 @@ public sealed class ApiContractTests :
         var auditEvent = document.RootElement
             .EnumerateArray()
             .Single(item =>
-                item.GetProperty("identity").GetString() == identity);
+                item.GetProperty("identityId").GetString() == identity);
 
         AssertProperties(
             auditEvent,
+            "id",
             "timestampUtc",
-            "identity",
-            "capability",
-            "context",
+            "identityId",
+            "capabilityId",
+            "resourceId",
+            "environment",
             "decision",
+            "enforcementMode",
+            "matchedPolicies",
+            "obligations",
             "reason",
-            "policyMatched",
-            "durationMs");
+            "evaluationDurationMs");
     }
 
     private async Task<HttpResponseMessage> PostEvaluationAsync(

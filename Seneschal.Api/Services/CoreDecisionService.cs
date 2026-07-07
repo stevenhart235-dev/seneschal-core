@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using Seneschal.Api.Mappers;
+using Seneschal.Core.Interfaces;
+using Seneschal.Core.Models;
 using ApiDecisionRequest = Seneschal.Api.Models.DecisionRequest;
 using ApiDecisionResult = Seneschal.Api.Models.DecisionResult;
 using CorePolicyEvaluator = Seneschal.Core.Interfaces.IPolicyEvaluator;
@@ -11,15 +13,18 @@ public sealed class CoreDecisionService
     private readonly PolicyLoader _policyLoader;
     private readonly CorePolicyEvaluator _policyEvaluator;
     private readonly RuntimeSettings _settings;
+    private readonly IAuditSink? _auditSink;
 
     public CoreDecisionService(
         PolicyLoader policyLoader,
         CorePolicyEvaluator policyEvaluator,
-        RuntimeSettings settings)
+        RuntimeSettings settings,
+        IAuditSink? auditSink = null)
     {
         _policyLoader = policyLoader;
         _policyEvaluator = policyEvaluator;
         _settings = settings;
+        _auditSink = auditSink;
     }
 
     public ApiDecisionResult Evaluate(ApiDecisionRequest request)
@@ -39,8 +44,45 @@ public sealed class CoreDecisionService
             _settings.Mode);
         stopwatch.Stop();
 
+        coreResult = coreResult with
+        {
+            LatencyMs = (int)stopwatch.ElapsedMilliseconds
+        };
+
+        WriteAuditEvent(
+            coreRequest,
+            coreResult);
+
         return DecisionResultMapper.ToApi(
             coreResult,
             stopwatch.ElapsedMilliseconds);
+    }
+
+    private void WriteAuditEvent(
+        DecisionRequest request,
+        DecisionResult result)
+    {
+        if (_auditSink is null)
+        {
+            return;
+        }
+
+        var auditEvent = new AuditEvent
+        {
+            Id = result.DecisionId,
+            TimestampUtc = result.Timestamp,
+            IdentityId = request.Identity.Id,
+            CapabilityId = request.Capability.Id,
+            ResourceId = request.Resource.Id,
+            Environment = request.Resource.Environment ?? string.Empty,
+            Decision = result.Decision,
+            EnforcementMode = result.Mode,
+            MatchedPolicies = result.MatchedPolicies,
+            Obligations = result.Obligations,
+            Reason = result.Reason,
+            EvaluationDurationMs = result.LatencyMs
+        };
+
+        _auditSink.WriteAsync(auditEvent).GetAwaiter().GetResult();
     }
 }

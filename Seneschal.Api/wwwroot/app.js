@@ -32,8 +32,8 @@ async function loadDashboard() {
 
         row.innerHTML = `
             <td>${new Date(event.timestampUtc).toLocaleString()}</td>
-            <td>${event.identity}</td>
-            <td>${event.capability}</td>
+            <td>${event.identityId}</td>
+            <td>${event.capabilityId}</td>
             <td>${event.decision}</td>
         `;
 

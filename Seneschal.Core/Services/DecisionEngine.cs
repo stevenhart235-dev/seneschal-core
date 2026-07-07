@@ -33,21 +33,18 @@ public sealed class DecisionEngine
 
         var auditEvent = new AuditEvent
         {
-            Timestamp = result.Timestamp,
-            DecisionId = result.DecisionId,
-            RequestId = result.RequestId,
-
-            Identity = request.Identity,
-            Capability = request.Capability,
-            Intent = request.Intent,
-            Resource = request.Resource,
-
+            Id = result.DecisionId,
+            TimestampUtc = result.Timestamp,
+            IdentityId = request.Identity.Id,
+            CapabilityId = request.Capability.Id,
+            ResourceId = request.Resource.Id,
+            Environment = request.Resource.Environment ?? string.Empty,
             Decision = result.Decision,
-            Mode = result.Mode,
-
+            EnforcementMode = result.Mode,
             MatchedPolicies = result.MatchedPolicies,
-
-            LatencyMs = result.LatencyMs
+            Obligations = result.Obligations,
+            Reason = result.Reason,
+            EvaluationDurationMs = result.LatencyMs
         };
 
         await _auditSink.WriteAsync(auditEvent, cancellationToken);

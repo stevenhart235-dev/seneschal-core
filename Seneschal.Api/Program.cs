@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Seneschal.Api.Mappers;
 using Seneschal.Api.Models;
 using Seneschal.Api.Services;
@@ -15,7 +14,9 @@ builder.Services.AddSingleton<
     Seneschal.Core.Services.PolicyEvaluator>();
 builder.Services.AddSingleton<CoreDecisionService>();
 builder.Services.AddSingleton<PolicyValidator>();
-builder.Services.AddSingleton<AuditLogger>();
+builder.Services.AddSingleton<IAuditEventStore, InMemoryAuditEventStore>();
+builder.Services.AddSingleton<IAuditSink>(
+    services => services.GetRequiredService<IAuditEventStore>());
 builder.Services.AddSingleton(new RuntimeSettings
 {
     Mode = Seneschal.Core.Enums.EnforcementMode.LogOnly
@@ -46,27 +47,70 @@ app.UseStaticFiles();
 
 app.Services.GetRequiredService<PolicyValidator>();
 
-app.MapPost("/evaluate", (DecisionRequest request, CoreDecisionService decisionService, AuditLogger auditLogger) =>
+app.MapPost("/evaluate", (DecisionRequest request, CoreDecisionService decisionService) =>
 {
     var result = decisionService.Evaluate(request);
-    auditLogger.Log(request, result);
 
     return Results.Ok(result);
 });
 
-app.MapGet("/audit", () =>
+app.MapGet("/audit", async (
+    HttpRequest request,
+    string? identityId,
+    string? capabilityId,
+    string? decision,
+    string? enforcementMode,
+    string? environment,
+    string? matchedPolicy,
+    IAuditEventStore auditEventStore,
+    CancellationToken cancellationToken) =>
 {
-    var auditFile = Path.Combine(AppContext.BaseDirectory, "Audit", "audit.jsonl");
+    var filter = new AuditEventFilter
+    {
+        IdentityId = identityId,
+        CapabilityId = capabilityId,
+        Decision = decision,
+        EnforcementMode = enforcementMode,
+        Environment = environment,
+        MatchedPolicy = matchedPolicy
+    };
+    var events = AuditEventFilterService.Apply(
+        (await auditEventStore.GetRecentAsync(
+            cancellationToken: cancellationToken))
+            .Select(AuditEventMapper.ToApi),
+        filter);
 
-    if (!File.Exists(auditFile))
-        return Results.Ok(new List<AuditEvent>());
-
-    var events = File.ReadLines(auditFile)
-        .Where(line => !string.IsNullOrWhiteSpace(line))
-        .Select(line => JsonSerializer.Deserialize<AuditEvent>(line)!)
-        .ToList();
+    if (AcceptsHtml(request))
+    {
+        return Results.Content(
+            AuditTrailPageRenderer.Render(events, filter),
+            "text/html; charset=utf-8");
+    }
 
     return Results.Ok(events);
+});
+
+app.MapGet("/audit/{auditEventId}", async (
+    string auditEventId,
+    IAuditEventStore auditEventStore,
+    CancellationToken cancellationToken) =>
+{
+    var auditEvent = await auditEventStore.GetByIdAsync(
+        auditEventId,
+        cancellationToken);
+
+    if (auditEvent is null)
+    {
+        return Results.Content(
+            AuditEventDetailPageRenderer.RenderNotFound(auditEventId),
+            "text/html; charset=utf-8",
+            statusCode: StatusCodes.Status404NotFound);
+    }
+
+    return Results.Content(
+        AuditEventDetailPageRenderer.Render(
+            AuditEventMapper.ToApi(auditEvent)),
+        "text/html; charset=utf-8");
 });
 
 app.MapGet("/policies", async (

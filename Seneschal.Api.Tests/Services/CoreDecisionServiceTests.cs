@@ -1,5 +1,6 @@
 using ApiDecisionRequest = Seneschal.Api.Models.DecisionRequest;
 using Seneschal.Api.Services;
+using Seneschal.Core.Repositories;
 using CoreEnforcementMode = Seneschal.Core.Enums.EnforcementMode;
 using CorePolicyEvaluator = Seneschal.Core.Services.PolicyEvaluator;
 using Xunit;
@@ -94,6 +95,39 @@ public sealed class CoreDecisionServiceTests :
         Assert.Equal("deny", result.Decision);
         Assert.Equal("logged_only", result.EffectiveAction);
         Assert.Equal("LogOnly", result.Mode);
+    }
+
+    [Fact]
+    public async Task Evaluate_WritesAuditEventWhenAuditSinkIsRegistered()
+    {
+        var auditStore = new InMemoryAuditEventStore();
+        var service = new CoreDecisionService(
+            new PolicyLoader(),
+            new CorePolicyEvaluator(),
+            new RuntimeSettings
+            {
+                Mode = CoreEnforcementMode.LogOnly
+            },
+            auditStore);
+
+        var result = service.Evaluate(
+            CreateRequest(
+                "Developer",
+                "DeployApplication",
+                "dev"));
+
+        var auditEvent = Assert.Single(
+            await auditStore.GetRecentAsync());
+        Assert.Equal("allow", result.Decision);
+        Assert.Equal("Developer", auditEvent.IdentityId);
+        Assert.Equal("DeployApplication", auditEvent.CapabilityId);
+        Assert.Equal("dev", auditEvent.Environment);
+        Assert.Equal("allow", result.Decision);
+        Assert.Contains(
+            "Developers can deploy to dev",
+            auditEvent.MatchedPolicies);
+        Assert.Empty(auditEvent.Obligations);
+        Assert.True(auditEvent.EvaluationDurationMs >= 0);
     }
 
     private static ApiDecisionRequest CreateRequest(

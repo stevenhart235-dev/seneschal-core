@@ -25,16 +25,46 @@
         </header>
 
         <form class="search-panel" method="get">
-            <label for="capabilityId">Capability ID</label>
+            <label for="q">Search capabilities</label>
             <div class="search-row">
                 <input
-                    id="capabilityId"
-                    name="capabilityId"
-                    value="@Model.CapabilityId"
-                    placeholder="DeployApplication" />
+                    id="q"
+                    name="q"
+                    value="@Model.Query"
+                    placeholder="Search by id, name, description, or tag" />
                 <button type="submit">Search</button>
             </div>
         </form>
+
+        @if (Model.SearchWasRequested)
+        {
+            <section class="panel">
+                <h2>Search Results</h2>
+
+                @if (Model.SearchResults.Count == 0)
+                {
+                    <p class="muted">
+                        No capabilities matched
+                        <span class="code">@Model.Query</span>.
+                    </p>
+                }
+                else
+                {
+                    <ul class="search-results">
+                        @foreach (var result in Model.SearchResults)
+                        {
+                            var resultCapability = result.Capability;
+                            <li>
+                                <a href="/capability-explorer?q=@Uri.EscapeDataString(Model.Query ?? string.Empty)&capabilityId=@Uri.EscapeDataString(resultCapability.Id)">
+                                    @resultCapability.Id
+                                </a>
+                                <span>@resultCapability.Description</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+        }
 
         @if (Model.CapabilityWasRequested && Model.Overview is null)
         {

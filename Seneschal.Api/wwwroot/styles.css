@@ -175,6 +175,30 @@ button {
     padding: 0;
 }
 
+.search-results {
+    list-style: none;
+    padding: 0;
+}
+
+.search-results li {
+    background: #111827;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    padding: 14px;
+}
+
+.search-results a {
+    color: #93C5FD;
+    display: block;
+    font-weight: bold;
+    margin-bottom: 6px;
+    text-decoration: none;
+}
+
+.search-results span {
+    color: #D1D5DB;
+}
+
 .relationship-group li {
     background: #111827;
     border-radius: 8px;

@@ -45,6 +45,14 @@ public sealed class InMemoryCapabilityCatalog : ICapabilityCatalog
 
         IEnumerable<CapabilityCatalogEntry> matches = _entries;
 
+        if (!string.IsNullOrWhiteSpace(query.SearchText))
+        {
+            matches = matches.Where(entry =>
+                MatchesSearchText(
+                    entry.Capability,
+                    query.SearchText));
+        }
+
         if (!string.IsNullOrWhiteSpace(query.Owner))
         {
             matches = matches.Where(entry =>
@@ -62,5 +70,24 @@ public sealed class InMemoryCapabilityCatalog : ICapabilityCatalog
 
         return Task.FromResult<IReadOnlyCollection<CapabilityCatalogEntry>>(
             matches.ToList());
+    }
+
+    private static bool MatchesSearchText(
+        Capability capability,
+        string searchText)
+    {
+        return Contains(capability.Id, searchText) ||
+            Contains(capability.Name, searchText) ||
+            Contains(capability.Description, searchText) ||
+            capability.Tags.Any(tag => Contains(tag, searchText));
+    }
+
+    private static bool Contains(
+        string value,
+        string searchText)
+    {
+        return value.Contains(
+            searchText,
+            StringComparison.OrdinalIgnoreCase);
     }
 }

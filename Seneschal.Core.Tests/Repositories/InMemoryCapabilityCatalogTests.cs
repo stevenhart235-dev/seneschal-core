@@ -65,6 +65,25 @@ public sealed class InMemoryCapabilityCatalogTests
         Assert.Equal("terraform.apply", entry.Capability.Id);
     }
 
+    [Theory]
+    [InlineData("KEYVAULT", "azure.keyvault.secret.read")]
+    [InlineData("Terraform Apply", "terraform.apply")]
+    [InlineData("execution plan", "terraform.plan")]
+    [InlineData("deployment", "terraform.apply")]
+    public async Task SearchAsync_FiltersByPartialTextCaseInsensitively(
+        string searchText,
+        string expectedCapabilityId)
+    {
+        var entries = await _catalog.SearchAsync(
+            new CapabilityCatalogQuery
+            {
+                SearchText = searchText
+            });
+
+        var entry = Assert.Single(entries);
+        Assert.Equal(expectedCapabilityId, entry.Capability.Id);
+    }
+
     [Fact]
     public void Constructor_RejectsDuplicateIdsCaseInsensitively()
     {
@@ -83,16 +102,34 @@ public sealed class InMemoryCapabilityCatalogTests
         string owner,
         RiskLevel riskLevel)
     {
+        var name = id switch
+        {
+            "terraform.apply" => "Terraform Apply",
+            "terraform.plan" => "Terraform Plan",
+            _ => id
+        };
+        var description = id switch
+        {
+            "terraform.plan" => "Create an infrastructure execution plan.",
+            _ => $"Capability {id}"
+        };
+        var tags = id switch
+        {
+            "terraform.apply" => new List<string> { "deployment" },
+            _ => new List<string>()
+        };
+
         return new Capability
         {
             Id = id,
-            Name = id,
+            Name = name,
             Provider = id.Split('.')[0],
             Category = "test",
-            Description = $"Capability {id}",
+            Description = description,
             RiskLevel = riskLevel,
             Owner = owner,
-            Version = "1.0"
+            Version = "1.0",
+            Tags = tags
         };
     }
 }

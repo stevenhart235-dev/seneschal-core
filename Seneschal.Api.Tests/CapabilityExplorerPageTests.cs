@@ -31,4 +31,35 @@ public sealed class CapabilityExplorerPageTests :
         Assert.Contains("Governing Policies", html);
         Assert.Contains("PolicyProjection", html);
     }
+
+    [Fact]
+    public async Task CapabilityExplorer_SearchRendersMatchingCapabilities()
+    {
+        using var response = await _client.GetAsync(
+            "/capability-explorer?q=secret");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Contains("Search Results", html);
+        Assert.Contains("azure.keyvault.secret.read", html);
+        Assert.Contains("Read a production secret", html);
+    }
+
+    [Fact]
+    public async Task CapabilityExplorer_SelectingSearchResultRendersOverview()
+    {
+        using var response = await _client.GetAsync(
+            "/capability-explorer?q=secret&capabilityId=azure.keyvault.secret.read");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Contains("Search Results", html);
+        Assert.Contains("Capability Metadata", html);
+        Assert.Contains("azure.keyvault.secret.read", html);
+        Assert.Contains("Support secret reads require approval", html);
+    }
 }

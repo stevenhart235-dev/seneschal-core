@@ -7,23 +7,44 @@ namespace Seneschal.Api.Pages;
 
 public sealed class CapabilityExplorerModel : PageModel
 {
+    private readonly ICapabilityCatalog _capabilityCatalog;
     private readonly ICapabilityExplorer _capabilityExplorer;
 
-    public CapabilityExplorerModel(ICapabilityExplorer capabilityExplorer)
+    public CapabilityExplorerModel(
+        ICapabilityCatalog capabilityCatalog,
+        ICapabilityExplorer capabilityExplorer)
     {
+        _capabilityCatalog = capabilityCatalog;
         _capabilityExplorer = capabilityExplorer;
     }
 
+    public string? Query { get; private set; }
     public string? CapabilityId { get; private set; }
+    public IReadOnlyCollection<CapabilityCatalogEntry> SearchResults
+        { get; private set; } = [];
     public CapabilityOverview? Overview { get; private set; }
+    public bool SearchWasRequested { get; private set; }
     public bool CapabilityWasRequested { get; private set; }
 
     public async Task OnGetAsync(
+        string? q,
         string? capabilityId,
         CancellationToken cancellationToken)
     {
+        Query = q;
         CapabilityId = capabilityId;
+        SearchWasRequested = !string.IsNullOrWhiteSpace(q);
         CapabilityWasRequested = !string.IsNullOrWhiteSpace(capabilityId);
+
+        if (SearchWasRequested)
+        {
+            SearchResults = await _capabilityCatalog.SearchAsync(
+                new CapabilityCatalogQuery
+                {
+                    SearchText = q
+                },
+                cancellationToken);
+        }
 
         if (!CapabilityWasRequested)
         {

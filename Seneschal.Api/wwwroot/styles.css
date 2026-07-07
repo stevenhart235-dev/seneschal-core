@@ -275,6 +275,86 @@ button {
     color: #9CA3AF;
 }
 
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin: 20px 0;
+}
+
+.dashboard-card {
+    background: #1F2937;
+    border: 1px solid #374151;
+    border-radius: 10px;
+    min-height: 112px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.dashboard-card strong {
+    display: block;
+    font-size: 34px;
+    line-height: 1;
+}
+
+.dashboard-card span {
+    color: #9CA3AF;
+    margin-top: 10px;
+}
+
+.dashboard-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.compact-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.compact-list li {
+    align-items: center;
+    background: #111827;
+    border-radius: 8px;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding: 14px;
+}
+
+.compact-list a {
+    color: #93C5FD;
+    text-decoration: none;
+}
+
+.compact-list span:not(.badge) {
+    color: #9CA3AF;
+}
+
+.quick-link-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.quick-link-panel p {
+    flex: 1;
+}
+
+.button-link {
+    background: #2563EB;
+    border-radius: 6px;
+    color: white;
+    padding: 10px 16px;
+    text-decoration: none;
+}
+
 .relationship-group {
     margin-top: 20px;
 }

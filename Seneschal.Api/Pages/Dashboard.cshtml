@@ -1,0 +1,106 @@
+@page "/dashboard"
+@model Seneschal.Api.Pages.DashboardModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seneschal Dashboard</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">Seneschal</div>
+            <nav class="sidebar-nav" aria-label="Primary navigation">
+                <a class="active" href="/dashboard">Dashboard</a>
+                <a href="/capability-explorer">Capabilities</a>
+                <a href="/policies">Policies</a>
+                <a href="/identities">Identities</a>
+                <a href="#">Resources</a>
+                <a href="/audit">Audit</a>
+            </nav>
+        </aside>
+
+        <main class="container explorer-page">
+            <header class="page-header">
+                <h1>Seneschal Dashboard</h1>
+                <p class="subtitle">
+                    A compact view of the configured governance inventory.
+                </p>
+            </header>
+
+            <section class="dashboard-grid">
+                <article class="dashboard-card">
+                    <strong>@Model.TotalCapabilities</strong>
+                    <span>Total Capabilities</span>
+                </article>
+                <article class="dashboard-card">
+                    <strong>@Model.TotalPolicies</strong>
+                    <span>Total Policies</span>
+                </article>
+                <article class="dashboard-card">
+                    <strong>@Model.TotalIdentities</strong>
+                    <span>Total Identities</span>
+                </article>
+                <article class="dashboard-card">
+                    <strong>@Model.TotalRelationships</strong>
+                    <span>Total Relationships</span>
+                </article>
+            </section>
+
+            <section class="dashboard-columns">
+                <article class="panel">
+                    <h2>Highest Risk Capabilities</h2>
+                    <ul class="compact-list">
+                        @foreach (var entry in Model.HighestRiskCapabilities)
+                        {
+                            var capability = entry.Capability;
+                            <li>
+                                <a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(capability.Id)">
+                                    @capability.Id
+                                </a>
+                                <span class="badge risk-badge risk-@capability.RiskLevel.ToString().ToLowerInvariant()">
+                                    @capability.RiskLevel
+                                </span>
+                            </li>
+                        }
+                    </ul>
+                </article>
+
+                <article class="panel">
+                    <h2>Recently Added Capabilities</h2>
+                    <ul class="compact-list">
+                        @foreach (var entry in Model.RecentlyAddedCapabilities)
+                        {
+                            var capability = entry.Capability;
+                            <li>
+                                <a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(capability.Id)">
+                                    @capability.Id
+                                </a>
+                                <span>@capability.Category</span>
+                            </li>
+                        }
+                    </ul>
+                </article>
+            </section>
+
+            <section class="panel quick-link-panel">
+                <h2>Explore Capabilities</h2>
+                <p class="muted">
+                    Search the catalog and inspect projected governance
+                    relationships for a capability.
+                </p>
+                <a class="button-link" href="/capability-explorer">
+                    Open Capability Explorer
+                </a>
+            </section>
+
+            <footer class="app-footer">Seneschal v0.2.1-alpha</footer>
+        </main>
+    </div>
+</body>
+</html>

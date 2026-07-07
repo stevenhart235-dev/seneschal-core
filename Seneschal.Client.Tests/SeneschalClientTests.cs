@@ -1,0 +1,210 @@
+using System.Net;
+using System.Text;
+using System.Text.Json;
+using Seneschal.Client.Models;
+using Xunit;
+
+namespace Seneschal.Client.Tests;
+
+public sealed class SeneschalClientTests
+{
+    [Fact]
+    public async Task EvaluateAsync_PostsRequestAndDeserializesDecision()
+    {
+        var handler = new StubHttpMessageHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent(
+                    """
+                    {
+                      "decision": "allow",
+                      "reason": "Allowed by policy",
+                      "policyMatched": "policy-1",
+                      "durationMs": 12,
+                      "effectiveAction": "allow",
+                      "mode": "LogOnly"
+                    }
+                    """)
+            });
+        using var httpClient = new HttpClient(handler);
+        var client = new SeneschalClient(
+            httpClient,
+            new Uri("https://seneschal.example"));
+
+        var result = await client.EvaluateAsync(new DecisionRequest
+        {
+            Identity = "payment-agent",
+            Capability = "azure.keyvault.secret.read",
+            Context = new Dictionary<string, string>
+            {
+                ["environment"] = "production"
+            }
+        });
+
+        Assert.Equal("allow", result.Decision);
+        Assert.Equal("Allowed by policy", result.Reason);
+        Assert.Equal("policy-1", result.PolicyMatched);
+        Assert.Equal(12, result.DurationMs);
+        Assert.Equal("allow", result.EffectiveAction);
+        Assert.Equal("LogOnly", result.Mode);
+
+        Assert.Equal(HttpMethod.Post, handler.Requests.Single().Method);
+        Assert.Equal(
+            "https://seneschal.example/evaluate",
+            handler.Requests.Single().RequestUri?.ToString());
+
+        using var document = JsonDocument.Parse(handler.Requests.Single().Body);
+
+        Assert.Equal(
+            "payment-agent",
+            document.RootElement.GetProperty("identity").GetString());
+        Assert.Equal(
+            "azure.keyvault.secret.read",
+            document.RootElement.GetProperty("capability").GetString());
+        Assert.Equal(
+            "production",
+            document.RootElement
+                .GetProperty("context")
+                .GetProperty("environment")
+                .GetString());
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SendsApiKeyHeaderWhenConfigured()
+    {
+        var handler = new StubHttpMessageHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent("""{"decision":"allow"}""")
+            });
+        using var httpClient = new HttpClient(handler);
+        var client = new SeneschalClient(
+            httpClient,
+            new SeneschalClientOptions
+            {
+                BaseUrl = new Uri("https://seneschal.example"),
+                ApiKey = "secret-token"
+            });
+
+        await client.EvaluateAsync(CreateRequest());
+
+        Assert.True(
+            handler.Requests.Single().Headers.TryGetValue(
+                "X-Api-Key",
+                out var values));
+        Assert.Equal("secret-token", values.Single());
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_ThrowsForUnsuccessfulResponse()
+    {
+        var handler = new StubHttpMessageHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.InternalServerError)
+            {
+                Content = JsonContent("boom")
+            });
+        using var httpClient = new HttpClient(handler);
+        var client = new SeneschalClient(
+            httpClient,
+            new Uri("https://seneschal.example"));
+
+        var exception = await Assert.ThrowsAsync<SeneschalClientException>(
+            () => client.EvaluateAsync(CreateRequest()));
+
+        Assert.Equal(HttpStatusCode.InternalServerError, exception.StatusCode);
+        Assert.Equal("boom", exception.ResponseBody);
+        Assert.Contains("HTTP 500", exception.Message);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_ThrowsForInvalidJsonResponse()
+    {
+        var handler = new StubHttpMessageHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent("{not-json")
+            });
+        using var httpClient = new HttpClient(handler);
+        var client = new SeneschalClient(
+            httpClient,
+            new Uri("https://seneschal.example"));
+
+        var exception = await Assert.ThrowsAsync<SeneschalClientException>(
+            () => client.EvaluateAsync(CreateRequest()));
+
+        Assert.Contains("invalid decision response", exception.Message);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_ThrowsForConnectivityFailure()
+    {
+        var handler = new StubHttpMessageHandler(_ =>
+            throw new HttpRequestException("network down"));
+        using var httpClient = new HttpClient(handler);
+        var client = new SeneschalClient(
+            httpClient,
+            new Uri("https://seneschal.example"));
+
+        var exception = await Assert.ThrowsAsync<SeneschalClientException>(
+            () => client.EvaluateAsync(CreateRequest()));
+
+        Assert.Contains("Unable to reach", exception.Message);
+        Assert.IsType<HttpRequestException>(exception.InnerException);
+    }
+
+    private static DecisionRequest CreateRequest()
+    {
+        return new DecisionRequest
+        {
+            Identity = "payment-agent",
+            Capability = "azure.keyvault.secret.read",
+            Context = new Dictionary<string, string>
+            {
+                ["environment"] = "production"
+            }
+        };
+    }
+
+    private static StringContent JsonContent(string json)
+    {
+        return new StringContent(json, Encoding.UTF8, "application/json");
+    }
+
+    private sealed class StubHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpRequestMessage, HttpResponseMessage> _handler;
+
+        public StubHttpMessageHandler(
+            Func<HttpRequestMessage, HttpResponseMessage> handler)
+        {
+            _handler = handler;
+        }
+
+        public List<RecordedRequest> Requests { get; } = new();
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            var body = request.Content is null
+                ? string.Empty
+                : await request.Content.ReadAsStringAsync(cancellationToken);
+
+            Requests.Add(new RecordedRequest(
+                request.Method,
+                request.RequestUri,
+                request.Headers.ToDictionary(
+                    header => header.Key,
+                    header => header.Value.ToList()),
+                body));
+
+            return _handler(request);
+        }
+    }
+
+    private sealed record RecordedRequest(
+        HttpMethod Method,
+        Uri? RequestUri,
+        Dictionary<string, List<string>> Headers,
+        string Body);
+}

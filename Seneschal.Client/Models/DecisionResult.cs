@@ -1,0 +1,57 @@
+namespace Seneschal.Client.Models;
+
+/// <summary>
+/// Represents the decision returned by the Seneschal runtime.
+/// </summary>
+public sealed record DecisionResult
+{
+    /// <summary>
+    /// Gets the resolved decision.
+    /// </summary>
+    public string Decision { get; init; } = "";
+
+    /// <summary>
+    /// Gets the human-readable reason for the decision.
+    /// </summary>
+    public string Reason { get; init; } = "";
+
+    /// <summary>
+    /// Gets the primary matched policy name or identifier.
+    /// </summary>
+    public string PolicyMatched { get; init; } = "";
+
+    /// <summary>
+    /// Gets the evaluation duration in milliseconds.
+    /// </summary>
+    public long DurationMs { get; init; }
+
+    /// <summary>
+    /// Gets the effective action after enforcement-mode projection.
+    /// </summary>
+    public string EffectiveAction { get; init; } = "";
+
+    /// <summary>
+    /// Gets the enforcement mode returned by Seneschal.
+    /// </summary>
+    public string Mode { get; init; } = "";
+
+    /// <summary>
+    /// Gets matched policies when returned by a runtime endpoint.
+    /// </summary>
+    public List<string> MatchedPolicies { get; init; } = new();
+
+    /// <summary>
+    /// Gets obligations attached to the decision.
+    /// </summary>
+    public List<string> Obligations { get; init; } = new();
+
+    /// <summary>
+    /// Gets a future correlation identifier, when returned.
+    /// </summary>
+    public string? CorrelationId { get; init; }
+
+    /// <summary>
+    /// Gets a future audit event identifier, when returned.
+    /// </summary>
+    public string? EventId { get; init; }
+}

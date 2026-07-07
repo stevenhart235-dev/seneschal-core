@@ -177,17 +177,23 @@ public sealed class CapabilityExplorerModel : PageModel
         {
             GovernanceRelationshipType.IdentityAssignedCapability or
                 GovernanceRelationshipType.IdentityInvokedCapability =>
-                FormatRelatedEntity(relationship, GovernanceEntityType.Identity),
+                FormatCompactRelatedEntity(
+                    relationship,
+                    GovernanceEntityType.Identity),
             GovernanceRelationshipType.PolicyAppliesToCapability =>
-                FormatRelatedEntity(relationship, GovernanceEntityType.Policy),
+                FormatCompactRelatedEntity(
+                    relationship,
+                    GovernanceEntityType.Policy),
             GovernanceRelationshipType.CapabilityTargetsResource or
                 GovernanceRelationshipType.PolicyAppliesToResource =>
-                FormatRelatedEntity(relationship, GovernanceEntityType.Resource),
+                FormatCompactRelatedEntity(
+                    relationship,
+                    GovernanceEntityType.Resource),
             _ => $"{FormatEntity(relationship.From)} -> {FormatEntity(relationship.To)}"
         };
     }
 
-    private static string FormatRelatedEntity(
+    private static string FormatCompactRelatedEntity(
         GovernanceRelationship relationship,
         GovernanceEntityType entityType)
     {
@@ -195,7 +201,9 @@ public sealed class CapabilityExplorerModel : PageModel
             ? relationship.From
             : relationship.To;
 
-        return FormatEntity(entity);
+        return string.IsNullOrWhiteSpace(entity.Scope)
+            ? entity.Id
+            : $"{entity.Id} [{entity.Scope}]";
     }
 
     private static string FormatEntity(GovernanceEntityReference entity)

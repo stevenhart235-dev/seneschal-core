@@ -53,6 +53,9 @@ public sealed class AuditTrailPageTests :
         Assert.Contains("Most evaluated capability", html);
         Assert.Contains("Most matched policy", html);
         Assert.Contains("Average evaluation duration", html);
+        Assert.True(
+            html.IndexOf("Audit Insights", StringComparison.Ordinal) <
+            html.IndexOf("Filter Audit Events", StringComparison.Ordinal));
         Assert.Contains("Audit Timeline", html);
         Assert.Contains("timeline-item", html);
         Assert.Contains("Recent Audit Events", html);
@@ -167,6 +170,15 @@ public sealed class AuditTrailPageTests :
         AssertInsight(html, "Most matched policy", "none");
         AssertInsight(html, "Average evaluation duration", "0 ms");
         Assert.Contains("No audit events yet", html);
+        Assert.Contains(
+            "Audit events are created automatically when decisions are evaluated.",
+            html);
+        Assert.Contains(
+            "Users do not manually create audit events.",
+            html);
+        Assert.Contains(
+            "seneschal evaluate payment-agent azure.keyvault.secret.read production",
+            html);
     }
 
     [Fact]
@@ -357,13 +369,32 @@ public sealed class AuditTrailPageTests :
         var html = await response.Content.ReadAsStringAsync();
 
         Assert.Contains("Filter Audit Events", html);
-        Assert.Contains("name=\"identityId\" value=\"payment-agent\"", html);
-        Assert.Contains("name=\"capabilityId\" value=\"DeployApplication\"", html);
-        Assert.Contains("name=\"decision\" value=\"Allow\"", html);
-        Assert.Contains("name=\"enforcementMode\" value=\"LogOnly\"", html);
-        Assert.Contains("name=\"environment\" value=\"dev\"", html);
+        Assert.Contains("<details class=\"panel filter-panel\" open>", html);
         Assert.Contains(
-            "name=\"matchedPolicy\" value=\"Developers can deploy to dev\"",
+            "Narrow recent decisions by identity, capability, environment, policy, decision, or mode.",
+            html);
+        Assert.Contains(
+            "name=\"identityId\" placeholder=\"payment-agent\" value=\"payment-agent\"",
+            html);
+        Assert.Contains(
+            "name=\"capabilityId\" placeholder=\"azure.keyvault.secret.read\" value=\"DeployApplication\"",
+            html);
+        Assert.Contains("<select name=\"decision\">", html);
+        Assert.Contains("<option value=\"allow\" selected>Allow</option>", html);
+        Assert.Contains("<option value=\"deny\">Deny</option>", html);
+        Assert.Contains(
+            "<option value=\"requires_approval\">PendingApproval</option>",
+            html);
+        Assert.Contains("<select name=\"enforcementMode\">", html);
+        Assert.Contains(
+            "<option value=\"LogOnly\" selected>Monitor</option>",
+            html);
+        Assert.Contains("<option value=\"Enforce\">Enforce</option>", html);
+        Assert.Contains(
+            "name=\"environment\" placeholder=\"production\" value=\"dev\"",
+            html);
+        Assert.Contains(
+            "name=\"matchedPolicy\" placeholder=\"prod-secret-read\" value=\"Developers can deploy to dev\"",
             html);
     }
 

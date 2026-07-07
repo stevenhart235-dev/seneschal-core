@@ -33,7 +33,15 @@ public sealed class CapabilityExplorerPageTests :
         Assert.Contains("Governance Summary", html);
         Assert.Contains("Assigned Identities", html);
         Assert.Contains("Governing Policies", html);
+        Assert.Contains("relationship-compact-grid", html);
+        Assert.Contains("relationship-compact-group", html);
+        Assert.Contains("relationship-chip", html);
+        Assert.Contains(">Developer</span>", html);
+        Assert.Contains(">Developers can deploy to dev</span>", html);
         Assert.Contains("PolicyProjection", html);
+        Assert.Contains("Declared · PolicyProjection", html);
+        Assert.DoesNotContain("Origin:", html);
+        Assert.DoesNotContain("Source:", html);
         Assert.Contains("Graph View", html);
         Assert.Contains("aria-label=\"Capability ego graph\"", html);
         Assert.Contains("graph-node graph-node-capability", html);
@@ -58,6 +66,23 @@ public sealed class CapabilityExplorerPageTests :
     }
 
     [Fact]
+    public async Task CapabilityExplorer_SearchMissExplainsCatalogSearch()
+    {
+        using var response = await _client.GetAsync(
+            "/capability-explorer?q=missing-capability");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Contains("No capabilities matched", html);
+        Assert.Contains(
+            "The Capability Explorer searches the configured",
+            html);
+        Assert.Contains("azure.keyvault.secret.read", html);
+    }
+
+    [Fact]
     public async Task CapabilityExplorer_SelectingSearchResultRendersOverview()
     {
         using var response = await _client.GetAsync(
@@ -71,5 +96,22 @@ public sealed class CapabilityExplorerPageTests :
         Assert.Contains("Capability Metadata", html);
         Assert.Contains("azure.keyvault.secret.read", html);
         Assert.Contains("Support secret reads require approval", html);
+    }
+
+    [Fact]
+    public async Task CapabilityExplorer_UnknownCapabilityExplainsCatalogSource()
+    {
+        using var response = await _client.GetAsync(
+            "/capability-explorer?capabilityId=unknown-capability");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Contains("Capability not found", html);
+        Assert.Contains(
+            "Capability pages are created from catalog entries",
+            html);
+        Assert.Contains("azure.keyvault.secret.read", html);
     }
 }

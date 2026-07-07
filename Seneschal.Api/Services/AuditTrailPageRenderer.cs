@@ -41,14 +41,16 @@ public static class AuditTrailPageRenderer
         html.AppendLine("                <h1>Seneschal Audit Trail</h1>");
         html.AppendLine("                <p class=\"subtitle\">Recent completed policy evaluations.</p>");
         html.AppendLine("            </header>");
-        AppendFilterForm(html, filter);
         AppendInsights(html, events);
+        AppendFilterForm(html, filter);
 
         if (events.Count == 0)
         {
             html.AppendLine("            <section class=\"notice\">");
             html.AppendLine("                <h2>No audit events yet</h2>");
-            html.AppendLine("                <p class=\"muted\">Run a policy evaluation to populate the audit trail.</p>");
+            html.AppendLine("                <p class=\"muted\">Audit events are created automatically when decisions are evaluated.</p>");
+            html.AppendLine("                <p class=\"muted\">Users do not manually create audit events. Run a policy evaluation to populate the audit trail.</p>");
+            html.AppendLine("                <p class=\"muted\">Try: <span class=\"code\">seneschal evaluate payment-agent azure.keyvault.secret.read production</span></p>");
             html.AppendLine("            </section>");
         }
         else
@@ -94,21 +96,65 @@ public static class AuditTrailPageRenderer
         StringBuilder html,
         AuditEventFilter filter)
     {
-        html.AppendLine("            <section class=\"panel\">");
-        html.AppendLine("                <h2>Filter Audit Events</h2>");
+        var isOpen = HasActiveFilters(filter) ? " open" : string.Empty;
+
+        html.Append("            <details class=\"panel filter-panel\"")
+            .Append(isOpen)
+            .AppendLine(">");
+        html.AppendLine("                <summary>Filter Audit Events</summary>");
+        html.AppendLine("                <p class=\"muted filter-help\">Narrow recent decisions by identity, capability, environment, policy, decision, or mode.</p>");
         html.AppendLine("                <form class=\"filter-form\" method=\"get\" action=\"/audit\">");
-        AppendFilterInput(html, "identityId", "Identity ID", filter.IdentityId);
-        AppendFilterInput(html, "capabilityId", "Capability ID", filter.CapabilityId);
-        AppendFilterInput(html, "decision", "Decision", filter.Decision);
-        AppendFilterInput(html, "enforcementMode", "Enforcement Mode", filter.EnforcementMode);
-        AppendFilterInput(html, "environment", "Environment", filter.Environment);
-        AppendFilterInput(html, "matchedPolicy", "Matched Policy", filter.MatchedPolicy);
+        AppendFilterInput(
+            html,
+            "identityId",
+            "Identity ID",
+            filter.IdentityId,
+            "payment-agent");
+        AppendFilterInput(
+            html,
+            "capabilityId",
+            "Capability ID",
+            filter.CapabilityId,
+            "azure.keyvault.secret.read");
+        AppendFilterSelect(
+            html,
+            "decision",
+            "Decision",
+            filter.Decision,
+            [
+                ("", "All"),
+                ("allow", "Allow"),
+                ("deny", "Deny"),
+                ("requires_approval", "PendingApproval")
+            ]);
+        AppendFilterSelect(
+            html,
+            "enforcementMode",
+            "Enforcement Mode",
+            filter.EnforcementMode,
+            [
+                ("", "All"),
+                ("LogOnly", "Monitor"),
+                ("Enforce", "Enforce")
+            ]);
+        AppendFilterInput(
+            html,
+            "environment",
+            "Environment",
+            filter.Environment,
+            "production");
+        AppendFilterInput(
+            html,
+            "matchedPolicy",
+            "Matched Policy",
+            filter.MatchedPolicy,
+            "prod-secret-read");
         html.AppendLine("                    <div class=\"filter-actions\">");
         html.AppendLine("                        <button type=\"submit\">Apply Filters</button>");
         html.AppendLine("                        <a class=\"table-link\" href=\"/audit\">Clear</a>");
         html.AppendLine("                    </div>");
         html.AppendLine("                </form>");
-        html.AppendLine("            </section>");
+        html.AppendLine("            </details>");
     }
 
     private static void AppendInsights(
@@ -250,7 +296,8 @@ public static class AuditTrailPageRenderer
         StringBuilder html,
         string name,
         string label,
-        string? value)
+        string? value,
+        string placeholder)
     {
         html.AppendLine("                    <label>");
         html.Append("                        <span>")
@@ -258,10 +305,79 @@ public static class AuditTrailPageRenderer
             .AppendLine("</span>");
         html.Append("                        <input name=\"")
             .Append(Encode(name))
+            .Append("\" placeholder=\"")
+            .Append(Encode(placeholder))
             .Append("\" value=\"")
             .Append(Encode(value ?? string.Empty))
             .AppendLine("\" />");
         html.AppendLine("                    </label>");
+    }
+
+    private static void AppendFilterSelect(
+        StringBuilder html,
+        string name,
+        string label,
+        string? selectedValue,
+        IReadOnlyCollection<(string Value, string Label)> options)
+    {
+        html.AppendLine("                    <label>");
+        html.Append("                        <span>")
+            .Append(Encode(label))
+            .AppendLine("</span>");
+        html.Append("                        <select name=\"")
+            .Append(Encode(name))
+            .AppendLine("\">");
+
+        foreach (var option in options)
+        {
+            var selected = IsSelectedFilterValue(
+                selectedValue,
+                option.Value,
+                option.Label)
+                ? " selected"
+                : string.Empty;
+
+            html.Append("                            <option value=\"")
+                .Append(Encode(option.Value))
+                .Append("\"")
+                .Append(selected)
+                .Append(">")
+                .Append(Encode(option.Label))
+                .AppendLine("</option>");
+        }
+
+        html.AppendLine("                        </select>");
+        html.AppendLine("                    </label>");
+    }
+
+    private static bool HasActiveFilters(AuditEventFilter filter)
+    {
+        return !string.IsNullOrWhiteSpace(filter.IdentityId) ||
+            !string.IsNullOrWhiteSpace(filter.CapabilityId) ||
+            !string.IsNullOrWhiteSpace(filter.Decision) ||
+            !string.IsNullOrWhiteSpace(filter.EnforcementMode) ||
+            !string.IsNullOrWhiteSpace(filter.Environment) ||
+            !string.IsNullOrWhiteSpace(filter.MatchedPolicy);
+    }
+
+    private static bool IsSelectedFilterValue(
+        string? selectedValue,
+        string optionValue,
+        string optionLabel)
+    {
+        if (string.IsNullOrWhiteSpace(selectedValue))
+        {
+            return string.IsNullOrWhiteSpace(optionValue);
+        }
+
+        return string.Equals(
+                selectedValue,
+                optionValue,
+                StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(
+                selectedValue,
+                optionLabel,
+                StringComparison.OrdinalIgnoreCase);
     }
 
     private static void AppendRow(

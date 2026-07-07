@@ -54,10 +54,18 @@
 
                 @if (Model.SearchResults.Count == 0)
                 {
-                    <p class="muted">
-                        No capabilities matched
-                        <span class="code">@Model.Query</span>.
-                    </p>
+                    <div class="empty-state">
+                        <p class="muted">
+                            No capabilities matched
+                            <span class="code">@Model.Query</span>.
+                        </p>
+                        <p class="muted">
+                            The Capability Explorer searches the configured
+                            capability catalog. Try a provider, tag, or full
+                            capability id such as
+                            <span class="code">azure.keyvault.secret.read</span>.
+                        </p>
+                    </div>
                 }
                 else
                 {
@@ -81,10 +89,15 @@
         {
             <section class="notice">
                 <h2>Capability not found</h2>
-                <p>
+                <p class="muted">
                     No capability was found for
                     <span class="code">@Model.CapabilityId</span>.
-                    Check the capability ID and try again.
+                    Capability pages are created from catalog entries, so this
+                    may be empty until the capability is configured.
+                </p>
+                <p class="muted">
+                    Try searching the catalog, or use a known id such as
+                    <span class="code">azure.keyvault.secret.read</span>.
                 </p>
             </section>
         }
@@ -165,28 +178,36 @@
 
                 @if (groups.Count == 0)
                 {
-                    <p class="muted">No relationships found.</p>
+                    <div class="empty-state">
+                        <p class="muted">
+                            No relationships found for this capability yet.
+                        </p>
+                        <p class="muted">
+                            Relationships are projected from sources such as
+                            policies and observations. They appear when a policy
+                            targets this capability or when usage is observed.
+                        </p>
+                    </div>
                 }
                 else
                 {
-                    foreach (var group in groups)
-                    {
-                        <section class="relationship-group relationship-card">
-                            <h3>@group.Label</h3>
-                            <ul>
-                                @foreach (var item in group.Items)
-                                {
-                                    <li>
-                                        <span>@item.Label</span>
-                                        <small>
-                                            Origin: @item.Origin;
-                                            Source: @item.SourceSystem
-                                        </small>
-                                    </li>
-                                }
-                            </ul>
-                        </section>
-                    }
+                    <div class="relationship-compact-grid">
+                        @foreach (var group in groups)
+                        {
+                            <section class="relationship-group relationship-compact-group">
+                                <h3>@group.Label</h3>
+                                <ul class="relationship-compact-list">
+                                    @foreach (var item in group.Items)
+                                    {
+                                        <li>
+                                            <span class="relationship-chip">@item.Label</span>
+                                            <small>@item.Origin · @item.SourceSystem</small>
+                                        </li>
+                                    }
+                                </ul>
+                            </section>
+                        }
+                    </div>
                 }
             </section>
 
@@ -198,10 +219,17 @@
 
                 @if (graphGroups.Count == 0)
                 {
-                    <p class="muted">
-                        No graph relationships are available for this
-                        capability yet.
-                    </p>
+                    <div class="empty-state">
+                        <p class="muted">
+                            No connected graph nodes are available for this
+                            capability yet.
+                        </p>
+                        <p class="muted">
+                            The graph is drawn from relationship data. It will
+                            populate after policies, identities, resources, or
+                            observed usage connect to this capability.
+                        </p>
+                    </div>
                 }
                 else
                 {

@@ -55,36 +55,56 @@
             <section class="dashboard-columns">
                 <article class="panel">
                     <h2>Highest Risk Capabilities</h2>
-                    <ul class="compact-list">
-                        @foreach (var entry in Model.HighestRiskCapabilities)
-                        {
-                            var capability = entry.Capability;
-                            <li>
-                                <a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(capability.Id)">
-                                    @capability.Id
-                                </a>
-                                <span class="badge risk-badge risk-@capability.RiskLevel.ToString().ToLowerInvariant()">
-                                    @capability.RiskLevel
-                                </span>
-                            </li>
-                        }
-                    </ul>
+                    @if (Model.HighestRiskCapabilities.Count == 0)
+                    {
+                        <p class="muted empty-state">
+                            This panel highlights risky capabilities from the catalog.
+                            It is empty until capabilities are configured.
+                        </p>
+                    }
+                    else
+                    {
+                        <ul class="compact-list">
+                            @foreach (var entry in Model.HighestRiskCapabilities)
+                            {
+                                var capability = entry.Capability;
+                                <li>
+                                    <a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(capability.Id)">
+                                        @capability.Id
+                                    </a>
+                                    <span class="badge risk-badge risk-@capability.RiskLevel.ToString().ToLowerInvariant()">
+                                        @capability.RiskLevel
+                                    </span>
+                                </li>
+                            }
+                        </ul>
+                    }
                 </article>
 
                 <article class="panel">
                     <h2>Recently Added Capabilities</h2>
-                    <ul class="compact-list">
-                        @foreach (var entry in Model.RecentlyAddedCapabilities)
-                        {
-                            var capability = entry.Capability;
-                            <li>
-                                <a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(capability.Id)">
-                                    @capability.Id
-                                </a>
-                                <span>@capability.Category</span>
-                            </li>
-                        }
-                    </ul>
+                    @if (Model.RecentlyAddedCapabilities.Count == 0)
+                    {
+                        <p class="muted empty-state">
+                            Recently added capabilities appear here after the
+                            capability catalog is populated.
+                        </p>
+                    }
+                    else
+                    {
+                        <ul class="compact-list">
+                            @foreach (var entry in Model.RecentlyAddedCapabilities)
+                            {
+                                var capability = entry.Capability;
+                                <li>
+                                    <a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(capability.Id)">
+                                        @capability.Id
+                                    </a>
+                                    <span>@capability.Category</span>
+                                </li>
+                            }
+                        </ul>
+                    }
                 </article>
             </section>
 

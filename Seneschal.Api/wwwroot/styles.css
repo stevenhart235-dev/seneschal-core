@@ -3,12 +3,14 @@ body {
     background: #111827;
     color: white;
     margin: 0;
+    font-size: 14px;
+    line-height: 1.4;
 }
 
 .container {
     width: 1100px;
     margin: auto;
-    padding: 40px;
+    padding: 24px 32px;
 }
 
 .subtitle {
@@ -17,20 +19,22 @@ body {
 
 .cards {
     display: flex;
-    gap: 20px;
-    margin: 30px 0;
+    gap: 10px;
+    margin: 14px 0;
 }
 
 .card {
     background: #1F2937;
-    padding: 20px;
+    border: 1px solid #374151;
+    padding: 12px;
     border-radius: 8px;
     flex: 1;
     text-align: center;
 }
 
 .card h2 {
-    font-size: 40px;
+    font-size: 28px;
+    line-height: 1;
     margin: 0;
 }
 
@@ -41,17 +45,17 @@ table {
 
 th {
     background: #374151;
-    padding: 12px;
+    padding: 9px 10px;
 }
 
 td {
-    padding: 10px;
+    padding: 8px 10px;
     border-bottom: 1px solid #374151;
 }
 .simulator {
     display: flex;
-    gap: 20px;
-    margin: 20px 0 40px 0;
+    gap: 16px;
+    margin: 16px 0 28px 0;
 }
 
 .simulator-form {
@@ -65,15 +69,15 @@ td {
 
 label {
     display: block;
-    margin-top: 12px;
-    margin-bottom: 6px;
+    margin-top: 9px;
+    margin-bottom: 4px;
     color: #9CA3AF;
 }
 
 select,
 input {
     width: 100%;
-    padding: 10px;
+    padding: 8px 10px;
     background: #111827;
     color: white;
     border: 1px solid #374151;
@@ -81,8 +85,8 @@ input {
 }
 
 button {
-    margin-top: 18px;
-    padding: 10px 16px;
+    margin-top: 12px;
+    padding: 8px 14px;
     background: #2563EB;
     color: white;
     border: 0;
@@ -92,6 +96,18 @@ button {
 
 .muted {
     color: #9CA3AF;
+}
+
+.empty-state {
+    margin: 0;
+}
+
+.empty-state p {
+    margin: 0 0 8px 0;
+}
+
+.empty-state p:last-child {
+    margin-bottom: 0;
 }
 
 .explorer-page {
@@ -109,8 +125,8 @@ button {
     background: #0B1120;
     border-right: 1px solid #1F2937;
     box-sizing: border-box;
-    flex: 0 0 240px;
-    padding: 28px 18px;
+    flex: 0 0 220px;
+    padding: 22px 14px;
     position: sticky;
     top: 0;
     height: 100vh;
@@ -118,21 +134,21 @@ button {
 
 .sidebar-brand {
     color: #F9FAFB;
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 700;
-    margin-bottom: 28px;
+    margin-bottom: 20px;
 }
 
 .sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
 }
 
 .sidebar-nav a {
     border-radius: 8px;
     color: #CBD5E1;
-    padding: 10px 12px;
+    padding: 8px 10px;
     text-decoration: none;
 }
 
@@ -147,13 +163,17 @@ button {
 }
 
 .page-header {
-    margin: 0 0 28px 0;
+    margin: 0 0 18px 0;
 }
 
 .page-header h1 {
-    font-size: 36px;
+    font-size: 30px;
     line-height: 1.15;
-    margin-bottom: 10px;
+    margin: 0 0 6px 0;
+}
+
+.page-header .subtitle {
+    margin: 0;
 }
 
 .search-panel,
@@ -162,13 +182,14 @@ button {
     background: #1F2937;
     border: 1px solid #374151;
     border-radius: 10px;
-    margin: 20px 0;
-    padding: 24px;
+    margin: 12px 0;
+    padding: 14px;
 }
 
 .panel h2,
 .notice h2 {
-    margin-top: 0;
+    font-size: 18px;
+    margin: 0 0 10px 0;
 }
 
 .search-row {
@@ -187,11 +208,12 @@ button {
 .metadata-grid {
     display: grid;
     grid-template-columns: 140px 1fr;
-    gap: 12px 20px;
+    gap: 7px 16px;
 }
 
 .metadata-grid dt {
     color: #9CA3AF;
+    font-size: 12px;
 }
 
 .metadata-grid dd {
@@ -201,17 +223,18 @@ button {
 .badge-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 20px;
+    gap: 5px;
+    margin-bottom: 10px;
 }
 
 .badge {
     border-radius: 999px;
     display: inline-flex;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.02em;
-    padding: 5px 10px;
+    line-height: 1;
+    padding: 4px 7px;
     text-transform: uppercase;
 }
 
@@ -252,14 +275,15 @@ button {
 .summary-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
+    gap: 8px;
 }
 
 .summary-card {
     background: #111827;
+    border: 1px solid #374151;
     border-radius: 8px;
-    min-height: 92px;
-    padding: 16px;
+    min-height: 64px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -267,27 +291,29 @@ button {
 
 .summary-grid strong {
     display: block;
-    font-size: 30px;
+    font-size: 23px;
+    line-height: 1;
 }
 
 .summary-grid span,
 .relationship-group small {
     color: #9CA3AF;
+    font-size: 12px;
 }
 
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-    margin: 20px 0;
+    gap: 8px;
+    margin: 12px 0;
 }
 
 .dashboard-card {
-    background: #1F2937;
+    background: #111827;
     border: 1px solid #374151;
     border-radius: 10px;
-    min-height: 112px;
-    padding: 20px;
+    min-height: 66px;
+    padding: 10px 12px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -295,19 +321,20 @@ button {
 
 .dashboard-card strong {
     display: block;
-    font-size: 34px;
+    font-size: 25px;
     line-height: 1;
 }
 
 .dashboard-card span {
     color: #9CA3AF;
-    margin-top: 10px;
+    font-size: 12px;
+    margin-top: 5px;
 }
 
 .dashboard-columns {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    gap: 14px;
 }
 
 .compact-list {
@@ -319,12 +346,13 @@ button {
 .compact-list li {
     align-items: center;
     background: #111827;
+    border: 1px solid #273449;
     border-radius: 8px;
     display: flex;
     gap: 12px;
     justify-content: space-between;
-    margin-bottom: 10px;
-    padding: 14px;
+    margin-bottom: 6px;
+    padding: 8px 10px;
 }
 
 .compact-list a {
@@ -340,40 +368,42 @@ button {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
+    gap: 12px;
 }
 
 .quick-link-panel p {
     flex: 1;
+    margin: 0;
 }
 
 .policy-grid {
     display: grid;
-    gap: 18px;
+    gap: 12px;
 }
 
 .policy-card {
     background: #1F2937;
     border: 1px solid #374151;
     border-radius: 10px;
-    padding: 24px;
+    padding: 16px;
 }
 
 .policy-card-header {
     align-items: flex-start;
     display: flex;
-    gap: 16px;
+    gap: 12px;
     justify-content: space-between;
 }
 
 .policy-card h2 {
-    font-size: 22px;
+    font-size: 19px;
     margin: 0;
 }
 
 .policy-reason {
     color: #D1D5DB;
-    line-height: 1.5;
+    line-height: 1.4;
+    margin: 10px 0;
 }
 
 .decision-badge {
@@ -408,21 +438,21 @@ button {
 
 .policy-relations {
     display: grid;
-    gap: 14px;
+    gap: 10px;
     grid-template-columns: repeat(3, 1fr);
-    margin-top: 20px;
+    margin-top: 12px;
 }
 
 .policy-relations div {
     background: #111827;
     border-radius: 8px;
-    padding: 14px;
+    padding: 10px;
 }
 
 .policy-relations h3 {
     color: #9CA3AF;
     font-size: 13px;
-    margin: 0 0 10px 0;
+    margin: 0 0 6px 0;
     text-transform: uppercase;
 }
 
@@ -434,7 +464,7 @@ button {
 
 .policy-relations li {
     color: #F9FAFB;
-    margin-bottom: 8px;
+    margin-bottom: 5px;
 }
 
 .audit-table {
@@ -451,7 +481,7 @@ button {
 
 .audit-insights-grid {
     display: grid;
-    gap: 14px;
+    gap: 10px;
     grid-template-columns: repeat(4, 1fr);
 }
 
@@ -459,13 +489,13 @@ button {
     background: #111827;
     border: 1px solid #374151;
     border-radius: 10px;
-    min-height: 92px;
-    padding: 16px;
+    min-height: 64px;
+    padding: 10px;
 }
 
 .audit-insight-card strong {
     display: block;
-    font-size: 28px;
+    font-size: 21px;
     line-height: 1.1;
     overflow-wrap: anywhere;
 }
@@ -473,7 +503,8 @@ button {
 .audit-insight-card span {
     color: #9CA3AF;
     display: block;
-    margin-top: 10px;
+    font-size: 12px;
+    margin-top: 5px;
 }
 
 .audit-timeline {
@@ -495,9 +526,9 @@ button {
 
 .timeline-item {
     display: grid;
-    gap: 14px;
+    gap: 10px;
     grid-template-columns: 18px 1fr;
-    margin-bottom: 16px;
+    margin-bottom: 10px;
     position: relative;
 }
 
@@ -520,7 +551,7 @@ button {
     background: #111827;
     border: 1px solid #374151;
     border-radius: 10px;
-    padding: 16px;
+    padding: 12px;
 }
 
 .timeline-header {
@@ -532,14 +563,14 @@ button {
 
 .timeline-header time {
     color: #D1D5DB;
-    font-size: 14px;
+    font-size: 13px;
 }
 
 .timeline-meta {
     display: grid;
-    gap: 12px;
+    gap: 8px;
     grid-template-columns: repeat(3, 1fr);
-    margin: 14px 0;
+    margin: 10px 0;
 }
 
 .timeline-meta dt {
@@ -555,14 +586,29 @@ button {
 
 .timeline-reason {
     color: #D1D5DB;
-    line-height: 1.5;
-    margin: 0 0 12px 0;
+    line-height: 1.4;
+    margin: 0 0 8px 0;
 }
 
 .filter-form {
     display: grid;
-    gap: 14px;
+    gap: 10px;
     grid-template-columns: repeat(3, 1fr);
+}
+
+.filter-panel {
+    background: #182232;
+}
+
+.filter-panel summary {
+    color: #CBD5E1;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.filter-help {
+    margin: 8px 0 12px 0;
 }
 
 .filter-form label {
@@ -571,13 +617,13 @@ button {
 
 .filter-form span {
     display: block;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 .filter-actions {
     align-items: center;
     display: flex;
-    gap: 14px;
+    gap: 10px;
 }
 
 .filter-actions button {
@@ -600,18 +646,19 @@ button {
     background: #111827;
     border-left: 3px solid #60A5FA;
     border-radius: 8px;
-    margin-bottom: 14px;
-    padding: 16px;
+    margin-bottom: 10px;
+    padding: 12px;
 }
 
 .trace-list h3 {
-    margin: 0 0 12px 0;
+    font-size: 17px;
+    margin: 0 0 8px 0;
 }
 
 .trace-fields {
     display: grid;
     grid-template-columns: 180px 1fr;
-    gap: 8px 16px;
+    gap: 6px 14px;
     margin: 0;
 }
 
@@ -627,29 +674,50 @@ button {
     background: #2563EB;
     border-radius: 6px;
     color: white;
-    padding: 10px 16px;
+    padding: 7px 12px;
     text-decoration: none;
 }
 
 .relationship-group {
-    margin-top: 20px;
+    margin-top: 12px;
+}
+
+.relationship-compact-grid {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.relationship-compact-group {
+    background: #111827;
+    border: 1px solid #374151;
+    border-radius: 10px;
+    margin-top: 0;
+    padding: 10px;
 }
 
 .relationship-card {
     background: #111827;
     border: 1px solid #374151;
     border-radius: 10px;
-    padding: 18px;
+    padding: 12px;
 }
 
 .relationship-card h3 {
-    margin-top: 0;
+    font-size: 17px;
+    margin: 0 0 8px 0;
 }
 
 .relationship-group ul {
     list-style: none;
     margin: 0;
     padding: 0;
+}
+
+.relationship-compact-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .search-results {
@@ -660,8 +728,8 @@ button {
 .search-results li {
     background: #111827;
     border-radius: 8px;
-    margin-bottom: 10px;
-    padding: 14px;
+    margin-bottom: 8px;
+    padding: 10px 12px;
 }
 
 .search-results a {
@@ -677,15 +745,35 @@ button {
 }
 
 .relationship-group li {
+    align-items: center;
     background: #0F172A;
     border-radius: 8px;
-    margin-bottom: 10px;
-    padding: 14px;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    padding: 9px 10px;
+}
+
+.relationship-compact-list li {
+    margin-bottom: 0;
+}
+
+.relationship-chip {
+    color: #F9FAFB;
+    font-weight: 600;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .relationship-group small {
+    color: #94A3B8;
     display: block;
-    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.25;
+    margin-top: 3px;
+    text-align: right;
+    white-space: nowrap;
 }
 
 .ego-graph {
@@ -693,9 +781,9 @@ button {
     border: 1px solid #374151;
     border-radius: 12px;
     display: grid;
-    gap: 28px;
+    gap: 16px;
     grid-template-columns: minmax(220px, 1fr) 2fr;
-    padding: 24px;
+    padding: 16px;
 }
 
 .graph-center {
@@ -706,19 +794,19 @@ button {
 
 .graph-spokes {
     display: grid;
-    gap: 18px;
+    gap: 10px;
 }
 
 .graph-node-group {
     background: #0F172A;
     border-radius: 10px;
-    padding: 16px;
+    padding: 12px;
 }
 
 .graph-node-group h3 {
     color: #9CA3AF;
     font-size: 13px;
-    margin: 0 0 12px 0;
+    margin: 0 0 8px 0;
     text-transform: uppercase;
 }
 
@@ -731,8 +819,8 @@ button {
 .graph-node-group li {
     align-items: center;
     display: flex;
-    gap: 10px;
-    margin-bottom: 10px;
+    gap: 8px;
+    margin-bottom: 6px;
 }
 
 .graph-node {
@@ -743,14 +831,14 @@ button {
     font-size: 13px;
     max-width: 100%;
     overflow-wrap: anywhere;
-    padding: 8px 12px;
+    padding: 6px 10px;
 }
 
 .graph-node-capability {
     background: #1E3A8A;
     border-color: #60A5FA;
     font-weight: 700;
-    padding: 12px 18px;
+    padding: 9px 14px;
 }
 
 .graph-node-identity {
@@ -781,6 +869,6 @@ button {
 .app-footer {
     color: #64748B;
     font-size: 13px;
-    margin-top: 32px;
-    padding: 20px 0 0;
+    margin-top: 20px;
+    padding: 12px 0 0;
 }

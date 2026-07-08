@@ -44,6 +44,7 @@ public static class PolicyExplorerPageRenderer
         html.AppendLine("            <div class=\"sidebar-brand\">Seneschal</div>");
         html.AppendLine("            <nav class=\"sidebar-nav\" aria-label=\"Primary navigation\">");
         html.AppendLine("                <a href=\"/dashboard\">Dashboard</a>");
+        html.AppendLine("                <a href=\"/monitor\">Monitor</a>");
         html.AppendLine("                <a href=\"/capability-explorer\">Capabilities</a>");
         html.AppendLine("                <a class=\"active\" href=\"/policies\">Policies</a>");
         html.AppendLine("                <a href=\"/identities\">Identities</a>");

@@ -32,6 +32,8 @@ public sealed class DashboardPageTests :
 
         Assert.Contains("Seneschal Dashboard", html);
         Assert.Contains("class=\"active\" href=\"/dashboard\"", html);
+        Assert.Contains("Monitor", html);
+        Assert.Contains("/monitor", html);
         Assert.Contains("Runtime Activity", html);
         Assert.Contains("Capability Activity", html);
         Assert.Contains("/capability-activity", html);

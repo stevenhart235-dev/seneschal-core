@@ -1,0 +1,524 @@
+@page "/monitor"
+@model Seneschal.Api.Pages.MonitorModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seneschal Monitor Dashboard</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">Seneschal</div>
+            <nav class="sidebar-nav" aria-label="Primary navigation">
+                <a href="/dashboard">Dashboard</a>
+                <a class="active" href="/monitor">Monitor</a>
+                <a href="/capability-explorer">Capabilities</a>
+                <a href="/policies">Policies</a>
+                <a href="/identity-activity">Identities</a>
+                <a href="#">Resources</a>
+                <a href="/audit">Audit</a>
+            </nav>
+        </aside>
+
+        <main class="container explorer-page">
+            <header class="page-header">
+                <h1>Monitor Dashboard</h1>
+                <p class="subtitle">
+                    Assess whether observed governance activity is ready for
+                    targeted enforcement.
+                </p>
+            </header>
+
+            <section class="monitor-status-banner">
+                <div>
+                    <span class="badge monitor-mode-badge">
+                        Current Mode: @Model.CurrentMode
+                    </span>
+                    <p>
+                        Policies are evaluated and audited, but runtime requests
+                        are not blocked.
+                    </p>
+                </div>
+            </section>
+
+            <section class="panel readiness-panel">
+                <div class="dashboard-section-header">
+                    <div>
+                        <h2>Governance Readiness</h2>
+                        <p class="muted">
+                            Deterministic score based on current configuration,
+                            audit history, and observed runtime activity.
+                        </p>
+                    </div>
+                    <div class="readiness-score">
+                        @Model.ReadinessScore%
+                    </div>
+                </div>
+
+                <p class="monitor-recommendation">
+                    @Model.ReadinessRecommendation
+                </p>
+
+                <div class="readiness-check-grid">
+                    <article class="readiness-check @(Model.PoliciesExist ? "ready" : "needs-observation")">
+                        <strong>Policies exist</strong>
+                        <span>@(Model.PoliciesExist ? "Yes" : "No")</span>
+                    </article>
+                    <article class="readiness-check @(Model.RuntimeDecisionsObserved ? "ready" : "needs-observation")">
+                        <strong>Runtime decisions observed</strong>
+                        <span>@(Model.RuntimeDecisionsObserved ? "Yes" : "No")</span>
+                    </article>
+                    <article class="readiness-check @(Model.AuditHistoryAvailable ? "ready" : "needs-observation")">
+                        <strong>Audit history available</strong>
+                        <span>@(Model.AuditHistoryAvailable ? "Yes" : "No")</span>
+                    </article>
+                    <article class="readiness-check @(Model.ActivityMetricsAvailable ? "ready" : "needs-observation")">
+                        <strong>Activity metrics available</strong>
+                        <span>@(Model.ActivityMetricsAvailable ? "Yes" : "No")</span>
+                    </article>
+                </div>
+            </section>
+
+            <section class="dashboard-columns">
+                <article class="panel">
+                    <h2>Would Have Been Blocked</h2>
+                    @if (!Model.HasWouldHaveBeenBlockedActivity)
+                    {
+                        <div class="empty-state">
+                            <p class="muted">
+                                No denied or pending approval decisions have
+                                been observed yet.
+                            </p>
+                            <p class="muted">
+                                This widget shows monitor-mode decisions that
+                                would block or require approval under
+                                enforcement.
+                            </p>
+                        </div>
+                    }
+                    else
+                    {
+                        <section class="dashboard-grid monitor-mini-grid">
+                            <article class="dashboard-card activity-card">
+                                <strong>@Model.TotalDeniedDecisions</strong>
+                                <span>Total Denied Decisions</span>
+                            </article>
+                            <article class="dashboard-card activity-card">
+                                <strong>@Model.PendingApprovalDecisions</strong>
+                                <span>Pending Approvals Observed</span>
+                            </article>
+                        </section>
+
+                        <h3 class="monitor-subheading">Top Denial Reasons</h3>
+                        @if (Model.TopDenialReasons.Count == 0)
+                        {
+                            <p class="muted">
+                                Denials have been observed, but no denial
+                                reasons are available.
+                            </p>
+                        }
+                        else
+                        {
+                            <ul class="compact-list activity-list">
+                                @foreach (var reason in Model.TopDenialReasons)
+                                {
+                                    <li>
+                                        <span>@reason.Reason</span>
+                                        <span>@reason.Count denied</span>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    }
+                </article>
+
+                <article class="panel">
+                    <h2>Most Active Policies</h2>
+                    @if (Model.MostActivePolicies.Count == 0)
+                    {
+                        <p class="muted empty-state">
+                            Policy activity appears after runtime evaluations
+                            match policies.
+                        </p>
+                    }
+                    else
+                    {
+                        <ul class="compact-list activity-list">
+                            @foreach (var policy in Model.MostActivePolicies)
+                            {
+                                <li>
+                                    <span>@policy.PolicyId</span>
+                                    <span>@policy.MatchCount matches</span>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </article>
+            </section>
+
+            <section class="panel">
+                <h2>Capabilities Ready For Enforcement</h2>
+                @if (Model.CapabilityReadiness.Count == 0)
+                {
+                    <div class="empty-state">
+                        <p class="muted">
+                            Capability readiness appears after runtime activity
+                            has been observed.
+                        </p>
+                        <p class="muted">
+                            Continue monitor-mode evaluations before enabling
+                            enforcement.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <table class="activity-table">
+                        <thead>
+                            <tr>
+                                <th>Capability</th>
+                                <th>Requests</th>
+                                <th>Denied</th>
+                                <th>Pending Approval</th>
+                                <th>Readiness</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var capability in Model.CapabilityReadiness)
+                            {
+                                <tr>
+                                    <td>
+                                        <a class="table-link" href="/capability-activity?capabilityId=@Uri.EscapeDataString(capability.CapabilityId)">
+                                            @capability.CapabilityId
+                                        </a>
+                                    </td>
+                                    <td>@capability.TotalRequests</td>
+                                    <td>@capability.DeniedCount</td>
+                                    <td>@capability.PendingApprovalCount</td>
+                                    <td>
+                                        <span class="badge readiness-badge @(capability.Status == "Ready" ? "readiness-ready" : "readiness-needs-observation")">
+                                            @capability.Status
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </section>
+
+            <section class="panel enforcement-advisor">
+                <div class="dashboard-section-header">
+                    <div>
+                        <h2>Enforcement Readiness Advisor</h2>
+                        <p class="muted">
+                            Deterministic capability-level recommendations
+                            based on observed runtime activity.
+                        </p>
+                    </div>
+                </div>
+
+                @if (Model.EnforcementReadinessAdvisor.Count == 0)
+                {
+                    <div class="empty-state">
+                        <p class="muted">
+                            No capability activity has been observed yet.
+                        </p>
+                        <p class="muted">
+                            Run monitor-mode evaluations before selecting
+                            capabilities for enforcement.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="advisor-list">
+                        @foreach (var advice in Model.EnforcementReadinessAdvisor)
+                        {
+                            <article class="advisor-card">
+                                <div class="advisor-card-header">
+                                    <div>
+                                        <h3>@advice.CapabilityId</h3>
+                                        <p class="muted">
+                                            @advice.Recommendation
+                                        </p>
+                                    </div>
+                                    <div class="advisor-score">
+                                        <strong>@advice.ReadinessScore%</strong>
+                                        <span class="badge readiness-badge @GetAdvisorStatusClass(advice.Status)">
+                                            @advice.Status
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <dl class="advisor-metrics">
+                                    <div>
+                                        <dt>Total requests</dt>
+                                        <dd>@advice.TotalRequests</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Allowed</dt>
+                                        <dd>@advice.AllowedCount</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Denied</dt>
+                                        <dd>@advice.DeniedCount</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Pending approval</dt>
+                                        <dd>@advice.PendingApprovalCount</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Average duration</dt>
+                                        <dd>@advice.AverageEvaluationDurationMs.ToString("0.##") ms</dd>
+                                    </div>
+                                </dl>
+
+                                <div class="advisor-reasons">
+                                    <strong>Evidence</strong>
+                                    <ul>
+                                        @foreach (var reason in advice.ExplanationReasons)
+                                        {
+                                            <li>@reason</li>
+                                        }
+                                    </ul>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
+
+            <section class="panel governance-drift">
+                <div class="dashboard-section-header">
+                    <div>
+                        <h2>Governance Drift</h2>
+                        <p class="muted">
+                            Deterministic checks for configured governance
+                            objects that are stale, unused, or under-covered
+                            by observed runtime activity.
+                        </p>
+                    </div>
+                </div>
+
+                @if (!Model.HasGovernanceDrift)
+                {
+                    <div class="empty-state">
+                        <p class="muted">
+                            No governance drift detected from current
+                            in-memory activity.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="drift-grid">
+                        <article class="drift-card">
+                            <h3>Unused Capabilities</h3>
+                            @if (Model.UnusedCapabilities.Count == 0)
+                            {
+                                <p class="muted">
+                                    Every registered capability has observed
+                                    runtime activity.
+                                </p>
+                            }
+                            else
+                            {
+                                <ul class="compact-list activity-list">
+                                    @foreach (var capability in Model.UnusedCapabilities)
+                                    {
+                                        <li>
+                                            <span>
+                                                @capability.CapabilityId
+                                                @if (!string.IsNullOrWhiteSpace(capability.Name) &&
+                                                    capability.Name != capability.CapabilityId)
+                                                {
+                                                    <small>@capability.Name</small>
+                                                }
+                                            </span>
+                                            <span>
+                                                @FormatMetadata(capability.Risk, capability.Category)
+                                            </span>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </article>
+
+                        <article class="drift-card">
+                            <h3>Unused Identities</h3>
+                            @if (Model.UnusedIdentities.Count == 0)
+                            {
+                                <p class="muted">
+                                    Every registered identity has observed
+                                    runtime activity.
+                                </p>
+                            }
+                            else
+                            {
+                                <ul class="compact-list activity-list">
+                                    @foreach (var identity in Model.UnusedIdentities)
+                                    {
+                                        <li>
+                                            <span>@identity.IdentityId</span>
+                                            <span>
+                                                @FormatMetadata(identity.Type, identity.Source)
+                                            </span>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </article>
+
+                        <article class="drift-card">
+                            <h3>Unused Policies</h3>
+                            @if (Model.UnusedPolicies.Count == 0)
+                            {
+                                <p class="muted">
+                                    Every configured policy has matched at
+                                    least one runtime evaluation.
+                                </p>
+                            }
+                            else
+                            {
+                                <ul class="compact-list activity-list">
+                                    @foreach (var policy in Model.UnusedPolicies)
+                                    {
+                                        <li>
+                                            <span>@policy.PolicyId</span>
+                                            <span>
+                                                @FormatMetadata(policy.Effect, policy.Mode)
+                                            </span>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </article>
+
+                        <article class="drift-card">
+                            <h3>Runtime Activity Without Policy Match</h3>
+                            @if (Model.ActivityWithoutPolicyMatches.Count == 0)
+                            {
+                                <p class="muted">
+                                    No audited capability activity without a
+                                    recorded policy match was found. This check
+                                    only reports explicit audit evidence.
+                                </p>
+                            }
+                            else
+                            {
+                                <ul class="compact-list activity-list">
+                                    @foreach (var activity in Model.ActivityWithoutPolicyMatches)
+                                    {
+                                        <li>
+                                            <span>@activity.CapabilityId</span>
+                                            <span>@activity.EventCount events</span>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </article>
+                    </div>
+                }
+            </section>
+
+            <section class="panel governance-recommendations">
+                <div class="dashboard-section-header">
+                    <div>
+                        <h2>Governance Recommendations</h2>
+                        <p class="muted">
+                            Deterministic next steps from readiness, drift,
+                            audit, and activity signals.
+                        </p>
+                    </div>
+                </div>
+
+                @if (Model.GovernanceRecommendations.Count == 0)
+                {
+                    <div class="empty-state">
+                        <p class="muted">
+                            No governance recommendations available from
+                            current in-memory activity.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="recommendation-list">
+                        @foreach (var recommendation in Model.GovernanceRecommendations)
+                        {
+                            <article class="recommendation-card">
+                                <div class="recommendation-header">
+                                    <div>
+                                        <h3>@recommendation.Title</h3>
+                                        <p class="muted">
+                                            @recommendation.RecommendationText
+                                        </p>
+                                    </div>
+                                    <span class="badge recommendation-severity @GetRecommendationSeverityClass(recommendation.Severity)">
+                                        @recommendation.Severity
+                                    </span>
+                                </div>
+
+                                <ul class="recommendation-evidence">
+                                    @foreach (var evidence in recommendation.Evidence)
+                                    {
+                                        <li>@evidence</li>
+                                    }
+                                </ul>
+
+                                @if (!string.IsNullOrWhiteSpace(recommendation.LinkUrl) &&
+                                    !string.IsNullOrWhiteSpace(recommendation.LinkText))
+                                {
+                                    <a class="table-link" href="@recommendation.LinkUrl">
+                                        @recommendation.LinkText
+                                    </a>
+                                }
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
+
+            <footer class="app-footer">Seneschal v0.2.1-alpha</footer>
+        </main>
+    </div>
+</body>
+</html>
+
+@functions {
+    private static string GetAdvisorStatusClass(string status)
+    {
+        return status switch
+        {
+            "Ready for Enforcement" => "readiness-ready",
+            "Nearly Ready" => "readiness-nearly-ready",
+            "Remain in Monitor" => "readiness-remain-monitor",
+            _ => "readiness-not-ready"
+        };
+    }
+
+    private static string FormatMetadata(params string[] values)
+    {
+        var metadata = values
+            .Where(value => !string.IsNullOrWhiteSpace(value));
+
+        return string.Join(" / ", metadata);
+    }
+
+    private static string GetRecommendationSeverityClass(string severity)
+    {
+        return severity switch
+        {
+            "Critical" => "recommendation-critical",
+            "Warning" => "recommendation-warning",
+            _ => "recommendation-info"
+        };
+    }
+}

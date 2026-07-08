@@ -126,6 +126,8 @@ app.MapGet("/policies", async (
     HttpRequest request,
     PolicyLoader policyLoader,
     IGovernanceGraph governanceGraph,
+    IActivityStore activityStore,
+    IAuditEventStore auditEventStore,
     CancellationToken cancellationToken) =>
 {
     if (AcceptsHtml(request))
@@ -134,6 +136,8 @@ app.MapGet("/policies", async (
             await PolicyExplorerPageRenderer.RenderAsync(
                 policyLoader.GetPolicies(),
                 governanceGraph,
+                activityStore,
+                auditEventStore,
                 cancellationToken),
             "text/html; charset=utf-8");
     }

@@ -16,19 +16,35 @@
         <aside class="sidebar">
             <div class="sidebar-brand">Seneschal</div>
             <nav class="sidebar-nav" aria-label="Primary navigation">
-                <a href="/dashboard">Dashboard</a>
-                <a href="/monitor">Monitor</a>
-                <a class="active" href="/capability-activity">Capabilities</a>
-                <a href="/policies">Policies</a>
-                <a href="/identity-activity">Identities</a>
-                <a href="#">Resources</a>
-                <a href="/audit">Audit</a>
+                <div class="nav-section">
+                    <div class="nav-section-title">Overview</div>
+                    <a href="/dashboard"><span class="nav-icon">▦</span><span>Dashboard</span></a>
+                    <a href="/monitor"><span class="nav-icon">◉</span><span>Monitor</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Governance</div>
+                    <a href="/capability-explorer"><span class="nav-icon">◇</span><span>Capabilities</span></a>
+                    <a href="/policies"><span class="nav-icon">§</span><span>Policies</span></a>
+                    <a href="/identities"><span class="nav-icon">◎</span><span>Identities</span></a>
+                    <a href="/resources"><span class="nav-icon">▱</span><span>Resources</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Operations</div>
+                    <a href="/audit"><span class="nav-icon">◷</span><span>Audit</span></a>
+                    <a class="active" href="/capability-activity"><span class="nav-icon">↗</span><span>Capability Activity</span></a>
+                    <a href="/identity-activity"><span class="nav-icon">↔</span><span>Identity Activity</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Explore</div>
+                    <a href="/graph-view"><span class="nav-icon">✣</span><span>Relationship Graph</span></a>
+                </div>
             </nav>
         </aside>
 
         <main class="container explorer-page">
             <header class="page-header graph-page-header">
                 <div>
+                    <div class="breadcrumb">Operations / Capability Activity</div>
                     <h1>Capability Activity</h1>
                     <p class="subtitle">
                         Understand which capabilities are being exercised and

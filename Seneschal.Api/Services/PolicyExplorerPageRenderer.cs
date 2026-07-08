@@ -12,20 +12,29 @@ public static class PolicyExplorerPageRenderer
     public static async Task<string> RenderAsync(
         IReadOnlyList<ApiPolicy> policies,
         IGovernanceGraph governanceGraph,
+        IActivityStore activityStore,
+        IAuditEventStore auditEventStore,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(policies);
         ArgumentNullException.ThrowIfNull(governanceGraph);
+        ArgumentNullException.ThrowIfNull(activityStore);
+        ArgumentNullException.ThrowIfNull(auditEventStore);
 
         var relationships = await governanceGraph.QueryAsync(
             new GovernanceRelationshipQuery(),
             cancellationToken);
+        var activity = await activityStore.GetSnapshotAsync(cancellationToken);
+        var auditEvents = await auditEventStore.GetRecentAsync(
+            cancellationToken: cancellationToken);
 
         var cards = policies
             .Select((policy, index) => CreateCard(
                 policy,
                 policies.Count - index,
-                relationships))
+                relationships,
+                activity,
+                auditEvents))
             .ToList();
 
         var html = new StringBuilder();
@@ -43,17 +52,33 @@ public static class PolicyExplorerPageRenderer
         html.AppendLine("        <aside class=\"sidebar\">");
         html.AppendLine("            <div class=\"sidebar-brand\">Seneschal</div>");
         html.AppendLine("            <nav class=\"sidebar-nav\" aria-label=\"Primary navigation\">");
-        html.AppendLine("                <a href=\"/dashboard\">Dashboard</a>");
-        html.AppendLine("                <a href=\"/monitor\">Monitor</a>");
-        html.AppendLine("                <a href=\"/capability-explorer\">Capabilities</a>");
-        html.AppendLine("                <a class=\"active\" href=\"/policies\">Policies</a>");
-        html.AppendLine("                <a href=\"/identities\">Identities</a>");
-        html.AppendLine("                <a href=\"#\">Resources</a>");
-        html.AppendLine("                <a href=\"/audit\">Audit</a>");
+        html.AppendLine("                <div class=\"nav-section\">");
+        html.AppendLine("                    <div class=\"nav-section-title\">Overview</div>");
+        html.AppendLine("                    <a href=\"/dashboard\"><span class=\"nav-icon\">▦</span><span>Dashboard</span></a>");
+        html.AppendLine("                    <a href=\"/monitor\"><span class=\"nav-icon\">◉</span><span>Monitor</span></a>");
+        html.AppendLine("                </div>");
+        html.AppendLine("                <div class=\"nav-section\">");
+        html.AppendLine("                    <div class=\"nav-section-title\">Governance</div>");
+        html.AppendLine("                    <a href=\"/capability-explorer\"><span class=\"nav-icon\">◇</span><span>Capabilities</span></a>");
+        html.AppendLine("                    <a class=\"active\" href=\"/policies\"><span class=\"nav-icon\">§</span><span>Policies</span></a>");
+        html.AppendLine("                    <a href=\"/identities\"><span class=\"nav-icon\">◎</span><span>Identities</span></a>");
+        html.AppendLine("                    <a href=\"/resources\"><span class=\"nav-icon\">▱</span><span>Resources</span></a>");
+        html.AppendLine("                </div>");
+        html.AppendLine("                <div class=\"nav-section\">");
+        html.AppendLine("                    <div class=\"nav-section-title\">Operations</div>");
+        html.AppendLine("                    <a href=\"/audit\"><span class=\"nav-icon\">◷</span><span>Audit</span></a>");
+        html.AppendLine("                    <a href=\"/capability-activity\"><span class=\"nav-icon\">↗</span><span>Capability Activity</span></a>");
+        html.AppendLine("                    <a href=\"/identity-activity\"><span class=\"nav-icon\">↔</span><span>Identity Activity</span></a>");
+        html.AppendLine("                </div>");
+        html.AppendLine("                <div class=\"nav-section\">");
+        html.AppendLine("                    <div class=\"nav-section-title\">Explore</div>");
+        html.AppendLine("                    <a href=\"/graph-view\"><span class=\"nav-icon\">✣</span><span>Relationship Graph</span></a>");
+        html.AppendLine("                </div>");
         html.AppendLine("            </nav>");
         html.AppendLine("        </aside>");
         html.AppendLine("        <main class=\"container explorer-page\">");
         html.AppendLine("            <header class=\"page-header\">");
+        html.AppendLine("                <div class=\"breadcrumb\">Governance / Policies</div>");
         html.AppendLine("                <h1>Seneschal Policy Explorer</h1>");
         html.AppendLine("                <p class=\"subtitle\">Review configured policies and their projected governance relationships.</p>");
         html.AppendLine("            </header>");
@@ -77,7 +102,9 @@ public static class PolicyExplorerPageRenderer
     private static PolicyCard CreateCard(
         ApiPolicy policy,
         int priority,
-        IReadOnlyCollection<GovernanceRelationship> relationships)
+        IReadOnlyCollection<GovernanceRelationship> relationships,
+        ActivitySnapshot activity,
+        IReadOnlyCollection<AuditEvent> auditEvents)
     {
         var policyRelationships = relationships
             .Where(relationship =>
@@ -87,10 +114,26 @@ public static class PolicyExplorerPageRenderer
                     policy.Name,
                     StringComparison.OrdinalIgnoreCase))
             .ToList();
+        var policyActivity = activity.Policies.FirstOrDefault(policyActivity =>
+            string.Equals(
+                policyActivity.PolicyId,
+                policy.Name,
+                StringComparison.OrdinalIgnoreCase));
+        var matchingAuditEvents = auditEvents
+            .Where(auditEvent => auditEvent.MatchedPolicies.Any(policyId =>
+                string.Equals(
+                    policyId,
+                    policy.Name,
+                    StringComparison.OrdinalIgnoreCase)))
+            .OrderByDescending(auditEvent => auditEvent.TimestampUtc)
+            .Take(5)
+            .ToList();
 
         return new PolicyCard(
             policy,
             priority,
+            policyActivity,
+            matchingAuditEvents,
             RelatedEntityIds(
                 policyRelationships,
                 GovernanceRelationshipType.PolicyAppliesToIdentity,
@@ -132,14 +175,19 @@ public static class PolicyExplorerPageRenderer
     {
         html.AppendLine("                <article class=\"policy-card\">");
         html.AppendLine("                    <div class=\"policy-card-header\">");
-        html.Append("                        <h2>")
+        html.AppendLine("                        <div>");
+        html.AppendLine("                            <p class=\"muted capability-eyebrow\">Policy Profile</p>");
+        html.Append("                            <h2>")
             .Append(Encode(card.Policy.Name))
             .AppendLine("</h2>");
-        html.Append("                        <span class=\"badge decision-badge decision-")
-            .Append(Encode(CssClass(card.Policy.Decision)))
-            .Append("\">")
-            .Append(Encode(card.Policy.Decision))
-            .AppendLine("</span>");
+        html.Append("                            <p class=\"code capability-id\">")
+            .Append(Encode(card.Policy.Name))
+            .AppendLine("</p>");
+        html.AppendLine("                        </div>");
+        html.AppendLine("                        <div class=\"badge-row\">");
+        AppendEffectBadge(html, card.Policy.Decision);
+        html.AppendLine("                            <span class=\"badge monitor-mode-badge\">Monitor mode</span>");
+        html.AppendLine("                        </div>");
         html.AppendLine("                    </div>");
         html.Append("                    <p class=\"policy-reason\">")
             .Append(Encode(card.Policy.Reason))
@@ -147,12 +195,112 @@ public static class PolicyExplorerPageRenderer
         html.Append("                    <p class=\"muted\">Priority: ")
             .Append(card.Priority)
             .AppendLine("</p>");
-        html.AppendLine("                    <div class=\"policy-relations\">");
+
+        html.AppendLine("                    <section class=\"policy-profile-section\">");
+        html.AppendLine("                        <h3>Applies To</h3>");
+        html.AppendLine("                        <div class=\"policy-relations compact-policy-relations\">");
         AppendRelationGroup(html, "Related identities", card.Identities);
         AppendRelationGroup(html, "Related capabilities", card.Capabilities);
         AppendRelationGroup(html, "Related resources", card.Resources);
-        html.AppendLine("                    </div>");
+        html.AppendLine("                        </div>");
+        html.AppendLine("                    </section>");
+
+        html.AppendLine("                    <section class=\"policy-profile-section\">");
+        html.AppendLine("                        <h3>Runtime Summary</h3>");
+        html.AppendLine("                        <div class=\"dashboard-grid policy-runtime-grid\">");
+        AppendMetricCard(html, "Match count", card.Activity?.MatchCount.ToString() ?? "0");
+        AppendMetricCard(html, "Last matched", card.Activity?.LastMatchedUtc?.ToString("u") ?? "n/a");
+        AppendMetricCard(html, "Related denied", card.DeniedCount.ToString());
+        AppendMetricCard(html, "Related pending approval", card.PendingApprovalCount.ToString());
+        html.AppendLine("                        </div>");
+        html.AppendLine("                    </section>");
+
+        html.AppendLine("                    <section class=\"policy-profile-section\">");
+        html.AppendLine("                        <h3>Conditions</h3>");
+        html.AppendLine("                        <dl class=\"metadata-grid compact-metadata-grid policy-condition-grid\">");
+        AppendCondition(html, "Identity", card.Policy.Identity);
+        AppendCondition(html, "Capability", card.Policy.Capability);
+        AppendCondition(html, "Environment", card.Policy.Environment);
+        AppendCondition(html, "Effect", card.Policy.Decision);
+        html.AppendLine("                        </dl>");
+        html.AppendLine("                    </section>");
+
+        html.AppendLine("                    <section class=\"dashboard-columns policy-profile-columns\">");
+        html.AppendLine("                        <div class=\"policy-profile-section\">");
+        html.AppendLine("                            <h3>Related Audit</h3>");
+        html.Append("                            <p><a class=\"table-link\" href=\"/audit?matchedPolicy=")
+            .Append(Uri.EscapeDataString(card.Policy.Name))
+            .AppendLine("\">View filtered audit trail</a></p>");
+        if (card.RecentAuditEvents.Count == 0)
+        {
+            html.AppendLine("                            <p class=\"muted empty-state\">No recent audit events matched this policy.</p>");
+        }
+        else
+        {
+            html.AppendLine("                            <ul class=\"compact-list activity-list\">");
+            foreach (var auditEvent in card.RecentAuditEvents)
+            {
+                html.Append("                                <li><span>")
+                    .Append(Encode(auditEvent.TimestampUtc.ToString("u")))
+                    .Append(" · ")
+                    .Append(Encode(auditEvent.IdentityId))
+                    .Append("</span><span>")
+                    .Append(Encode(auditEvent.Decision.ToString()))
+                    .Append(" · ")
+                    .Append(Encode(auditEvent.Reason))
+                    .AppendLine("</span></li>");
+            }
+
+            html.AppendLine("                            </ul>");
+        }
+
+        html.AppendLine("                        </div>");
+        html.AppendLine("                        <div class=\"policy-profile-section\">");
+        html.AppendLine("                            <h3>Recommendations</h3>");
+        html.Append("                            <p class=\"monitor-recommendation\">")
+            .Append(Encode(card.Recommendation))
+            .AppendLine("</p>");
+        html.AppendLine("                            <p class=\"muted\">Use runtime activity and audit history to understand policy impact before changing enforcement posture.</p>");
+        html.AppendLine("                        </div>");
+        html.AppendLine("                    </section>");
         html.AppendLine("                </article>");
+    }
+
+    private static void AppendEffectBadge(StringBuilder html, string decision)
+    {
+        html.Append("                            <span class=\"badge decision-badge decision-")
+            .Append(Encode(CssClass(decision)))
+            .Append("\">")
+            .Append(Encode(decision))
+            .AppendLine("</span>");
+    }
+
+    private static void AppendMetricCard(
+        StringBuilder html,
+        string label,
+        string value)
+    {
+        html.AppendLine("                            <article class=\"dashboard-card activity-card\">");
+        html.Append("                                <strong>")
+            .Append(Encode(value))
+            .AppendLine("</strong>");
+        html.Append("                                <span>")
+            .Append(Encode(label))
+            .AppendLine("</span>");
+        html.AppendLine("                            </article>");
+    }
+
+    private static void AppendCondition(
+        StringBuilder html,
+        string label,
+        string value)
+    {
+        html.Append("                            <dt>")
+            .Append(Encode(label))
+            .AppendLine("</dt>");
+        html.Append("                            <dd>")
+            .Append(Encode(string.IsNullOrWhiteSpace(value) ? "Any" : value))
+            .AppendLine("</dd>");
     }
 
     private static void AppendRelationGroup(
@@ -200,7 +348,34 @@ public static class PolicyExplorerPageRenderer
     private sealed record PolicyCard(
         ApiPolicy Policy,
         int Priority,
+        PolicyActivity? Activity,
+        IReadOnlyCollection<AuditEvent> RecentAuditEvents,
         IReadOnlyCollection<string> Identities,
         IReadOnlyCollection<string> Capabilities,
-        IReadOnlyCollection<string> Resources);
+        IReadOnlyCollection<string> Resources)
+    {
+        public long DeniedCount => RecentAuditEvents.LongCount(auditEvent =>
+            auditEvent.Decision == DecisionType.Deny);
+
+        public long PendingApprovalCount => RecentAuditEvents.LongCount(auditEvent =>
+            auditEvent.Decision == DecisionType.RequireApproval);
+
+        public string Recommendation
+        {
+            get
+            {
+                if (Activity is null || Activity.MatchCount == 0)
+                {
+                    return "Policy has not been exercised yet";
+                }
+
+                if (DeniedCount > 0 || PendingApprovalCount > 0)
+                {
+                    return "Review runtime impact";
+                }
+
+                return "Policy appears active and stable";
+            }
+        }
+    }
 }

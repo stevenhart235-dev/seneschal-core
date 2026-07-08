@@ -17,18 +17,34 @@
         <aside class="sidebar">
             <div class="sidebar-brand">Seneschal</div>
             <nav class="sidebar-nav" aria-label="Primary navigation">
-                <a href="/dashboard">Dashboard</a>
-                <a href="/monitor">Monitor</a>
-                <a class="active" href="/capability-explorer">Capabilities</a>
-                <a href="/policies">Policies</a>
-                <a href="/identities">Identities</a>
-                <a href="#">Resources</a>
-                <a href="/audit">Audit</a>
+                <div class="nav-section">
+                    <div class="nav-section-title">Overview</div>
+                    <a href="/dashboard"><span class="nav-icon">▦</span><span>Dashboard</span></a>
+                    <a href="/monitor"><span class="nav-icon">◉</span><span>Monitor</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Governance</div>
+                    <a class="active" href="/capability-explorer"><span class="nav-icon">◇</span><span>Capabilities</span></a>
+                    <a href="/policies"><span class="nav-icon">§</span><span>Policies</span></a>
+                    <a href="/identities"><span class="nav-icon">◎</span><span>Identities</span></a>
+                    <a href="/resources"><span class="nav-icon">▱</span><span>Resources</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Operations</div>
+                    <a href="/audit"><span class="nav-icon">◷</span><span>Audit</span></a>
+                    <a href="/capability-activity"><span class="nav-icon">↗</span><span>Capability Activity</span></a>
+                    <a href="/identity-activity"><span class="nav-icon">↔</span><span>Identity Activity</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Explore</div>
+                    <a href="/graph-view"><span class="nav-icon">✣</span><span>Relationship Graph</span></a>
+                </div>
             </nav>
         </aside>
 
     <main class="container explorer-page">
         <header class="page-header">
+            <div class="breadcrumb">Governance / Capabilities</div>
             <h1>Seneschal Capability Explorer</h1>
             <p class="subtitle">
                 Search for a capability to inspect its catalog metadata,
@@ -109,50 +125,115 @@
         }
         else if (Model.Overview is not null && capability is not null)
         {
-            <section class="panel">
-                <h2>Capability Metadata</h2>
-
-                <div class="badge-row">
-                    <span class="badge badge-provider">@capability.Provider</span>
-                    <span class="badge badge-category">@capability.Category</span>
-                    <span class="badge risk-badge risk-@capability.RiskLevel.ToString().ToLowerInvariant()">
-                        @capability.RiskLevel risk
-                    </span>
+            <section class="panel capability-profile-header">
+                <div class="capability-title-row">
+                    <div>
+                        <p class="muted capability-eyebrow">Capability Profile</p>
+                        <h2>@capability.Name</h2>
+                        <p class="code capability-id">@capability.Id</p>
+                    </div>
+                    <div class="badge-row">
+                        <span class="badge risk-badge risk-@capability.RiskLevel.ToString().ToLowerInvariant()">
+                            @capability.RiskLevel risk
+                        </span>
+                        <span class="badge badge-category">@capability.Category</span>
+                        <span class="badge badge-provider">@capability.Provider</span>
+                    </div>
                 </div>
 
-                <dl class="metadata-grid">
-                    <dt>Id</dt>
-                    <dd>@capability.Id</dd>
+                <p class="capability-description">
+                    @capability.Description
+                </p>
 
-                    <dt>Name</dt>
-                    <dd>@capability.Name</dd>
+                @if (!string.IsNullOrWhiteSpace(capability.Owner) ||
+                    !string.IsNullOrWhiteSpace(capability.Version) ||
+                    capability.Tags.Count > 0)
+                {
+                    <dl class="metadata-grid compact-metadata-grid">
+                        @if (!string.IsNullOrWhiteSpace(capability.Owner))
+                        {
+                            <dt>Owner</dt>
+                            <dd>@capability.Owner</dd>
+                        }
 
-                    <dt>Description</dt>
-                    <dd>@capability.Description</dd>
+                        @if (!string.IsNullOrWhiteSpace(capability.Version))
+                        {
+                            <dt>Version</dt>
+                            <dd>@capability.Version</dd>
+                        }
 
-                    @if (!string.IsNullOrWhiteSpace(capability.Owner))
-                    {
-                        <dt>Owner</dt>
-                        <dd>@capability.Owner</dd>
-                    }
+                        @if (capability.Tags.Count > 0)
+                        {
+                            <dt>Tags</dt>
+                            <dd>@string.Join(", ", capability.Tags)</dd>
+                        }
+                    </dl>
+                }
+            </section>
 
-                    @if (!string.IsNullOrWhiteSpace(capability.Version))
-                    {
-                        <dt>Version</dt>
-                        <dd>@capability.Version</dd>
-                    }
+            <section class="panel capability-runtime-panel">
+                <div class="dashboard-section-header">
+                    <div>
+                        <h2>Runtime Summary</h2>
+                        <p class="muted">
+                            Observed decisions for this capability from the
+                            in-memory activity store.
+                        </p>
+                    </div>
+                    <a class="button-link" href="/audit?capabilityId=@Uri.EscapeDataString(capability.Id)">
+                        View Audit Trail
+                    </a>
+                </div>
 
-                    @if (capability.Tags.Count > 0)
-                    {
-                        <dt>Tags</dt>
-                        <dd>@string.Join(", ", capability.Tags)</dd>
-                    }
-                </dl>
+                @if (!Model.HasRuntimeActivity)
+                {
+                    <div class="empty-state runtime-empty-state">
+                        <p class="muted">
+                            No runtime activity has been observed for this
+                            capability yet.
+                        </p>
+                        <p class="muted">
+                            Runtime summary appears after applications or users
+                            evaluate this capability through Seneschal.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    var runtime = Model.RuntimeActivity!;
+                    <section class="dashboard-grid capability-runtime-grid">
+                        <article class="dashboard-card activity-card">
+                            <strong>@runtime.TotalRequests</strong>
+                            <span>Total requests</span>
+                        </article>
+                        <article class="dashboard-card activity-card">
+                            <strong>@runtime.AllowedCount</strong>
+                            <span>Allowed</span>
+                        </article>
+                        <article class="dashboard-card activity-card">
+                            <strong>@runtime.DeniedCount</strong>
+                            <span>Denied</span>
+                        </article>
+                        <article class="dashboard-card activity-card">
+                            <strong>@runtime.PendingApprovalCount</strong>
+                            <span>Pending approval</span>
+                        </article>
+                        <article class="dashboard-card activity-card">
+                            <strong>@(runtime.LastUsedUtc?.ToString("u") ?? "n/a")</strong>
+                            <span>Last used</span>
+                        </article>
+                        <article class="dashboard-card activity-card">
+                            <strong>@runtime.AverageEvaluationDurationMs.ToString("0.##")</strong>
+                            <span>Avg duration ms</span>
+                        </article>
+                    </section>
+                }
             </section>
 
             <section class="panel">
-                <h2>Governance Summary</h2>
-                <div class="summary-grid">
+                <h2>Governance Relationships</h2>
+                <h3 class="monitor-subheading">Governance Summary</h3>
+                <div class="summary-grid capability-summary-grid">
                     <div class="summary-card">
                         <strong>@Model.Overview.Summary.AssignedIdentityCount</strong>
                         <span>Assigned Identities</span>
@@ -170,14 +251,11 @@
                         <span>Governing Policies</span>
                     </div>
                 </div>
-                <p class="muted">
+                <p class="muted relationship-origin-summary">
                     Origins:
                     @string.Join(", ", Model.Overview.Summary.Origins)
                 </p>
-            </section>
 
-            <section class="panel">
-                <h2>Relationships</h2>
                 @{
                     var groups = Model.GetRelationshipGroups();
                 }
@@ -215,6 +293,59 @@
                         }
                     </div>
                 }
+            </section>
+
+            <section class="dashboard-columns capability-profile-columns">
+                <article class="panel compact-panel">
+                    <h2>Recent Decisions</h2>
+                    <p>
+                        <a class="table-link" href="/audit?capabilityId=@Uri.EscapeDataString(capability.Id)">
+                            View filtered audit trail
+                        </a>
+                    </p>
+
+                    @if (Model.RecentDecisions.Count == 0)
+                    {
+                        <div class="empty-state">
+                            <p class="muted">
+                                No recent audit events were found for this
+                                capability.
+                            </p>
+                        </div>
+                    }
+                    else
+                    {
+                        <ul class="compact-list activity-list">
+                            @foreach (var decision in Model.RecentDecisions)
+                            {
+                                <li>
+                                    <span>
+                                        @decision.TimestampUtc.ToString("u") ·
+                                        @decision.IdentityId
+                                    </span>
+                                    <span>
+                                        @decision.Decision · @decision.Reason
+                                    </span>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </article>
+
+                <article class="panel compact-panel">
+                    <h2>Recommendations</h2>
+                    <p class="monitor-recommendation">
+                        @Model.GetRecommendation()
+                    </p>
+                    <p class="muted">
+                        Use the Monitor Dashboard to review readiness, drift,
+                        and enforcement recommendations before changing runtime
+                        posture.
+                    </p>
+                    <a class="button-link" href="/monitor">
+                        Open Monitor Dashboard
+                    </a>
+                </article>
             </section>
 
             <section class="panel">

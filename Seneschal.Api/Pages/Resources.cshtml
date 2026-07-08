@@ -1,0 +1,71 @@
+@page "/resources"
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seneschal Resources</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">Seneschal</div>
+            <nav class="sidebar-nav" aria-label="Primary navigation">
+                <div class="nav-section">
+                    <div class="nav-section-title">Overview</div>
+                    <a href="/dashboard"><span class="nav-icon">▦</span><span>Dashboard</span></a>
+                    <a href="/monitor"><span class="nav-icon">◉</span><span>Monitor</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Governance</div>
+                    <a href="/capability-explorer"><span class="nav-icon">◇</span><span>Capabilities</span></a>
+                    <a href="/policies"><span class="nav-icon">§</span><span>Policies</span></a>
+                    <a href="/identities"><span class="nav-icon">◎</span><span>Identities</span></a>
+                    <a class="active" href="/resources"><span class="nav-icon">▱</span><span>Resources</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Operations</div>
+                    <a href="/audit"><span class="nav-icon">◷</span><span>Audit</span></a>
+                    <a href="/capability-activity"><span class="nav-icon">↗</span><span>Capability Activity</span></a>
+                    <a href="/identity-activity"><span class="nav-icon">↔</span><span>Identity Activity</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Explore</div>
+                    <a href="/graph-view"><span class="nav-icon">✣</span><span>Relationship Graph</span></a>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="container explorer-page">
+            <header class="page-header">
+                <div class="breadcrumb">Governance / Resources</div>
+                <h1>Resources</h1>
+                <p class="subtitle">
+                    Resource governance context projected from configured
+                    policies and runtime activity.
+                </p>
+            </header>
+
+            <section class="panel">
+                <h2>Resource Explorer Coming Soon</h2>
+                <div class="empty-state">
+                    <p class="muted">
+                        Resources are currently represented through policy
+                        environment and resource context.
+                    </p>
+                    <p class="muted">
+                        Use the Relationship Graph or Audit Trail to inspect
+                        resource relationships already observed by Seneschal.
+                    </p>
+                </div>
+            </section>
+
+            <footer class="app-footer">Seneschal v0.2.1-alpha</footer>
+        </main>
+    </div>
+</body>
+</html>

@@ -10,6 +10,7 @@ public sealed class DashboardModel : PageModel
     private readonly ICapabilityCatalog _capabilityCatalog;
     private readonly IGovernanceGraph _governanceGraph;
     private readonly IActivityStore _activityStore;
+    private readonly IAuditEventStore _auditEventStore;
     private readonly IdentityLoader _identityLoader;
     private readonly PolicyLoader _policyLoader;
 
@@ -17,12 +18,14 @@ public sealed class DashboardModel : PageModel
         ICapabilityCatalog capabilityCatalog,
         IGovernanceGraph governanceGraph,
         IActivityStore activityStore,
+        IAuditEventStore auditEventStore,
         IdentityLoader identityLoader,
         PolicyLoader policyLoader)
     {
         _capabilityCatalog = capabilityCatalog;
         _governanceGraph = governanceGraph;
         _activityStore = activityStore;
+        _auditEventStore = auditEventStore;
         _identityLoader = identityLoader;
         _policyLoader = policyLoader;
     }
@@ -52,8 +55,10 @@ public sealed class DashboardModel : PageModel
         { get; private set; } = [];
     public IReadOnlyCollection<IdentityActivity> MostActiveIdentities
         { get; private set; } = [];
+    public bool AuditEventsAvailable { get; private set; }
 
     public bool HasRuntimeActivity => TotalRuntimeDecisions > 0;
+    public bool ShowFirstRunExperience => TotalRuntimeDecisions < 3;
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
@@ -64,11 +69,15 @@ public sealed class DashboardModel : PageModel
             new GovernanceRelationshipQuery(),
             cancellationToken);
         Activity = await _activityStore.GetSnapshotAsync(cancellationToken);
+        var auditEvents = await _auditEventStore.GetRecentAsync(
+            count: 1,
+            cancellationToken);
 
         TotalCapabilities = capabilities.Count;
         TotalPolicies = _policyLoader.GetPolicies().Count;
         TotalIdentities = _identityLoader.GetIdentities().Count;
         TotalRelationships = relationships.Count;
+        AuditEventsAvailable = auditEvents.Count > 0;
         TotalRuntimeDecisions = Activity.Capabilities.Sum(
             capability => capability.TotalRequests);
         AllowedRuntimeDecisions = Activity.Capabilities.Sum(

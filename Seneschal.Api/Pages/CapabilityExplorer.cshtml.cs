@@ -9,13 +9,19 @@ public sealed class CapabilityExplorerModel : PageModel
 {
     private readonly ICapabilityCatalog _capabilityCatalog;
     private readonly ICapabilityExplorer _capabilityExplorer;
+    private readonly IActivityStore _activityStore;
+    private readonly IAuditEventStore _auditEventStore;
 
     public CapabilityExplorerModel(
         ICapabilityCatalog capabilityCatalog,
-        ICapabilityExplorer capabilityExplorer)
+        ICapabilityExplorer capabilityExplorer,
+        IActivityStore activityStore,
+        IAuditEventStore auditEventStore)
     {
         _capabilityCatalog = capabilityCatalog;
         _capabilityExplorer = capabilityExplorer;
+        _activityStore = activityStore;
+        _auditEventStore = auditEventStore;
     }
 
     public string? Query { get; private set; }
@@ -23,8 +29,11 @@ public sealed class CapabilityExplorerModel : PageModel
     public IReadOnlyCollection<CapabilityCatalogEntry> SearchResults
         { get; private set; } = [];
     public CapabilityOverview? Overview { get; private set; }
+    public CapabilityActivity? RuntimeActivity { get; private set; }
+    public IReadOnlyCollection<AuditEvent> RecentDecisions { get; private set; } = [];
     public bool SearchWasRequested { get; private set; }
     public bool CapabilityWasRequested { get; private set; }
+    public bool HasRuntimeActivity => RuntimeActivity?.TotalRequests > 0;
 
     public async Task OnGetAsync(
         string? q,
@@ -57,6 +66,43 @@ public sealed class CapabilityExplorerModel : PageModel
                 CapabilityId = capabilityId!
             },
             cancellationToken);
+
+        if (Overview is null)
+        {
+            return;
+        }
+
+        var activity = await _activityStore.GetSnapshotAsync(cancellationToken);
+        RuntimeActivity = activity.Capabilities.FirstOrDefault(capability =>
+            string.Equals(
+                capability.CapabilityId,
+                capabilityId,
+                StringComparison.OrdinalIgnoreCase));
+
+        RecentDecisions = (await _auditEventStore.GetRecentAsync(
+                cancellationToken: cancellationToken))
+            .Where(auditEvent => string.Equals(
+                auditEvent.CapabilityId,
+                capabilityId,
+                StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(auditEvent => auditEvent.TimestampUtc)
+            .Take(5)
+            .ToList();
+    }
+
+    public string GetRecommendation()
+    {
+        if (!HasRuntimeActivity)
+        {
+            return "Observe runtime activity before enforcing";
+        }
+
+        if (RuntimeActivity!.DeniedCount > 0)
+        {
+            return "Review denial patterns";
+        }
+
+        return "Review enforcement readiness";
     }
 
     public IReadOnlyCollection<RelationshipGroup> GetRelationshipGroups()

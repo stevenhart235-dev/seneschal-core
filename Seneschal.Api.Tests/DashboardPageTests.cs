@@ -31,9 +31,16 @@ public sealed class DashboardPageTests :
         var html = await response.Content.ReadAsStringAsync();
 
         Assert.Contains("Seneschal Dashboard", html);
+        Assert.Contains("Overview", html);
+        Assert.Contains("Governance", html);
+        Assert.Contains("Operations", html);
+        Assert.Contains("Explore", html);
+        Assert.Contains("<span>Dashboard</span>", html);
         Assert.Contains("class=\"active\" href=\"/dashboard\"", html);
         Assert.Contains("Monitor", html);
         Assert.Contains("/monitor", html);
+        Assert.Contains("/resources", html);
+        Assert.Contains("/graph-view", html);
         Assert.Contains("Runtime Activity", html);
         Assert.Contains("Capability Activity", html);
         Assert.Contains("/capability-activity", html);
@@ -60,7 +67,12 @@ public sealed class DashboardPageTests :
                 builder.ConfigureTestServices(services =>
                 {
                     services.RemoveAll<IActivityStore>();
+                    services.RemoveAll<IAuditEventStore>();
+                    services.RemoveAll<IAuditSink>();
                     services.AddSingleton<IActivityStore, InMemoryActivityStore>();
+                    services.AddSingleton<IAuditEventStore, InMemoryAuditEventStore>();
+                    services.AddSingleton<IAuditSink>(
+                        services => services.GetRequiredService<IAuditEventStore>());
                 });
             })
             .CreateClient();
@@ -74,6 +86,23 @@ public sealed class DashboardPageTests :
         Assert.Contains("No runtime activity has been observed yet.", html);
         Assert.Contains("Activity appears automatically", html);
         Assert.Contains("/evaluate", html);
+        Assert.Contains("First-Run Guide", html);
+        Assert.Contains("Adoption Checklist", html);
+        Assert.Contains("Configure capabilities", html);
+        Assert.Contains("Configure identities", html);
+        Assert.Contains("Configure policies", html);
+        Assert.Contains("Connect an application", html);
+        Assert.Contains("Observe runtime activity", html);
+        Assert.Contains("Review Monitor dashboard", html);
+        Assert.Contains("Enable enforcement when ready", html);
+        Assert.Contains("dotnet run --project Seneschal.Api", html);
+        Assert.Contains(
+            "dotnet run --project Seneschal.Samples.ProtectedApi",
+            html);
+        Assert.Contains("curl -X POST http://localhost:5000/deploy", html);
+        Assert.Contains("Capability Explorer", html);
+        Assert.Contains("Policy Explorer", html);
+        Assert.Contains("Seneschal.Samples.ProtectedApi/README.md", html);
     }
 
     [Fact]
@@ -117,5 +146,54 @@ public sealed class DashboardPageTests :
         Assert.Contains("Most Active Identities", html);
         Assert.Contains(capability, html);
         Assert.Contains(identity, html);
+        Assert.Contains("Audit evidence available", html);
+    }
+
+    [Fact]
+    public async Task Dashboard_HidesFirstRunGuideAfterRuntimeActivityGrows()
+    {
+        var identity = $"DashboardFirstRun-{Guid.NewGuid():N}";
+
+        for (var index = 0; index < 3; index++)
+        {
+            using var evaluationResponse = await _client.PostAsJsonAsync(
+                "/evaluate",
+                new
+                {
+                    identity,
+                    capability = $"DashboardFirstRunCapability-{index}",
+                    context = new
+                    {
+                        environment = "dev",
+                        resource = $"dashboard-first-run-resource-{index}"
+                    }
+                });
+
+            Assert.Equal(HttpStatusCode.OK, evaluationResponse.StatusCode);
+        }
+
+        using var response = await _client.GetAsync("/dashboard");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.DoesNotContain("First-Run Guide", html);
+        Assert.Contains("Runtime Activity", html);
+        Assert.Contains("Top Capabilities", html);
+    }
+
+    [Fact]
+    public async Task Resources_RendersFromNavigationRoute()
+    {
+        using var response = await _client.GetAsync("/resources");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Contains("Governance / Resources", html);
+        Assert.Contains("Resource Explorer Coming Soon", html);
+        Assert.Contains("class=\"active\" href=\"/resources\"", html);
     }
 }

@@ -16,25 +16,206 @@
         <aside class="sidebar">
             <div class="sidebar-brand">Seneschal</div>
             <nav class="sidebar-nav" aria-label="Primary navigation">
-                <a class="active" href="/dashboard">Dashboard</a>
-                <a href="/monitor">Monitor</a>
-                <a href="/capability-explorer">Capabilities</a>
-                <a href="/policies">Policies</a>
-                <a href="/identities">Identities</a>
-                <a href="#">Resources</a>
-                <a href="/audit">Audit</a>
+                <div class="nav-section">
+                    <div class="nav-section-title">Overview</div>
+                    <a class="active" href="/dashboard"><span class="nav-icon">▦</span><span>Dashboard</span></a>
+                    <a href="/monitor"><span class="nav-icon">◉</span><span>Monitor</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Governance</div>
+                    <a href="/capability-explorer"><span class="nav-icon">◇</span><span>Capabilities</span></a>
+                    <a href="/policies"><span class="nav-icon">§</span><span>Policies</span></a>
+                    <a href="/identities"><span class="nav-icon">◎</span><span>Identities</span></a>
+                    <a href="/resources"><span class="nav-icon">▱</span><span>Resources</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Operations</div>
+                    <a href="/audit"><span class="nav-icon">◷</span><span>Audit</span></a>
+                    <a href="/capability-activity"><span class="nav-icon">↗</span><span>Capability Activity</span></a>
+                    <a href="/identity-activity"><span class="nav-icon">↔</span><span>Identity Activity</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Explore</div>
+                    <a href="/graph-view"><span class="nav-icon">✣</span><span>Relationship Graph</span></a>
+                </div>
             </nav>
         </aside>
 
         <main class="container explorer-page">
             <header class="page-header">
+                <div class="breadcrumb">Overview / Dashboard</div>
                 <h1>Seneschal Dashboard</h1>
                 <p class="subtitle">
                     Runtime activity and configured governance inventory.
                 </p>
             </header>
 
-            <section class="panel runtime-activity-panel">
+            <section class="dashboard-overview-grid">
+                <article class="panel platform-health-panel">
+                    <div class="dashboard-section-header">
+                        <div>
+                            <h2>Platform Overview / Health</h2>
+                            <p class="muted">
+                                Current runtime posture and decision volume.
+                            </p>
+                        </div>
+                        <span class="badge monitor-mode-badge">Monitor Mode</span>
+                    </div>
+
+                    <section class="dashboard-grid platform-health-grid">
+                        <article class="dashboard-card health-card">
+                            <strong>Monitor</strong>
+                            <span>Runtime Mode</span>
+                        </article>
+                        <article class="dashboard-card health-card">
+                            <strong>@Model.TotalRuntimeDecisions</strong>
+                            <span>Total Runtime Decisions</span>
+                        </article>
+                        <article class="dashboard-card health-card">
+                            <strong>@Model.AllowedRuntimeDecisions</strong>
+                            <span>Allowed Decisions</span>
+                        </article>
+                        <article class="dashboard-card health-card @(Model.DeniedRuntimeDecisions > 0 ? "health-warning" : "health-ok")">
+                            <strong>@Model.DeniedRuntimeDecisions</strong>
+                            <span>Denied Decisions</span>
+                        </article>
+                        <article class="dashboard-card health-card">
+                            <strong>@Model.PendingApprovalRuntimeDecisions</strong>
+                            <span>Pending Approval Decisions</span>
+                        </article>
+                    </section>
+
+                    <p class="dashboard-health-summary muted">
+                        @(Model.HasRuntimeActivity
+                            ? "Runtime decisions are being observed. Use Monitor to review readiness, drift, and recommendations before enforcement."
+                            : "No runtime activity has been observed yet. Seneschal is ready to monitor decisions once callers use /evaluate.")
+                    </p>
+                </article>
+
+                <article class="panel quick-actions-panel">
+                    <h2>Quick Actions</h2>
+                    <div class="quick-action-grid">
+                        <a class="quick-action-card" href="/monitor">
+                            <span>◉</span>
+                            <strong>Open Monitor Dashboard</strong>
+                            <small>Readiness, drift, and recommendations</small>
+                        </a>
+                        <a class="quick-action-card" href="/capability-activity">
+                            <span>↗</span>
+                            <strong>Open Capability Activity</strong>
+                            <small>Runtime usage by capability</small>
+                        </a>
+                        <a class="quick-action-card" href="/identity-activity">
+                            <span>↔</span>
+                            <strong>Open Identity Activity</strong>
+                            <small>Runtime usage by identity</small>
+                        </a>
+                        <a class="quick-action-card" href="/graph-view">
+                            <span>✣</span>
+                            <strong>Open Relationship Graph</strong>
+                            <small>Explore governance relationships</small>
+                        </a>
+                    </div>
+                </article>
+            </section>
+
+            @if (Model.ShowFirstRunExperience)
+            {
+                <section class="panel first-run-panel dashboard-section">
+                    <div class="dashboard-section-header">
+                        <div>
+                            <h2>First-Run Guide</h2>
+                            <p class="muted">
+                                Follow this path to move from configured
+                                governance to observed runtime decisions.
+                            </p>
+                        </div>
+                        <a class="button-link" href="/monitor">
+                            Open Monitor
+                        </a>
+                    </div>
+
+                    <div class="first-run-grid">
+                        <div>
+                            <h3>Adoption Checklist</h3>
+                            <ul class="onboarding-checklist">
+                                <li class="@(Model.TotalCapabilities > 0 ? "done" : "pending")">
+                                    <span>@(Model.TotalCapabilities > 0 ? "✓" : "○")</span>
+                                    <div>
+                                        <strong>Configure capabilities</strong>
+                                        <small>@Model.TotalCapabilities configured</small>
+                                    </div>
+                                </li>
+                                <li class="@(Model.TotalIdentities > 0 ? "done" : "pending")">
+                                    <span>@(Model.TotalIdentities > 0 ? "✓" : "○")</span>
+                                    <div>
+                                        <strong>Configure identities</strong>
+                                        <small>@Model.TotalIdentities configured</small>
+                                    </div>
+                                </li>
+                                <li class="@(Model.TotalPolicies > 0 ? "done" : "pending")">
+                                    <span>@(Model.TotalPolicies > 0 ? "✓" : "○")</span>
+                                    <div>
+                                        <strong>Configure policies</strong>
+                                        <small>@Model.TotalPolicies configured</small>
+                                    </div>
+                                </li>
+                                <li class="@(Model.HasRuntimeActivity ? "done" : "pending")">
+                                    <span>@(Model.HasRuntimeActivity ? "✓" : "○")</span>
+                                    <div>
+                                        <strong>Connect an application</strong>
+                                        <small>Call Seneschal from an app, middleware, or sample API</small>
+                                    </div>
+                                </li>
+                                <li class="@(Model.HasRuntimeActivity ? "done" : "pending")">
+                                    <span>@(Model.HasRuntimeActivity ? "✓" : "○")</span>
+                                    <div>
+                                        <strong>Observe runtime activity</strong>
+                                        <small>@Model.TotalRuntimeDecisions decisions observed</small>
+                                    </div>
+                                </li>
+                                <li class="@(Model.AuditEventsAvailable ? "done" : "pending")">
+                                    <span>@(Model.AuditEventsAvailable ? "✓" : "○")</span>
+                                    <div>
+                                        <strong>Review Monitor dashboard</strong>
+                                        <small>Audit evidence @(Model.AuditEventsAvailable ? "available" : "not observed yet")</small>
+                                    </div>
+                                </li>
+                                <li class="pending">
+                                    <span>○</span>
+                                    <div>
+                                        <strong>Enable enforcement when ready</strong>
+                                        <small>Use Monitor readiness before changing posture</small>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3>Quick Start</h3>
+                            <div class="quick-start-commands">
+                                <code>dotnet run --project Seneschal.Api</code>
+                                <code>dotnet run --project Seneschal.Samples.ProtectedApi</code>
+                                <code>curl -X POST http://localhost:5000/deploy</code>
+                            </div>
+
+                            <div class="first-run-links">
+                                <a href="/capability-explorer">Capability Explorer</a>
+                                <a href="/policies">Policy Explorer</a>
+                                <a href="/monitor">Monitor</a>
+                                <a href="/audit">Audit</a>
+                            </div>
+
+                            <p class="muted first-run-note">
+                                Runtime sample README:
+                                <span class="code">Seneschal.Samples.ProtectedApi/README.md</span>
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            }
+
+            <section class="panel runtime-activity-panel dashboard-section">
                 <div class="dashboard-section-header">
                     <div>
                         <h2>Runtime Activity</h2>
@@ -43,15 +224,7 @@
                             Seneschal's runtime evaluation path.
                         </p>
                     </div>
-                    <div class="runtime-action-row">
-                        <a class="button-link" href="/capability-activity">
-                            Capability Activity
-                        </a>
-                        <a class="button-link" href="/identity-activity">
-                            Identity Activity
-                        </a>
-                        <a class="button-link" href="/activity">View JSON</a>
-                    </div>
+                    <a class="button-link" href="/activity">View JSON</a>
                 </div>
 
                 @if (!Model.HasRuntimeActivity)
@@ -75,25 +248,6 @@
                 {
                     <section class="dashboard-grid activity-metric-grid">
                         <article class="dashboard-card activity-card">
-                            <strong>@Model.TotalRuntimeDecisions</strong>
-                            <span>Total Runtime Decisions</span>
-                        </article>
-                        <article class="dashboard-card activity-card">
-                            <strong>@Model.AllowedRuntimeDecisions</strong>
-                            <span>Allowed Decisions</span>
-                        </article>
-                        <article class="dashboard-card activity-card">
-                            <strong>@Model.DeniedRuntimeDecisions</strong>
-                            <span>Denied Decisions</span>
-                        </article>
-                        <article class="dashboard-card activity-card">
-                            <strong>@Model.PendingApprovalRuntimeDecisions</strong>
-                            <span>Pending Approval Decisions</span>
-                        </article>
-                    </section>
-
-                    <section class="dashboard-grid activity-metric-grid">
-                        <article class="dashboard-card activity-card">
                             <strong>@(Model.MostActiveCapability?.CapabilityId ?? "n/a")</strong>
                             <span>Most Active Capability</span>
                         </article>
@@ -115,8 +269,8 @@
 
             @if (Model.HasRuntimeActivity)
             {
-                <section class="dashboard-columns activity-columns">
-                    <article class="panel">
+                <section class="dashboard-columns activity-columns dashboard-section">
+                    <article class="panel compact-panel">
                         <h2>Top Capabilities</h2>
                         <ul class="compact-list activity-list">
                             @foreach (var capability in Model.TopCapabilitiesByRequestCount)
@@ -131,7 +285,7 @@
                         </ul>
                     </article>
 
-                    <article class="panel">
+                    <article class="panel compact-panel">
                         <h2>Most Denied Capabilities</h2>
                         @if (Model.MostDeniedCapabilities.Count == 0)
                         {
@@ -155,7 +309,7 @@
                         }
                     </article>
 
-                    <article class="panel activity-wide-panel">
+                    <article class="panel activity-wide-panel compact-panel">
                         <h2>Most Active Identities</h2>
                         <ul class="compact-list activity-list">
                             @foreach (var identity in Model.MostActiveIdentities)
@@ -175,90 +329,106 @@
                 </section>
             }
 
-            <section class="dashboard-grid">
-                <article class="dashboard-card">
-                    <strong>@Model.TotalCapabilities</strong>
-                    <span>Total Capabilities</span>
-                </article>
-                <article class="dashboard-card">
-                    <strong>@Model.TotalPolicies</strong>
-                    <span>Total Policies</span>
-                </article>
-                <article class="dashboard-card">
-                    <strong>@Model.TotalIdentities</strong>
-                    <span>Total Identities</span>
-                </article>
-                <article class="dashboard-card">
-                    <strong>@Model.TotalRelationships</strong>
-                    <span>Total Relationships</span>
-                </article>
+            <section class="panel inventory-panel dashboard-section">
+                <div class="dashboard-section-header">
+                    <div>
+                        <h2>Governance Inventory</h2>
+                        <p class="muted">
+                            Configured governance objects and projected
+                            relationships.
+                        </p>
+                    </div>
+                    <a class="button-link" href="/capability-explorer">
+                        Open Capability Explorer
+                    </a>
+                </div>
+
+                <section class="dashboard-grid inventory-grid">
+                    <article class="dashboard-card">
+                        <strong>@Model.TotalCapabilities</strong>
+                        <span>Total Capabilities</span>
+                    </article>
+                    <article class="dashboard-card">
+                        <strong>@Model.TotalPolicies</strong>
+                        <span>Total Policies</span>
+                    </article>
+                    <article class="dashboard-card">
+                        <strong>@Model.TotalIdentities</strong>
+                        <span>Total Identities</span>
+                    </article>
+                    <article class="dashboard-card">
+                        <strong>@Model.TotalRelationships</strong>
+                        <span>Total Relationships</span>
+                    </article>
+                </section>
             </section>
 
-            <section class="dashboard-columns">
-                <article class="panel">
-                    <h2>Highest Risk Capabilities</h2>
-                    @if (Model.HighestRiskCapabilities.Count == 0)
-                    {
-                        <p class="muted empty-state">
-                            This panel highlights risky capabilities from the catalog.
-                            It is empty until capabilities are configured.
+            <section class="dashboard-section">
+                <div class="dashboard-section-title-row">
+                    <div>
+                        <h2>Risk &amp; Governance</h2>
+                        <p class="muted">
+                            Catalog signals that help prioritize governance
+                            review.
                         </p>
-                    }
-                    else
-                    {
-                        <ul class="compact-list">
-                            @foreach (var entry in Model.HighestRiskCapabilities)
-                            {
-                                var capability = entry.Capability;
-                                <li>
-                                    <a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(capability.Id)">
-                                        @capability.Id
-                                    </a>
-                                    <span class="badge risk-badge risk-@capability.RiskLevel.ToString().ToLowerInvariant()">
-                                        @capability.RiskLevel
-                                    </span>
-                                </li>
-                            }
-                        </ul>
-                    }
-                </article>
+                    </div>
+                </div>
 
-                <article class="panel">
-                    <h2>Recently Added Capabilities</h2>
-                    @if (Model.RecentlyAddedCapabilities.Count == 0)
-                    {
-                        <p class="muted empty-state">
-                            Recently added capabilities appear here after the
-                            capability catalog is populated.
-                        </p>
-                    }
-                    else
-                    {
-                        <ul class="compact-list">
-                            @foreach (var entry in Model.RecentlyAddedCapabilities)
-                            {
-                                var capability = entry.Capability;
-                                <li>
-                                    <a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(capability.Id)">
-                                        @capability.Id
-                                    </a>
-                                    <span>@capability.Category</span>
-                                </li>
-                            }
-                        </ul>
-                    }
-                </article>
-            </section>
+                <div class="dashboard-columns">
+                    <article class="panel compact-panel">
+                        <h2>Highest Risk Capabilities</h2>
+                        @if (Model.HighestRiskCapabilities.Count == 0)
+                        {
+                            <p class="muted empty-state">
+                                This panel highlights risky capabilities from the catalog.
+                                It is empty until capabilities are configured.
+                            </p>
+                        }
+                        else
+                        {
+                            <ul class="compact-list">
+                                @foreach (var entry in Model.HighestRiskCapabilities)
+                                {
+                                    var capability = entry.Capability;
+                                    <li>
+                                        <a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(capability.Id)">
+                                            @capability.Id
+                                        </a>
+                                        <span class="badge risk-badge risk-@capability.RiskLevel.ToString().ToLowerInvariant()">
+                                            @capability.RiskLevel
+                                        </span>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </article>
 
-            <section class="panel quick-link-panel">
-                <h2>Explore Capabilities</h2>
-                <p class="muted">
-                    Search the catalog and inspect projected governance
-                    relationships for a capability.
-                </p>
-                <a class="button-link" href="/capability-explorer">
-                    Open Capability Explorer
-                </a>
+                    <article class="panel compact-panel">
+                        <h2>Recently Added Capabilities</h2>
+                        @if (Model.RecentlyAddedCapabilities.Count == 0)
+                        {
+                            <p class="muted empty-state">
+                                Recently added capabilities appear here after the
+                                capability catalog is populated.
+                            </p>
+                        }
+                        else
+                        {
+                            <ul class="compact-list">
+                                @foreach (var entry in Model.RecentlyAddedCapabilities)
+                                {
+                                    var capability = entry.Capability;
+                                    <li>
+                                        <a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(capability.Id)">
+                                            @capability.Id
+                                        </a>
+                                        <span>@capability.Category</span>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </article>
+                </div>
             </section>
 
             <footer class="app-footer">Seneschal v0.2.1-alpha</footer>

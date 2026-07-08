@@ -18,10 +18,13 @@ builder.Services.AddSingleton<IAuditEventStore, InMemoryAuditEventStore>();
 builder.Services.AddSingleton<IAuditSink>(
     services => services.GetRequiredService<IAuditEventStore>());
 builder.Services.AddSingleton<IActivityStore, InMemoryActivityStore>();
+builder.Services.AddSingleton<IDecisionExporter, NullDecisionExporter>();
+builder.Services.AddSingleton<IDecisionMetrics, InMemoryDecisionMetrics>();
 builder.Services.AddSingleton(new RuntimeSettings
 {
     Mode = Seneschal.Core.Enums.EnforcementMode.LogOnly
 });
+builder.Services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
 builder.Services.AddSingleton<CapabilityLoader>();
 builder.Services.AddSingleton<IdentityLoader>();
 builder.Services.AddSingleton<PolicyProjector>();
@@ -56,11 +59,125 @@ app.MapPost("/evaluate", (DecisionRequest request, CoreDecisionService decisionS
     return Results.Ok(result);
 });
 
+app.MapGet("/health", () =>
+{
+    return Results.Ok(new
+    {
+        status = "healthy",
+        timestampUtc = DateTimeOffset.UtcNow
+    });
+});
+
+app.MapGet("/live", () =>
+{
+    return Results.Ok(new
+    {
+        status = "live",
+        timestampUtc = DateTimeOffset.UtcNow
+    });
+});
+
+app.MapGet("/ready", (
+    CapabilityLoader capabilityLoader,
+    IdentityLoader identityLoader,
+    PolicyLoader policyLoader,
+    RuntimeSettings runtimeSettings,
+    IConfigurationValidator configurationValidator) =>
+{
+    var capabilityCount = capabilityLoader.GetCapabilities().Count;
+    var identityCount = identityLoader.GetIdentities().Count;
+    var policyCount = policyLoader.GetPolicies().Count;
+    var runtimeSettingsLoaded = runtimeSettings is not null;
+    var validationResult = configurationValidator.Validate();
+    var ready = capabilityCount > 0
+        && identityCount > 0
+        && policyCount > 0
+        && runtimeSettingsLoaded;
+
+    return Results.Ok(new
+    {
+        status = ready ? "ready" : "not_ready",
+        timestampUtc = DateTimeOffset.UtcNow,
+        capabilitiesLoaded = capabilityCount > 0,
+        identitiesLoaded = identityCount > 0,
+        policiesLoaded = policyCount > 0,
+        runtimeSettingsLoaded,
+        configValid = validationResult.IsValid,
+        validationErrors = validationResult.ErrorCount,
+        validationWarnings = validationResult.WarningCount
+    });
+});
+
+app.MapGet("/config/validate", (
+    IConfigurationValidator configurationValidator) =>
+{
+    return Results.Ok(configurationValidator.Validate());
+});
+
+app.MapGet("/diagnostics", async (
+    RuntimeSettings runtimeSettings,
+    CapabilityLoader capabilityLoader,
+    IdentityLoader identityLoader,
+    PolicyLoader policyLoader,
+    IAuditEventStore auditEventStore,
+    IActivityStore activityStore,
+    IDecisionExporter decisionExporter,
+    IDecisionMetrics decisionMetrics,
+    CancellationToken cancellationToken) =>
+{
+    var auditEvents = await auditEventStore.GetRecentAsync(
+        count: int.MaxValue,
+        cancellationToken: cancellationToken);
+    var activitySnapshot = await activityStore.GetSnapshotAsync(
+        cancellationToken);
+
+    return Results.Ok(new
+    {
+        currentRuntimeMode = runtimeSettings.Mode.ToString(),
+        capabilityCount = capabilityLoader.GetCapabilities().Count,
+        identityCount = identityLoader.GetIdentities().Count,
+        policyCount = policyLoader.GetPolicies().Count,
+        auditEventCount = auditEvents.Count,
+        activityCapabilityCount = activitySnapshot.Capabilities.Count,
+        activityIdentityCount = activitySnapshot.Identities.Count,
+        activityPolicyCount = activitySnapshot.Policies.Count,
+        exporterType = decisionExporter.GetType().Name,
+        metricsType = decisionMetrics.GetType().Name,
+        timestampUtc = DateTimeOffset.UtcNow
+    });
+});
+
 app.MapGet("/activity", async (
     IActivityStore activityStore,
     CancellationToken cancellationToken) =>
 {
     return Results.Ok(await activityStore.GetSnapshotAsync(cancellationToken));
+});
+
+app.MapGet("/exports", async (
+    IDecisionExporter exporter,
+    CancellationToken cancellationToken) =>
+{
+    if (exporter is InMemoryDecisionExporter inMemoryExporter)
+    {
+        return Results.Ok(await inMemoryExporter.GetExportsAsync(cancellationToken));
+    }
+
+    return Results.Ok(Array.Empty<Seneschal.Core.Models.DecisionExportRecord>());
+});
+
+app.MapGet("/metrics", (IDecisionMetrics metrics) =>
+{
+    if (metrics is InMemoryDecisionMetrics inMemoryMetrics)
+    {
+        return Results.Text(
+            inMemoryMetrics.RenderPrometheus(),
+            "text/plain; version=0.0.4; charset=utf-8");
+    }
+
+    return Results.Text(
+        string.Empty,
+        "text/plain; version=0.0.4; charset=utf-8");
 });
 
 app.MapGet("/audit", async (

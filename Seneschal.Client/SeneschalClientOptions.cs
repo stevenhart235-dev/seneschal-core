@@ -24,5 +24,5 @@ public sealed record SeneschalClientOptions
     /// <summary>
     /// Gets the request header name used when <see cref="ApiKey"/> is set.
     /// </summary>
-    public string ApiKeyHeaderName { get; set; } = "X-Api-Key";
+    public string ApiKeyHeaderName { get; set; } = "X-Seneschal-Api-Key";
 }

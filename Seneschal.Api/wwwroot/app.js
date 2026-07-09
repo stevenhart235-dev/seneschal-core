@@ -42,39 +42,15 @@ async function loadDashboard() {
 }
 
 async function evaluatePolicy() {
-    const identity = document.getElementById("simIdentity").value;
-    const capability = document.getElementById("simCapability").value;
-    const environment = document.getElementById("simEnvironment").value;
-    const resource = document.getElementById("simResource").value;
-
-    const response = await fetch("/evaluate", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            identity,
-            capability,
-            context: {
-                environment,
-                resource
-            }
-        })
-    });
-
-    const result = await response.json();
-
     document.getElementById("simResult").innerHTML = `
-        <h3>Decision Result</h3>
-        <p><strong>Decision:</strong> ${result.decision}</p>
-        <p><strong>Effective Action:</strong> ${result.effectiveAction}</p>
-        <p><strong>Mode:</strong> ${result.mode}</p>
-        <p><strong>Matched Policy:</strong> ${result.policyMatched}</p>
-        <p><strong>Reason:</strong> ${result.reason}</p>
-        <p><strong>Duration:</strong> ${result.durationMs} ms</p>
+        <h3>Policy Simulator Disabled</h3>
+        <p class="muted">
+            The secured <code>/evaluate</code> endpoint requires an integration
+            API key. Seneschal does not place integration keys in browser
+            JavaScript. Use the protected sample API or a server-side
+            integration to evaluate capabilities.
+        </p>
     `;
-
-    await loadDashboard();
 }
 
 document.getElementById("evaluateButton").addEventListener("click", evaluatePolicy);

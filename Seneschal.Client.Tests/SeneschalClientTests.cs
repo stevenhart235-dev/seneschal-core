@@ -105,7 +105,7 @@ public sealed class SeneschalClientTests
 
         Assert.True(
             handler.Requests.Single().Headers.TryGetValue(
-                "X-Api-Key",
+                "X-Seneschal-Api-Key",
                 out var values));
         Assert.Equal("secret-token", values.Single());
     }

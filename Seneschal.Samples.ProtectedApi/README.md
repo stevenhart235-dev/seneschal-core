@@ -28,8 +28,22 @@ Override it with configuration:
 $env:Seneschal__BaseUrl = "http://localhost:5000"
 ```
 
-An optional `Seneschal:ApiKey` setting is available as a placeholder for future
-authenticated Seneschal deployments.
+The sample sends the development integration API key configured in
+`appsettings.json`:
+
+```json
+{
+  "Seneschal": {
+    "ApiKey": "dev-sample-key"
+  }
+}
+```
+
+When calling Seneschal directly, integrations must send:
+
+```text
+X-Seneschal-Api-Key: dev-sample-key
+```
 
 ## Run both applications
 

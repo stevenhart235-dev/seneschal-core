@@ -25,6 +25,8 @@ builder.Services.AddSingleton(new RuntimeSettings
     Mode = Seneschal.Core.Enums.EnforcementMode.LogOnly
 });
 builder.Services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
+builder.Services.AddSingleton<IntegrationApiKeyLoader>();
+builder.Services.AddSingleton<IntegrationApiKeyAuthorizer>();
 builder.Services.AddSingleton<CapabilityLoader>();
 builder.Services.AddSingleton<IdentityLoader>();
 builder.Services.AddSingleton<PolicyProjector>();
@@ -52,8 +54,26 @@ app.UseStaticFiles();
 
 app.Services.GetRequiredService<PolicyValidator>();
 
-app.MapPost("/evaluate", (DecisionRequest request, CoreDecisionService decisionService) =>
+app.MapPost("/evaluate", (
+    DecisionRequest request,
+    HttpRequest httpRequest,
+    IntegrationApiKeyAuthorizer apiKeyAuthorizer,
+    CoreDecisionService decisionService) =>
 {
+    var authorization = apiKeyAuthorizer.Authorize(
+        httpRequest,
+        request);
+
+    if (!authorization.IsAllowed)
+    {
+        return Results.Json(
+            new
+            {
+                reason = authorization.Reason
+            },
+            statusCode: authorization.StatusCode);
+    }
+
     var result = decisionService.Evaluate(request);
 
     return Results.Ok(result);

@@ -1,0 +1,13 @@
+# Development/sample only.
+# Do not use checked-in API keys in production.
+# Production should use secret-backed configuration later.
+integrationKeys:
+  - name: sample-protected-api
+    key: dev-sample-key
+    enabled: true
+    allowedIdentities:
+      - Developer
+      - UnknownService
+      - anonymous
+    allowedCapabilities:
+      - DeployApplication

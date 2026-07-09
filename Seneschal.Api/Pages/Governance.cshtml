@@ -1,0 +1,117 @@
+@page "/governance"
+@model Seneschal.Api.Pages.GovernanceModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seneschal Runtime Governance</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">Seneschal</div>
+            <nav class="sidebar-nav" aria-label="Primary navigation">
+                <div class="nav-section">
+                    <div class="nav-section-title">Overview</div>
+                    <a href="/dashboard"><span class="nav-icon">▦</span><span>Dashboard</span></a>
+                    <a href="/monitor"><span class="nav-icon">◉</span><span>Monitor</span></a>
+                    <a class="active" href="/governance"><span class="nav-icon">⏻</span><span>Governance</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Governance</div>
+                    <a href="/capability-explorer"><span class="nav-icon">◇</span><span>Capabilities</span></a>
+                    <a href="/policies"><span class="nav-icon">§</span><span>Policies</span></a>
+                    <a href="/identities"><span class="nav-icon">◎</span><span>Identities</span></a>
+                    <a href="/resources"><span class="nav-icon">▱</span><span>Resources</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Operations</div>
+                    <a href="/audit"><span class="nav-icon">◷</span><span>Audit</span></a>
+                    <a href="/incidents"><span class="nav-icon">△</span><span>Incidents</span></a>
+                    <a href="/capability-activity"><span class="nav-icon">↗</span><span>Capability Activity</span></a>
+                    <a href="/identity-activity"><span class="nav-icon">↔</span><span>Identity Activity</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Explore</div>
+                    <a href="/graph-view"><span class="nav-icon">✣</span><span>Relationship Graph</span></a>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="container explorer-page">
+            <header class="page-header">
+                <div class="breadcrumb">Overview / Runtime Governance</div>
+                <h1>Runtime Governance</h1>
+                <p class="subtitle">
+                    Switch Seneschal between monitor/log-only mode and active
+                    enforcement without restarting the application.
+                </p>
+            </header>
+
+            <section class="monitor-status-banner">
+                <div>
+                    <span class="badge monitor-mode-badge">
+                        Current Mode: @Model.CurrentModeLabel
+                    </span>
+                    <p>@Model.CurrentModeDescription</p>
+                    <p class="muted">
+                        Runtime governance mode is in-memory only. Restarting
+                        Seneschal resets the mode to LogOnly.
+                    </p>
+                </div>
+            </section>
+
+            <section class="dashboard-columns">
+                <article class="panel">
+                    <h2>LogOnly</h2>
+                    <p class="muted">
+                        Policies are evaluated and audited. Deny and pending
+                        approval decisions are recorded, but integrations may
+                        continue execution.
+                    </p>
+                    <form method="post" action="/governance?handler=SetMode">
+                        <input type="hidden" name="mode" value="LogOnly" />
+                        <button class="button-link" type="submit">
+                            Switch to LogOnly
+                        </button>
+                    </form>
+                </article>
+
+                <article class="panel">
+                    <h2>Enforce</h2>
+                    <p class="muted">
+                        Callers must honor Seneschal decisions. Allow proceeds;
+                        Deny and PendingApproval may block the operation.
+                    </p>
+                    <div class="empty-state warning-state">
+                        <p>
+                            Deny and pending approval decisions may block
+                            integrated applications.
+                        </p>
+                    </div>
+                    <form method="post" action="/governance?handler=SetMode">
+                        <input type="hidden" name="mode" value="Enforce" />
+                        <button class="button-link" type="submit">
+                            Switch to Enforce
+                        </button>
+                    </form>
+                </article>
+            </section>
+
+            <section class="panel">
+                <h2>Operational Note</h2>
+                <p class="muted">
+                    This first version is intentionally non-persistent and
+                    portal-first. Mode changes should become administrative
+                    audit events before this control is used in production.
+                </p>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

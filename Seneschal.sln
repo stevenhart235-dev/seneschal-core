@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Seneschal.AspNetCore.Tests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Seneschal.Samples.ProtectedApi", "Seneschal.Samples.ProtectedApi\Seneschal.Samples.ProtectedApi.csproj", "{18C35790-DDB1-41BA-8838-3E02E57C546D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Seneschal.Samples.CapabilityControlDemo", "Seneschal.Samples.CapabilityControlDemo\Seneschal.Samples.CapabilityControlDemo.csproj", "{BEB2E2F9-0FD1-4D11-BCC7-AE4A29A05933}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -153,6 +155,18 @@ Global
 		{18C35790-DDB1-41BA-8838-3E02E57C546D}.Release|x64.Build.0 = Release|Any CPU
 		{18C35790-DDB1-41BA-8838-3E02E57C546D}.Release|x86.ActiveCfg = Release|Any CPU
 		{18C35790-DDB1-41BA-8838-3E02E57C546D}.Release|x86.Build.0 = Release|Any CPU
+		{BEB2E2F9-0FD1-4D11-BCC7-AE4A29A05933}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BEB2E2F9-0FD1-4D11-BCC7-AE4A29A05933}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BEB2E2F9-0FD1-4D11-BCC7-AE4A29A05933}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BEB2E2F9-0FD1-4D11-BCC7-AE4A29A05933}.Debug|x64.Build.0 = Debug|Any CPU
+		{BEB2E2F9-0FD1-4D11-BCC7-AE4A29A05933}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BEB2E2F9-0FD1-4D11-BCC7-AE4A29A05933}.Debug|x86.Build.0 = Debug|Any CPU
+		{BEB2E2F9-0FD1-4D11-BCC7-AE4A29A05933}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BEB2E2F9-0FD1-4D11-BCC7-AE4A29A05933}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BEB2E2F9-0FD1-4D11-BCC7-AE4A29A05933}.Release|x64.ActiveCfg = Release|Any CPU
+		{BEB2E2F9-0FD1-4D11-BCC7-AE4A29A05933}.Release|x64.Build.0 = Release|Any CPU
+		{BEB2E2F9-0FD1-4D11-BCC7-AE4A29A05933}.Release|x86.ActiveCfg = Release|Any CPU
+		{BEB2E2F9-0FD1-4D11-BCC7-AE4A29A05933}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

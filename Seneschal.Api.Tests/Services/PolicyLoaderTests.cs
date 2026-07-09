@@ -20,7 +20,7 @@ public sealed class PolicyLoaderTests :
     {
         var policies = _loader.GetPolicies();
 
-        Assert.Equal(4, policies.Count);
+        Assert.Equal(6, policies.Count);
         Assert.Equal("Developers can deploy to dev", policies[0].Name);
         Assert.Equal("allow", policies[0].Decision);
     }
@@ -53,7 +53,7 @@ public sealed class PolicyLoaderTests :
             .ToList();
 
         Assert.Equal(
-            [4, 3, 2, 1],
+            [6, 5, 4, 3, 2, 1],
             projectedPolicies.Select(policy => policy.Priority));
     }
 

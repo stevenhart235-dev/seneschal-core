@@ -200,7 +200,7 @@ public sealed class EvaluateApiKeyAuthorizationTests :
                 builder.ConfigureTestServices(services =>
                 {
                     services.RemoveAll<IntegrationApiKeyLoader>();
-                    services.AddSingleton(new IntegrationApiKeyLoader(
+                    services.AddSingleton(IntegrationApiKeyLoader.FromKeys(
                         keys.Length == 0
                             ? [IntegrationKey()]
                             : keys));

@@ -40,7 +40,7 @@ public sealed class ApiApplicationFactory : WebApplicationFactory<Program>
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<IntegrationApiKeyLoader>();
-            services.AddSingleton(new IntegrationApiKeyLoader(
+            services.AddSingleton(IntegrationApiKeyLoader.FromKeys(
             [
                 new IntegrationApiKey
                 {

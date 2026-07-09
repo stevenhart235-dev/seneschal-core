@@ -21,10 +21,7 @@ public sealed class CoreDecisionServiceTests :
         _service = new CoreDecisionService(
             new PolicyLoader(),
             new CorePolicyEvaluator(),
-            new RuntimeSettings
-            {
-                Mode = CoreEnforcementMode.LogOnly
-            });
+            CreateModeStore());
     }
 
     [Fact]
@@ -107,10 +104,7 @@ public sealed class CoreDecisionServiceTests :
         var service = new CoreDecisionService(
             new PolicyLoader(),
             new CorePolicyEvaluator(),
-            new RuntimeSettings
-            {
-                Mode = CoreEnforcementMode.LogOnly
-            },
+            CreateModeStore(),
             auditStore);
 
         var result = service.Evaluate(
@@ -140,10 +134,7 @@ public sealed class CoreDecisionServiceTests :
         var service = new CoreDecisionService(
             new PolicyLoader(),
             new CorePolicyEvaluator(),
-            new RuntimeSettings
-            {
-                Mode = CoreEnforcementMode.LogOnly
-            },
+            CreateModeStore(),
             activityStore: activityStore);
 
         var result = service.Evaluate(
@@ -176,10 +167,7 @@ public sealed class CoreDecisionServiceTests :
         var service = new CoreDecisionService(
             new PolicyLoader(),
             new CorePolicyEvaluator(),
-            new RuntimeSettings
-            {
-                Mode = CoreEnforcementMode.LogOnly
-            },
+            CreateModeStore(),
             decisionExporter: exporter);
 
         var result = service.Evaluate(
@@ -208,10 +196,7 @@ public sealed class CoreDecisionServiceTests :
         var service = new CoreDecisionService(
             new PolicyLoader(),
             new CorePolicyEvaluator(),
-            new RuntimeSettings
-            {
-                Mode = CoreEnforcementMode.LogOnly
-            },
+            CreateModeStore(),
             decisionExporter: exporter);
 
         service.Evaluate(
@@ -231,10 +216,7 @@ public sealed class CoreDecisionServiceTests :
         var service = new CoreDecisionService(
             new PolicyLoader(),
             new CorePolicyEvaluator(),
-            new RuntimeSettings
-            {
-                Mode = CoreEnforcementMode.LogOnly
-            },
+            CreateModeStore(),
             auditStore,
             activityStore,
             new ThrowingDecisionExporter());
@@ -259,10 +241,7 @@ public sealed class CoreDecisionServiceTests :
         var service = new CoreDecisionService(
             new PolicyLoader(),
             new CorePolicyEvaluator(),
-            new RuntimeSettings
-            {
-                Mode = CoreEnforcementMode.LogOnly
-            },
+            CreateModeStore(),
             auditStore,
             activityStore,
             exporter,
@@ -287,10 +266,7 @@ public sealed class CoreDecisionServiceTests :
         var service = new CoreDecisionService(
             new PolicyLoader(),
             new CorePolicyEvaluator(),
-            new RuntimeSettings
-            {
-                Mode = CoreEnforcementMode.LogOnly
-            },
+            CreateModeStore(),
             decisionMetrics: metrics);
 
         service.Evaluate(
@@ -415,6 +391,14 @@ public sealed class CoreDecisionServiceTests :
                 ["resource"] = "contract-test-resource"
             }
         };
+    }
+
+    private static IGovernanceModeStore CreateModeStore()
+    {
+        return new InMemoryGovernanceModeStore(new RuntimeSettings
+        {
+            Mode = CoreEnforcementMode.LogOnly
+        });
     }
 
     private sealed class ThrowingDecisionExporter : IDecisionExporter

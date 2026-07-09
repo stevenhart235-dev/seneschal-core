@@ -24,6 +24,7 @@ builder.Services.AddSingleton(new RuntimeSettings
 {
     Mode = Seneschal.Core.Enums.EnforcementMode.LogOnly
 });
+builder.Services.AddSingleton<IGovernanceModeStore, InMemoryGovernanceModeStore>();
 builder.Services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
 builder.Services.AddSingleton<IntegrationApiKeyLoader>();
 builder.Services.AddSingleton<IntegrationApiKeyAuthorizer>();
@@ -141,7 +142,7 @@ app.MapGet("/config/validate", (
 });
 
 app.MapGet("/diagnostics", async (
-    RuntimeSettings runtimeSettings,
+    IGovernanceModeStore governanceModeStore,
     CapabilityLoader capabilityLoader,
     IdentityLoader identityLoader,
     PolicyLoader policyLoader,
@@ -159,7 +160,7 @@ app.MapGet("/diagnostics", async (
 
     return Results.Ok(new
     {
-        currentRuntimeMode = runtimeSettings.Mode.ToString(),
+        currentRuntimeMode = governanceModeStore.GetMode().ToString(),
         capabilityCount = capabilityLoader.GetCapabilities().Count,
         identityCount = identityLoader.GetIdentities().Count,
         policyCount = policyLoader.GetPolicies().Count,

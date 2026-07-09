@@ -17,7 +17,7 @@ public sealed class CoreDecisionService
 
     private readonly PolicyLoader _policyLoader;
     private readonly CorePolicyEvaluator _policyEvaluator;
-    private readonly RuntimeSettings _settings;
+    private readonly IGovernanceModeStore _governanceModeStore;
     private readonly IAuditSink? _auditSink;
     private readonly IActivityStore? _activityStore;
     private readonly IDecisionExporter? _decisionExporter;
@@ -27,7 +27,7 @@ public sealed class CoreDecisionService
     public CoreDecisionService(
         PolicyLoader policyLoader,
         CorePolicyEvaluator policyEvaluator,
-        RuntimeSettings settings,
+        IGovernanceModeStore governanceModeStore,
         IAuditSink? auditSink = null,
         IActivityStore? activityStore = null,
         IDecisionExporter? decisionExporter = null,
@@ -36,7 +36,7 @@ public sealed class CoreDecisionService
     {
         _policyLoader = policyLoader;
         _policyEvaluator = policyEvaluator;
-        _settings = settings;
+        _governanceModeStore = governanceModeStore;
         _auditSink = auditSink;
         _activityStore = activityStore;
         _decisionExporter = decisionExporter;
@@ -68,7 +68,7 @@ public sealed class CoreDecisionService
         var coreResult = _policyEvaluator.Evaluate(
             coreRequest,
             corePolicies,
-            _settings.Mode);
+            _governanceModeStore.GetMode());
         stopwatch.Stop();
 
         coreResult = coreResult with

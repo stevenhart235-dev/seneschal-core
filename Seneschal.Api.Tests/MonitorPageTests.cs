@@ -79,9 +79,9 @@ public sealed class MonitorPageTests :
         Assert.Contains("Governance Recommendations", html);
         Assert.Contains("Review Unused Governance Objects", html);
         Assert.Contains("Review or archive unused governance objects", html);
-        Assert.Contains("Unused capabilities: 3", html);
-        Assert.Contains("Unused identities: 4", html);
-        Assert.Contains("Unused policies: 4", html);
+        Assert.Contains("Unused capabilities: 5", html);
+        Assert.Contains("Unused identities: 5", html);
+        Assert.Contains("Unused policies: 6", html);
     }
 
     [Fact]
@@ -170,6 +170,20 @@ public sealed class MonitorPageTests :
                     AllowedCount = 29,
                     PendingApprovalCount = 1,
                     AverageEvaluationDurationMs = 5
+                },
+                new CapabilityActivity
+                {
+                    CapabilityId = "infrastructure.production.apply",
+                    TotalRequests = 30,
+                    AllowedCount = 30,
+                    AverageEvaluationDurationMs = 5
+                },
+                new CapabilityActivity
+                {
+                    CapabilityId = "infrastructure.production.destroy",
+                    TotalRequests = 30,
+                    DeniedCount = 30,
+                    AverageEvaluationDurationMs = 5
                 }
             ],
             Identities =
@@ -193,6 +207,11 @@ public sealed class MonitorPageTests :
                 {
                     IdentityId = "SupportAgent",
                     TotalRequests = 1
+                },
+                new IdentityActivity
+                {
+                    IdentityId = "platform-agent",
+                    TotalRequests = 1
                 }
             ],
             Policies =
@@ -215,6 +234,16 @@ public sealed class MonitorPageTests :
                 new PolicyActivity
                 {
                     PolicyId = "Support secret reads require approval",
+                    MatchCount = 1
+                },
+                new PolicyActivity
+                {
+                    PolicyId = "Platform agent can apply production infrastructure",
+                    MatchCount = 1
+                },
+                new PolicyActivity
+                {
+                    PolicyId = "Platform agent cannot destroy production infrastructure",
                     MatchCount = 1
                 }
             ]

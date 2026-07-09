@@ -9,7 +9,7 @@ namespace Seneschal.Api.Pages;
 public sealed class MonitorModel : PageModel
 {
     private readonly PolicyLoader _policyLoader;
-    private readonly RuntimeSettings _runtimeSettings;
+    private readonly IGovernanceModeStore _governanceModeStore;
     private readonly IAuditEventStore _auditEventStore;
     private readonly IActivityStore _activityStore;
     private readonly CapabilityLoader _capabilityLoader;
@@ -17,21 +17,21 @@ public sealed class MonitorModel : PageModel
 
     public MonitorModel(
         PolicyLoader policyLoader,
-        RuntimeSettings runtimeSettings,
+        IGovernanceModeStore governanceModeStore,
         IAuditEventStore auditEventStore,
         IActivityStore activityStore,
         CapabilityLoader capabilityLoader,
         IdentityLoader identityLoader)
     {
         _policyLoader = policyLoader;
-        _runtimeSettings = runtimeSettings;
+        _governanceModeStore = governanceModeStore;
         _auditEventStore = auditEventStore;
         _activityStore = activityStore;
         _capabilityLoader = capabilityLoader;
         _identityLoader = identityLoader;
     }
 
-    public string CurrentMode => _runtimeSettings.Mode == EnforcementMode.LogOnly
+    public string CurrentMode => _governanceModeStore.GetMode() == EnforcementMode.LogOnly
         ? "Monitor"
         : "Enforce";
 

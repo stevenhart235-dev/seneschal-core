@@ -13,3 +13,13 @@ capabilities:
     description: Read a production secret
     risk: High
     category: Security
+
+  - name: infrastructure.production.apply
+    description: Apply infrastructure changes to production
+    risk: Critical
+    category: Infrastructure
+
+  - name: infrastructure.production.destroy
+    description: Destroy production infrastructure resources
+    risk: Critical
+    category: Infrastructure

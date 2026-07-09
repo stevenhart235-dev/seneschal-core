@@ -1,0 +1,274 @@
+@page "/incidents/{id}"
+@model Seneschal.Api.Pages.IncidentDetailModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seneschal Governance Incident</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">Seneschal</div>
+            <nav class="sidebar-nav" aria-label="Primary navigation">
+                <div class="nav-section">
+                    <div class="nav-section-title">Overview</div>
+                    <a href="/dashboard"><span class="nav-icon">▦</span><span>Dashboard</span></a>
+                    <a href="/monitor"><span class="nav-icon">◉</span><span>Monitor</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Governance</div>
+                    <a href="/capability-explorer"><span class="nav-icon">◇</span><span>Capabilities</span></a>
+                    <a href="/policies"><span class="nav-icon">§</span><span>Policies</span></a>
+                    <a href="/identities"><span class="nav-icon">◎</span><span>Identities</span></a>
+                    <a href="/resources"><span class="nav-icon">▱</span><span>Resources</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Operations</div>
+                    <a href="/audit"><span class="nav-icon">◷</span><span>Audit</span></a>
+                    <a class="active" href="/incidents"><span class="nav-icon">△</span><span>Incidents</span></a>
+                    <a href="/capability-activity"><span class="nav-icon">↗</span><span>Capability Activity</span></a>
+                    <a href="/identity-activity"><span class="nav-icon">↔</span><span>Identity Activity</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Explore</div>
+                    <a href="/graph-view"><span class="nav-icon">✣</span><span>Relationship Graph</span></a>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="container explorer-page">
+            @if (Model.IncidentNotFound)
+            {
+                <header class="page-header">
+                    <div class="breadcrumb">Operations / Incidents / Not Found</div>
+                    <h1>Incident not found</h1>
+                    <p class="subtitle">
+                        No governance incident exists with id
+                        <span class="code">@Model.IncidentId</span>.
+                    </p>
+                </header>
+
+                <section class="panel">
+                    <h2>Missing Incident</h2>
+                    <div class="empty-state">
+                        <p class="muted">
+                            The incident may have never existed, or this
+                            in-memory instance may have restarted.
+                        </p>
+                        <p>
+                            <a class="button-link" href="/incidents">Back to Incidents</a>
+                        </p>
+                    </div>
+                </section>
+            }
+            else if (Model.Incident is not null)
+            {
+                var incident = Model.Incident;
+
+                <header class="page-header graph-page-header">
+                    <div>
+                        <div class="breadcrumb">Operations / Incidents / Detail</div>
+                        <h1>@incident.Title</h1>
+                        <p class="subtitle">
+                            Focused context for a repeated governance decision.
+                        </p>
+                        <div class="badge-row">
+                            <span class="badge severity-badge @Seneschal.Api.Pages.IncidentDetailModel.SeverityClass(incident.Severity)">
+                                @incident.Severity
+                            </span>
+                            <span class="badge status-badge">
+                                @incident.CurrentStatus
+                            </span>
+                        </div>
+                    </div>
+                    <a class="button-link" href="/incidents">Back to Incidents</a>
+                </header>
+
+                <section class="incident-summary-strip">
+                    <div>
+                        <span>Severity</span>
+                        <strong>@incident.Severity</strong>
+                    </div>
+                    <div>
+                        <span>Status</span>
+                        <strong>@incident.CurrentStatus</strong>
+                    </div>
+                    <div>
+                        <span>Occurrence Count</span>
+                        <strong>@incident.OccurrenceCount</strong>
+                    </div>
+                    <div>
+                        <span>Age</span>
+                        <strong>@Model.GetAge()</strong>
+                    </div>
+                    <div>
+                        <span>Last Seen</span>
+                        <strong>@incident.LastSeenUtc.ToString("u")</strong>
+                    </div>
+                </section>
+
+                <section class="panel incident-detail-panel">
+                    <div class="incident-detail-header">
+                        <h2>Incident Context</h2>
+                        <div class="incident-actions">
+                            @if (incident.CurrentStatus == Seneschal.Core.Enums.GovernanceIncidentStatus.Open)
+                            {
+                                <form method="post" action="/incidents/@incident.Id/acknowledge">
+                                    <button class="compact-action-button" type="submit">
+                                        Acknowledge
+                                    </button>
+                                </form>
+                            }
+                            @if (incident.CurrentStatus != Seneschal.Core.Enums.GovernanceIncidentStatus.Resolved)
+                            {
+                                <form method="post" action="/incidents/@incident.Id/resolve">
+                                    <button class="compact-action-button secondary-action-button" type="submit">
+                                        Resolve
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+
+                    <dl class="metadata-grid incident-metadata-grid">
+                        <dt>Incident Id</dt>
+                        <dd>@incident.Id</dd>
+                        <dt>Capability</dt>
+                        <dd>@incident.CapabilityId</dd>
+                        <dt>Identity</dt>
+                        <dd>@incident.IdentityId</dd>
+                        <dt>Decision Reason</dt>
+                        <dd>@incident.DecisionReason</dd>
+                        <dt>Matched Policy</dt>
+                        <dd>@(string.IsNullOrWhiteSpace(incident.MatchedPolicy) ? "n/a" : incident.MatchedPolicy)</dd>
+                        <dt>First Seen</dt>
+                        <dd>@incident.FirstSeenUtc.ToString("u")</dd>
+                        <dt>Last Seen</dt>
+                        <dd>@incident.LastSeenUtc.ToString("u")</dd>
+                        <dt>Occurrence Count</dt>
+                        <dd>@incident.OccurrenceCount</dd>
+                    </dl>
+                </section>
+
+                <section class="panel">
+                    <div class="incident-detail-header">
+                        <div>
+                            <h2>Investigation</h2>
+                            <p class="muted">
+                                Operational links and next-step guidance for
+                                this incident.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="investigation-grid">
+                        <a class="quick-action-card" href="@Model.CapabilityLink()">
+                            <span>◇</span>
+                            <strong>Related Capability</strong>
+                            <small>@incident.CapabilityId</small>
+                        </a>
+                        <a class="quick-action-card" href="@Model.IdentityLink()">
+                            <span>◎</span>
+                            <strong>Related Identity</strong>
+                            <small>@incident.IdentityId</small>
+                        </a>
+                        @if (!string.IsNullOrWhiteSpace(incident.MatchedPolicy))
+                        {
+                            <a class="quick-action-card" href="@Model.PolicyLink()">
+                                <span>§</span>
+                                <strong>Related Policy</strong>
+                                <small>@incident.MatchedPolicy</small>
+                            </a>
+                        }
+                        <a class="quick-action-card" href="@Model.AuditLink()">
+                            <span>◷</span>
+                            <strong>Related Audit</strong>
+                            <small>Filtered audit trail</small>
+                        </a>
+                    </div>
+
+                    <div class="incident-recommendation">
+                        <strong>Recommendation</strong>
+                        <p>@Model.GetRecommendation()</p>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="incident-detail-header">
+                        <div>
+                            <h2>Incident Timeline</h2>
+                            <p class="muted">
+                                First seen, last seen, and recent matching
+                                audit evidence.
+                            </p>
+                        </div>
+                        <a class="button-link" href="@Model.AuditLink()">
+                            View Filtered Audit
+                        </a>
+                    </div>
+
+                    <div class="timeline-facts">
+                        <div>
+                            <span>First Seen</span>
+                            <strong>@incident.FirstSeenUtc.ToString("u")</strong>
+                        </div>
+                        <div>
+                            <span>Last Seen</span>
+                            <strong>@incident.LastSeenUtc.ToString("u")</strong>
+                        </div>
+                        <div>
+                            <span>Total Occurrences</span>
+                            <strong>@incident.OccurrenceCount</strong>
+                        </div>
+                    </div>
+
+                    @if (Model.RecentAuditEvents.Count == 0)
+                    {
+                        <div class="empty-state">
+                            <p class="muted">
+                                No recent matching audit events are currently
+                                available in memory.
+                            </p>
+                        </div>
+                    }
+                    else
+                    {
+                        <ol class="incident-timeline">
+                            @foreach (var auditEvent in Model.RecentAuditEvents)
+                            {
+                                <li>
+                                    <div class="timeline-dot"></div>
+                                    <div class="timeline-card">
+                                        <div class="timeline-card-header">
+                                            <strong>@auditEvent.TimestampUtc.ToString("u")</strong>
+                                            <span class="badge decision-badge @Seneschal.Api.Pages.IncidentDetailModel.DecisionClass(auditEvent.Decision)">
+                                                @auditEvent.Decision
+                                            </span>
+                                        </div>
+                                        <dl class="timeline-metadata">
+                                            <dt>Identity</dt>
+                                            <dd>@auditEvent.IdentityId</dd>
+                                            <dt>Capability</dt>
+                                            <dd>@auditEvent.CapabilityId</dd>
+                                            <dt>Matched Policy</dt>
+                                            <dd>@(auditEvent.MatchedPolicies.Count == 0 ? "n/a" : string.Join(", ", auditEvent.MatchedPolicies))</dd>
+                                            <dt>Decision Reason</dt>
+                                            <dd>@auditEvent.Reason</dd>
+                                        </dl>
+                                    </div>
+                                </li>
+                            }
+                        </ol>
+                    }
+                </section>
+            }
+        </main>
+    </div>
+</body>
+</html>

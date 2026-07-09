@@ -14,3 +14,7 @@ identities:
   - name: SupportAgent
     description: Support automation agent
     type: Agent
+
+  - name: platform-agent
+    description: Autonomous platform operations agent
+    type: Agent

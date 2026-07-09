@@ -11,3 +11,22 @@ integrationKeys:
       - anonymous
     allowedCapabilities:
       - DeployApplication
+
+  - name: capability-control-demo
+    key: dev-capability-control-key
+    enabled: true
+    allowedIdentities:
+      - platform-agent
+    allowedCapabilities:
+      - infrastructure.production.apply
+      - infrastructure.production.destroy
+    environment: production
+
+  - name: capability-control-demo-limited
+    key: dev-capability-control-limited-key
+    enabled: true
+    allowedIdentities:
+      - platform-agent
+    allowedCapabilities:
+      - infrastructure.production.plan
+    environment: production

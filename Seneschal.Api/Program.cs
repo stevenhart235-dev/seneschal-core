@@ -29,6 +29,12 @@ builder.Services.AddSingleton<IntegrationApiKeyLoader>();
 builder.Services.AddSingleton<IntegrationApiKeyAuthorizer>();
 builder.Services.AddSingleton<CapabilityLoader>();
 builder.Services.AddSingleton<IdentityLoader>();
+builder.Services.AddSingleton<IGovernanceIncidentStore>(services =>
+    new InMemoryGovernanceIncidentStore(
+        services
+            .GetRequiredService<CapabilityLoader>()
+            .GetCapabilities()
+            .Select(CapabilityMapper.ToCore)));
 builder.Services.AddSingleton<PolicyProjector>();
 builder.Services.AddSingleton<ICapabilityCatalog>(services =>
     new InMemoryCapabilityCatalog(
@@ -199,6 +205,50 @@ app.MapGet("/metrics", (IDecisionMetrics metrics) =>
         string.Empty,
         "text/plain; version=0.0.4; charset=utf-8");
 });
+
+app.MapPost(
+    "/incidents/{id}/acknowledge",
+    async (
+        string id,
+        HttpRequest request,
+        IGovernanceIncidentStore governanceIncidentStore,
+        CancellationToken cancellationToken) =>
+    {
+        var acknowledged = await governanceIncidentStore.AcknowledgeAsync(
+            id,
+            cancellationToken);
+
+        if (!acknowledged)
+        {
+            return Results.NotFound();
+        }
+
+        return AcceptsHtml(request)
+            ? Results.Redirect("/incidents")
+            : Results.NoContent();
+    });
+
+app.MapPost(
+    "/incidents/{id}/resolve",
+    async (
+        string id,
+        HttpRequest request,
+        IGovernanceIncidentStore governanceIncidentStore,
+        CancellationToken cancellationToken) =>
+    {
+        var resolved = await governanceIncidentStore.ResolveAsync(
+            id,
+            cancellationToken);
+
+        if (!resolved)
+        {
+            return Results.NotFound();
+        }
+
+        return AcceptsHtml(request)
+            ? Results.Redirect("/incidents")
+            : Results.NoContent();
+    });
 
 app.MapGet("/audit", async (
     HttpRequest request,

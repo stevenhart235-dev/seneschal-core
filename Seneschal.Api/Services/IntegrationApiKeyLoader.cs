@@ -33,10 +33,16 @@ public sealed class IntegrationApiKeyLoader
         _keys = keyFile.IntegrationKeys;
     }
 
-    public IntegrationApiKeyLoader(
+    private IntegrationApiKeyLoader(
         IEnumerable<IntegrationApiKey> keys)
     {
         _keys = keys.ToList();
+    }
+
+    public static IntegrationApiKeyLoader FromKeys(
+        IEnumerable<IntegrationApiKey> keys)
+    {
+        return new IntegrationApiKeyLoader(keys);
     }
 
     public IReadOnlyList<IntegrationApiKey> GetKeys()

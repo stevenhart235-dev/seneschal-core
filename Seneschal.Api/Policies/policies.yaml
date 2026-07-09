@@ -26,3 +26,17 @@ policies:
     environment: dev
     decision: allow
     reason: Platform engineers are allowed to deploy applications to dev
+
+  - name: Platform agent can apply production infrastructure
+    identity: platform-agent
+    capability: infrastructure.production.apply
+    environment: production
+    decision: allow
+    reason: Platform agent is approved to apply production infrastructure changes
+
+  - name: Platform agent cannot destroy production infrastructure
+    identity: platform-agent
+    capability: infrastructure.production.destroy
+    environment: production
+    decision: deny
+    reason: Destructive production infrastructure changes require manual break-glass approval

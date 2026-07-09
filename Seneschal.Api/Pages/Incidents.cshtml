@@ -1,0 +1,172 @@
+@page "/incidents"
+@model Seneschal.Api.Pages.IncidentsModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seneschal Governance Incidents</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">Seneschal</div>
+            <nav class="sidebar-nav" aria-label="Primary navigation">
+                <div class="nav-section">
+                    <div class="nav-section-title">Overview</div>
+                    <a href="/dashboard"><span class="nav-icon">▦</span><span>Dashboard</span></a>
+                    <a href="/monitor"><span class="nav-icon">◉</span><span>Monitor</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Governance</div>
+                    <a href="/capability-explorer"><span class="nav-icon">◇</span><span>Capabilities</span></a>
+                    <a href="/policies"><span class="nav-icon">§</span><span>Policies</span></a>
+                    <a href="/identities"><span class="nav-icon">◎</span><span>Identities</span></a>
+                    <a href="/resources"><span class="nav-icon">▱</span><span>Resources</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Operations</div>
+                    <a href="/audit"><span class="nav-icon">◷</span><span>Audit</span></a>
+                    <a class="active" href="/incidents"><span class="nav-icon">△</span><span>Incidents</span></a>
+                    <a href="/capability-activity"><span class="nav-icon">↗</span><span>Capability Activity</span></a>
+                    <a href="/identity-activity"><span class="nav-icon">↔</span><span>Identity Activity</span></a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Explore</div>
+                    <a href="/graph-view"><span class="nav-icon">✣</span><span>Relationship Graph</span></a>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="container explorer-page">
+            <header class="page-header graph-page-header">
+                <div>
+                    <div class="breadcrumb">Operations / Incidents</div>
+                    <h1>Governance Incidents</h1>
+                    <p class="subtitle">
+                        Repeated denied or pending approval decisions grouped
+                        into operational incidents.
+                    </p>
+                </div>
+                <a class="button-link" href="/audit">Open Audit Trail</a>
+            </header>
+
+            <section class="dashboard-grid incident-summary-grid">
+                <article class="dashboard-card">
+                    <strong>@Model.OpenIncidentCount</strong>
+                    <span>Open Incidents</span>
+                </article>
+                <article class="dashboard-card">
+                    <strong>@Model.CriticalIncidentCount</strong>
+                    <span>Critical Incidents</span>
+                </article>
+                <article class="dashboard-card">
+                    <strong>@Model.WarningIncidentCount</strong>
+                    <span>Warning Incidents</span>
+                </article>
+                <article class="dashboard-card">
+                    <strong>@Model.TotalOccurrenceCount</strong>
+                    <span>Total Occurrences</span>
+                </article>
+            </section>
+
+            @if (!Model.HasIncidents)
+            {
+                <section class="panel">
+                    <h2>No governance incidents detected.</h2>
+                    <div class="empty-state">
+                        <p class="muted">
+                            Incidents are created automatically when repeated
+                            denied or pending approval decisions are observed.
+                        </p>
+                        <p class="muted">
+                            Run evaluations through the API, SDK, middleware,
+                            or sample application to generate operational
+                            evidence.
+                        </p>
+                    </div>
+                </section>
+            }
+            else
+            {
+                <section class="panel">
+                    <h2>Incident Queue</h2>
+                    <table class="activity-table incident-table">
+                        <thead>
+                            <tr>
+                                <th>Severity</th>
+                                <th>Status</th>
+                                <th>Title</th>
+                                <th>Capability</th>
+                                <th>Identity</th>
+                                <th>Decision Reason</th>
+                                <th>Matched Policy</th>
+                                <th>Occurrences</th>
+                                <th>First Seen</th>
+                                <th>Last Seen</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var incident in Model.Incidents)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="badge severity-badge @Seneschal.Api.Pages.IncidentsModel.SeverityClass(incident.Severity)">
+                                            @incident.Severity
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge status-badge">
+                                            @incident.CurrentStatus
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a class="table-link" href="@Seneschal.Api.Pages.IncidentsModel.DetailLink(incident)">
+                                            @incident.Title
+                                        </a>
+                                    </td>
+                                    <td>@incident.CapabilityId</td>
+                                    <td>@incident.IdentityId</td>
+                                    <td>@incident.DecisionReason</td>
+                                    <td>@(string.IsNullOrWhiteSpace(incident.MatchedPolicy) ? "n/a" : incident.MatchedPolicy)</td>
+                                    <td>@incident.OccurrenceCount</td>
+                                    <td>@incident.FirstSeenUtc.ToString("u")</td>
+                                    <td>@incident.LastSeenUtc.ToString("u")</td>
+                                    <td>
+                                        <div class="incident-actions">
+                                            <a class="table-link compact-action-link" href="@Seneschal.Api.Pages.IncidentsModel.AuditLink(incident)">
+                                                Audit
+                                            </a>
+                                            @if (incident.CurrentStatus == Seneschal.Core.Enums.GovernanceIncidentStatus.Open)
+                                            {
+                                                <form method="post" action="/incidents/@incident.Id/acknowledge">
+                                                    <button class="compact-action-button" type="submit">
+                                                        Acknowledge
+                                                    </button>
+                                                </form>
+                                            }
+                                            @if (incident.CurrentStatus != Seneschal.Core.Enums.GovernanceIncidentStatus.Resolved)
+                                            {
+                                                <form method="post" action="/incidents/@incident.Id/resolve">
+                                                    <button class="compact-action-button secondary-action-button" type="submit">
+                                                        Resolve
+                                                    </button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </section>
+            }
+        </main>
+    </div>
+</body>
+</html>

@@ -22,6 +22,7 @@ public sealed class CoreDecisionService
     private readonly IActivityStore? _activityStore;
     private readonly IDecisionExporter? _decisionExporter;
     private readonly IDecisionMetrics? _decisionMetrics;
+    private readonly IGovernanceIncidentStore? _governanceIncidentStore;
 
     public CoreDecisionService(
         PolicyLoader policyLoader,
@@ -30,7 +31,8 @@ public sealed class CoreDecisionService
         IAuditSink? auditSink = null,
         IActivityStore? activityStore = null,
         IDecisionExporter? decisionExporter = null,
-        IDecisionMetrics? decisionMetrics = null)
+        IDecisionMetrics? decisionMetrics = null,
+        IGovernanceIncidentStore? governanceIncidentStore = null)
     {
         _policyLoader = policyLoader;
         _policyEvaluator = policyEvaluator;
@@ -39,6 +41,7 @@ public sealed class CoreDecisionService
         _activityStore = activityStore;
         _decisionExporter = decisionExporter;
         _decisionMetrics = decisionMetrics;
+        _governanceIncidentStore = governanceIncidentStore;
     }
 
     public ApiDecisionResult Evaluate(ApiDecisionRequest request)
@@ -136,7 +139,8 @@ public sealed class CoreDecisionService
         if (_auditSink is null &&
             _activityStore is null &&
             _decisionExporter is null &&
-            _decisionMetrics is null)
+            _decisionMetrics is null &&
+            _governanceIncidentStore is null)
         {
             return;
         }
@@ -161,6 +165,7 @@ public sealed class CoreDecisionService
         _activityStore?.RecordAsync(auditEvent).GetAwaiter().GetResult();
         TryExport(auditEvent);
         TryRecordMetrics(auditEvent);
+        TryRecordIncident(auditEvent);
     }
 
     private void TryExport(AuditEvent auditEvent)
@@ -196,6 +201,28 @@ public sealed class CoreDecisionService
         {
             // Decision metrics are intentionally isolated from policy
             // evaluation, audit history, activity metrics, export, and tracing.
+        }
+    }
+
+    private void TryRecordIncident(AuditEvent auditEvent)
+    {
+        if (_governanceIncidentStore is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _governanceIncidentStore
+                .RecordAsync(auditEvent)
+                .GetAwaiter()
+                .GetResult();
+        }
+        catch
+        {
+            // Governance incidents are intentionally isolated from policy
+            // evaluation, audit history, activity metrics, export, metrics,
+            // and tracing.
         }
     }
 }

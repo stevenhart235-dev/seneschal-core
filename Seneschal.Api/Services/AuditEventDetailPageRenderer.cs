@@ -135,6 +135,7 @@ public static class AuditEventDetailPageRenderer
         html.AppendLine("                <div class=\"nav-section\">");
         html.AppendLine("                    <div class=\"nav-section-title\">Operations</div>");
         html.AppendLine("                    <a class=\"active\" href=\"/audit\"><span class=\"nav-icon\">◷</span><span>Audit</span></a>");
+        html.AppendLine("                    <a href=\"/incidents\"><span class=\"nav-icon\">△</span><span>Incidents</span></a>");
         html.AppendLine("                    <a href=\"/capability-activity\"><span class=\"nav-icon\">↗</span><span>Capability Activity</span></a>");
         html.AppendLine("                    <a href=\"/identity-activity\"><span class=\"nav-icon\">↔</span><span>Identity Activity</span></a>");
         html.AppendLine("                </div>");

@@ -3,8 +3,8 @@
 Run Seneschal locally, protect one ASP.NET Core endpoint, and verify
 `LogOnly` versus `Enforce` behavior.
 
-> **Current requirement:** `Seneschal.Client` and `Seneschal.AspNetCore` are
-> source projects. They are not installed from published packages.
+> **Current requirement:** Packages are produced locally and are not published
+> to NuGet.org. Run `dotnet pack -c Release` in `Seneschal.AspNetCore` first.
 
 ## 1. Prerequisites
 
@@ -60,33 +60,35 @@ Restart Seneschal after any YAML change.
 > **Development only:** The checked-in key is plaintext sample configuration.
 > Do not use it in production.
 
-## 4. Reference and register the client
+## 4. Install and register the SDK
 
-From the repository root, set the application project path and add both
-references:
+Add the generated local package source and install the ASP.NET Core package:
 
 ```powershell
 $appProject = "MyApi/MyApi.csproj"
-dotnet add $appProject reference Seneschal.Client/Seneschal.Client.csproj
-dotnet add $appProject reference Seneschal.AspNetCore/Seneschal.AspNetCore.csproj
+dotnet nuget add source "$PWD/artifacts/packages" --name SeneschalLocal
+dotnet add $appProject package Seneschal.AspNetCore --version 0.1.0-alpha.1
 ```
 
-Add these namespaces to `Program.cs`:
+`Seneschal.AspNetCore` installs `Seneschal.Client` as a package dependency.
+
+Add the namespace to `Program.cs`:
 
 ```csharp
 using Seneschal.AspNetCore;
-using Seneschal.Client;
 ```
 
-Register the client before `builder.Build()`:
+Register Seneschal before `builder.Build()`:
 
 ```csharp
-builder.Services.Configure<SeneschalClientOptions>(options =>
+builder.Services.AddSeneschal(options =>
 {
     options.BaseUrl = new Uri("http://localhost:5000");
     options.ApiKey = "dev-sample-key";
+    options.IdentityResolver = context =>
+        context.User.Identity?.Name ?? "anonymous";
+    options.DefaultEnvironment = "dev";
 });
-builder.Services.AddHttpClient<ISeneschalClient, SeneschalClient>();
 ```
 
 The inline key keeps this quickstart short. Move it to configuration or a
@@ -100,20 +102,13 @@ Register middleware after routing and map an attributed handler:
 var app = builder.Build();
 
 app.UseRouting();
-app.UseSeneschalCapabilityAttributes();
+app.UseSeneschal();
 
-app.MapPost("/governed-operation", GovernedOperation);
+app.MapPost("/governed-operation", () =>
+        Results.Ok(new { executed = true }))
+    .RequireCapability("DeployApplication");
 
 app.Run();
-
-[RequiresCapability(
-    "DeployApplication",
-    Environment = "dev",
-    ResourceId = "quickstart-api")]
-static IResult GovernedOperation()
-{
-    return Results.Ok(new { executed = true });
-}
 ```
 
 With no ASP.NET Core authentication configured, middleware submits identity

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using Seneschal.Client;
 using Seneschal.Client.Models;
 
@@ -11,7 +12,7 @@ public sealed class SeneschalCapabilityAttributeMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ISeneschalClient _client;
-    private readonly SeneschalEnforcementBehavior _enforcementBehavior;
+    private readonly SeneschalOptions _options;
 
     /// <summary>
     /// Initializes a new instance of the
@@ -24,13 +25,34 @@ public sealed class SeneschalCapabilityAttributeMiddleware
         RequestDelegate next,
         ISeneschalClient client,
         SeneschalEnforcementBehavior enforcementBehavior)
+        : this(
+            next,
+            client,
+            Options.Create(new SeneschalOptions
+            {
+                EnforcementBehavior = enforcementBehavior
+            }))
+    {
+    }
+
+    /// <summary>
+    /// Initializes the middleware with the recommended integration options.
+    /// </summary>
+    /// <param name="next">The next delegate in the pipeline.</param>
+    /// <param name="client">The Seneschal decision client.</param>
+    /// <param name="options">The configured Seneschal options.</param>
+    public SeneschalCapabilityAttributeMiddleware(
+        RequestDelegate next,
+        ISeneschalClient client,
+        IOptions<SeneschalOptions> options)
     {
         ArgumentNullException.ThrowIfNull(next);
         ArgumentNullException.ThrowIfNull(client);
+        ArgumentNullException.ThrowIfNull(options);
 
         _next = next;
         _client = client;
-        _enforcementBehavior = enforcementBehavior;
+        _options = options.Value;
     }
 
     /// <summary>
@@ -59,7 +81,7 @@ public sealed class SeneschalCapabilityAttributeMiddleware
 
         if (SeneschalDecisionHandler.ShouldContinue(
                 decision,
-                _enforcementBehavior))
+                _options.EnforcementBehavior))
         {
             await _next(context);
             return;
@@ -68,16 +90,19 @@ public sealed class SeneschalCapabilityAttributeMiddleware
         await SeneschalDecisionHandler.WriteResponseAsync(context, decision);
     }
 
-    private static DecisionRequest BuildDecisionRequest(
+    private DecisionRequest BuildDecisionRequest(
         HttpContext context,
         RequiresCapabilityAttribute attribute)
     {
         var resource = string.IsNullOrWhiteSpace(attribute.ResourceId)
             ? context.Request.Path.Value ?? "/"
             : attribute.ResourceId;
-        var identity = string.IsNullOrWhiteSpace(context.User.Identity?.Name)
-            ? "anonymous"
-            : context.User.Identity!.Name!;
+        var identity = _options.IdentityResolver(context);
+
+        if (string.IsNullOrWhiteSpace(identity))
+        {
+            identity = "anonymous";
+        }
 
         var request = new DecisionRequest
         {
@@ -89,9 +114,13 @@ public sealed class SeneschalCapabilityAttributeMiddleware
             }
         };
 
-        if (!string.IsNullOrWhiteSpace(attribute.Environment))
+        var environment = string.IsNullOrWhiteSpace(attribute.Environment)
+            ? _options.DefaultEnvironment
+            : attribute.Environment;
+
+        if (!string.IsNullOrWhiteSpace(environment))
         {
-            request.Context["environment"] = attribute.Environment;
+            request.Context["environment"] = environment;
         }
 
         return request;

@@ -22,4 +22,10 @@
     <ProjectReference Include="..\Seneschal.Api\Seneschal.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\Seneschal.Api\Policies\*.yaml"
+             Link="Policies\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

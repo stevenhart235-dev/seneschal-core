@@ -14,8 +14,26 @@ public class PolicyLoader
     private readonly Lazy<IReadOnlyList<CorePolicy>> _corePolicies;
 
     public PolicyLoader()
+        : this(YamlConfigurationPathResolver.Resolve(
+            AppContext.BaseDirectory,
+            configuredPath: null,
+            "policies.yaml"))
     {
-        var path = Path.Combine(Directory.GetCurrentDirectory(), "Policies", "policies.yaml");
+    }
+
+    public PolicyLoader(
+        IHostEnvironment environment,
+        IConfiguration configuration)
+        : this(YamlConfigurationPathResolver.Resolve(
+            environment.ContentRootPath,
+            configuration[YamlConfigurationPathResolver.PoliciesPathKey],
+            "policies.yaml"))
+    {
+    }
+
+    public PolicyLoader(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
         if (!File.Exists(path))
             throw new FileNotFoundException($"Policy file not found: {path}");

@@ -9,11 +9,26 @@ public class IdentityLoader
     private readonly List<IdentityDefinition> _identities;
 
     public IdentityLoader()
+        : this(YamlConfigurationPathResolver.Resolve(
+            AppContext.BaseDirectory,
+            configuredPath: null,
+            "identities.yaml"))
     {
-        var path = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "Policies",
-            "identities.yaml");
+    }
+
+    public IdentityLoader(
+        IHostEnvironment environment,
+        IConfiguration configuration)
+        : this(YamlConfigurationPathResolver.Resolve(
+            environment.ContentRootPath,
+            configuration[YamlConfigurationPathResolver.IdentitiesPathKey],
+            "identities.yaml"))
+    {
+    }
+
+    public IdentityLoader(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
         if (!File.Exists(path))
             throw new FileNotFoundException($"Identity file not found: {path}");

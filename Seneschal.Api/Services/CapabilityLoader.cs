@@ -9,11 +9,26 @@ public class CapabilityLoader
     private readonly List<Capability> _capabilities;
 
     public CapabilityLoader()
+        : this(YamlConfigurationPathResolver.Resolve(
+            AppContext.BaseDirectory,
+            configuredPath: null,
+            "capabilities.yaml"))
     {
-        var path = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "Policies",
-            "capabilities.yaml");
+    }
+
+    public CapabilityLoader(
+        IHostEnvironment environment,
+        IConfiguration configuration)
+        : this(YamlConfigurationPathResolver.Resolve(
+            environment.ContentRootPath,
+            configuration[YamlConfigurationPathResolver.CapabilitiesPathKey],
+            "capabilities.yaml"))
+    {
+    }
+
+    public CapabilityLoader(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
         var yaml = File.ReadAllText(path);
 

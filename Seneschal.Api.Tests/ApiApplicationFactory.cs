@@ -12,10 +12,7 @@ public sealed class ApiApplicationFactory : WebApplicationFactory<Program>
 {
     public const string TestApiKey = "dev-test-key";
 
-    private readonly string _originalCurrentDirectory =
-        Directory.GetCurrentDirectory();
-
-    public ApiApplicationFactory()
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         var apiProjectDirectory = Path.GetFullPath(
             Path.Combine(
@@ -26,17 +23,7 @@ public sealed class ApiApplicationFactory : WebApplicationFactory<Program>
                 "..",
                 "Seneschal.Api"));
 
-        Directory.SetCurrentDirectory(apiProjectDirectory);
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        base.Dispose(disposing);
-        Directory.SetCurrentDirectory(_originalCurrentDirectory);
-    }
-
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
-    {
+        builder.UseContentRoot(apiProjectDirectory);
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<IntegrationApiKeyLoader>();

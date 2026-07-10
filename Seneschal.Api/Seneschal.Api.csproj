@@ -15,4 +15,10 @@
     <ProjectReference Include="..\Seneschal.Core\Seneschal.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Policies\*.yaml"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

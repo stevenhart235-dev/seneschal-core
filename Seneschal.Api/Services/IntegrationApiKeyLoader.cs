@@ -9,11 +9,27 @@ public sealed class IntegrationApiKeyLoader
     private readonly IReadOnlyList<IntegrationApiKey> _keys;
 
     public IntegrationApiKeyLoader()
+        : this(YamlConfigurationPathResolver.Resolve(
+            AppContext.BaseDirectory,
+            configuredPath: null,
+            "integration-keys.yaml"))
     {
-        var path = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "Policies",
-            "integration-keys.yaml");
+    }
+
+    public IntegrationApiKeyLoader(
+        IHostEnvironment environment,
+        IConfiguration configuration)
+        : this(YamlConfigurationPathResolver.Resolve(
+            environment.ContentRootPath,
+            configuration[
+                YamlConfigurationPathResolver.IntegrationKeysPathKey],
+            "integration-keys.yaml"))
+    {
+    }
+
+    public IntegrationApiKeyLoader(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
         if (!File.Exists(path))
         {

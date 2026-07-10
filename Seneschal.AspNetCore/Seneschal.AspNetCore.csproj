@@ -5,6 +5,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>true</IsPackable>
+    <PackageId>Seneschal.AspNetCore</PackageId>
+    <Version>0.1.0-alpha.1</Version>
+    <Authors>Steven Hart</Authors>
+    <Description>ASP.NET Core middleware and endpoint metadata for Seneschal capability governance.</Description>
+    <PackageTags>seneschal;aspnetcore;capability-governance;authorization;middleware</PackageTags>
+    <RepositoryUrl>https://github.com/stevenhart235-dev/seneschal-core</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)..\artifacts\packages</PackageOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,6 +23,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Seneschal.Client\Seneschal.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

@@ -13,35 +13,7 @@
 </head>
 <body>
     <div class="app-shell">
-        <aside class="sidebar">
-            <div class="sidebar-brand">Seneschal</div>
-            <nav class="sidebar-nav" aria-label="Primary navigation">
-                <div class="nav-section">
-                    <div class="nav-section-title">Overview</div>
-                    <a class="active" href="/dashboard"><span class="nav-icon">▦</span><span>Dashboard</span></a>
-                    <a href="/monitor"><span class="nav-icon">◉</span><span>Monitor</span></a>
-                    <a href="/governance"><span class="nav-icon">⏻</span><span>Governance</span></a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Governance</div>
-                    <a href="/capability-explorer"><span class="nav-icon">◇</span><span>Capabilities</span></a>
-                    <a href="/policies"><span class="nav-icon">§</span><span>Policies</span></a>
-                    <a href="/identities"><span class="nav-icon">◎</span><span>Identities</span></a>
-                    <a href="/resources"><span class="nav-icon">▱</span><span>Resources</span></a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Operations</div>
-                    <a href="/audit"><span class="nav-icon">◷</span><span>Audit</span></a>
-                    <a href="/incidents"><span class="nav-icon">△</span><span>Incidents</span></a>
-                    <a href="/capability-activity"><span class="nav-icon">↗</span><span>Capability Activity</span></a>
-                    <a href="/identity-activity"><span class="nav-icon">↔</span><span>Identity Activity</span></a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Explore</div>
-                    <a href="/graph-view"><span class="nav-icon">✣</span><span>Relationship Graph</span></a>
-                </div>
-            </nav>
-        </aside>
+        @await Html.PartialAsync("Shared/_PortalSidebar", "dashboard")
 
         <main class="container explorer-page">
             <header class="page-header">
@@ -51,6 +23,90 @@
                     Runtime activity and configured governance inventory.
                 </p>
             </header>
+
+            <section class="live-status-strip" aria-labelledby="live-status-heading">
+                <div class="live-status-primary">
+                    <span class="live-indicator" id="dashboard-live-state"><span aria-hidden="true"></span>Live</span>
+                    <div>
+                        <h2 id="live-status-heading">Live operations</h2>
+                        <p id="dashboard-refresh-status" class="visually-hidden">Polling active</p>
+                    </div>
+                </div>
+                <div class="governance-posture mode-posture-@Model.Live.CurrentMode.ToLowerInvariant()" id="governance-posture">
+                    <strong id="governance-posture-title">@(Model.Live.CurrentMode == "LogOnly" ? "MONITORING ACTIVE" : "ENFORCEMENT ACTIVE")</strong>
+                    <span id="governance-posture-description">@(Model.Live.CurrentMode == "LogOnly" ? "Denied and pending decisions are recorded but do not block." : "Denied and pending decisions may block integrated operations.")</span>
+                    <small>Runtime mode: <b id="governance-posture-mode">@Model.Live.CurrentMode</b></small>
+                </div>
+                <dl class="live-status-metrics">
+                    <div><dt>Active identities</dt><dd id="live-identity-count">@Model.Live.ActiveIdentityCount</dd></div>
+                    <div><dt>Active capabilities</dt><dd id="live-capability-count">@Model.Live.ActiveCapabilityCount</dd></div>
+                    <div><dt>Last evaluation</dt><dd><time id="live-last-evaluation" data-relative-time="@Model.Live.LastEvaluationUtc?.ToString("O")">@(Model.Live.LastEvaluationUtc is null ? "No evaluations" : Model.Live.LastEvaluationUtc.Value.ToString("u"))</time></dd></div>
+                    <div><dt>Runtime decisions</dt><dd id="live-total-decisions">@Model.TotalRuntimeDecisions</dd></div>
+                </dl>
+                <p class="live-threshold-note">Active means evaluated within the last 20 seconds; it does not indicate a connected session.</p>
+            </section>
+
+            <section class="dashboard-live-grid" aria-label="Current decision activity">
+                <article class="panel live-decision-panel">
+                    <div class="dashboard-section-header">
+                        <div>
+                            <h2>Live Decision Activity</h2>
+                            <p class="muted">Worker request → Seneschal decision → mode-derived projected action.</p>
+                        </div>
+                        <span class="live-update-label" aria-live="polite" id="live-update-label">Watching for evaluations</span>
+                    </div>
+                    <ol class="live-decision-feed" id="live-decision-feed">
+                        @foreach (var decision in Model.Live.Decisions)
+                        {
+                            <li data-event-id="@decision.Id">
+                                <div class="live-event-summary">
+                                    <time datetime="@decision.TimestampUtc.ToString("O")" data-relative-time="@decision.TimestampUtc.ToString("O")">@decision.TimestampUtc.ToString("u")</time>
+                                    <strong>@decision.Identity</strong>
+                                    <span>requested</span>
+                                    <strong class="code">@decision.Capability</strong>
+                                </div>
+                                <div class="live-event-outcome">
+                                    <span class="decision-badge decision-@decision.Decision.ToLowerInvariant()">@decision.Decision.ToUpperInvariant()</span>
+                                    <span class="outcome-arrow" aria-hidden="true">→</span>
+                                    <span class="status-badge mode-@decision.Mode.ToLowerInvariant()">Mode: @decision.Mode</span>
+                                    <strong class="effective-action effective-@decision.EffectiveAction.Replace(" ", "-").ToLowerInvariant()">PROJECTED: @decision.EffectiveAction.ToUpperInvariant()</strong>
+                                </div>
+                                <p>@decision.Reason</p>
+                            </li>
+                        }
+                    </ol>
+                    @if (Model.Live.Decisions.Count == 0)
+                    {
+                        <p class="empty-state" id="live-decision-empty">No evaluations have been recorded in this runtime.</p>
+                    }
+                </article>
+
+                <aside class="dashboard-live-side">
+                    <section class="panel active-workers-panel">
+                        <h2>Active Identities</h2>
+                        <p class="muted">Ordered by most recent evaluation.</p>
+                        <ul class="active-worker-list" id="active-worker-list">
+                            @foreach (var identity in Model.Live.Identities)
+                            {
+                                <li>
+                                    <div><strong>@identity.Identity</strong><span class="code">@identity.LatestCapability</span></div>
+                                    <span class="decision-badge decision-@identity.LatestDecision.ToLowerInvariant()">@identity.LatestDecision</span>
+                                    <span class="worker-presence worker-@identity.Status.ToLowerInvariant()"><span aria-hidden="true"></span>@identity.Status · <time data-relative-time="@identity.LastSeenUtc.ToString("O")">@identity.LastSeenUtc.ToString("u")</time></span>
+                                </li>
+                            }
+                        </ul>
+                    </section>
+
+                    <section class="panel decision-distribution-panel">
+                        <h2>Decision Distribution</h2>
+                        <div class="decision-distribution" id="decision-distribution" aria-label="Decision totals">
+                            <div class="distribution-allow" style="--decision-count: @Model.AllowedRuntimeDecisions"><span>Allow</span><strong>@Model.AllowedRuntimeDecisions</strong></div>
+                            <div class="distribution-deny" style="--decision-count: @Model.DeniedRuntimeDecisions"><span>Deny</span><strong>@Model.DeniedRuntimeDecisions</strong></div>
+                            <div class="distribution-pending" style="--decision-count: @Model.PendingApprovalRuntimeDecisions"><span>Pending</span><strong>@Model.PendingApprovalRuntimeDecisions</strong></div>
+                        </div>
+                    </section>
+                </aside>
+            </section>
 
             <section class="dashboard-overview-grid">
                 <article class="panel platform-health-panel">
@@ -436,5 +492,6 @@
             <footer class="app-footer">Seneschal v0.2.1-alpha</footer>
         </main>
     </div>
+    <script src="/dashboard-live.js" defer></script>
 </body>
 </html>

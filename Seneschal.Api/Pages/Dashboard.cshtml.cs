@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Seneschal.Api.Services;
+using Seneschal.Core.Enums;
 using Seneschal.Core.Interfaces;
 using Seneschal.Core.Models;
 
@@ -13,6 +15,9 @@ public sealed class DashboardModel : PageModel
     private readonly IAuditEventStore _auditEventStore;
     private readonly IdentityLoader _identityLoader;
     private readonly PolicyLoader _policyLoader;
+    private readonly IGovernanceModeStore _governanceModeStore;
+
+    public static readonly TimeSpan ActiveThreshold = TimeSpan.FromSeconds(20);
 
     public DashboardModel(
         ICapabilityCatalog capabilityCatalog,
@@ -20,7 +25,8 @@ public sealed class DashboardModel : PageModel
         IActivityStore activityStore,
         IAuditEventStore auditEventStore,
         IdentityLoader identityLoader,
-        PolicyLoader policyLoader)
+        PolicyLoader policyLoader,
+        IGovernanceModeStore governanceModeStore)
     {
         _capabilityCatalog = capabilityCatalog;
         _governanceGraph = governanceGraph;
@@ -28,6 +34,7 @@ public sealed class DashboardModel : PageModel
         _auditEventStore = auditEventStore;
         _identityLoader = identityLoader;
         _policyLoader = policyLoader;
+        _governanceModeStore = governanceModeStore;
     }
 
     public int TotalCapabilities { get; private set; }
@@ -56,6 +63,7 @@ public sealed class DashboardModel : PageModel
     public IReadOnlyCollection<IdentityActivity> MostActiveIdentities
         { get; private set; } = [];
     public bool AuditEventsAvailable { get; private set; }
+    public DashboardLiveSnapshot Live { get; private set; } = DashboardLiveSnapshot.Empty;
 
     public bool HasRuntimeActivity => TotalRuntimeDecisions > 0;
     public bool ShowFirstRunExperience => TotalRuntimeDecisions < 3;
@@ -70,7 +78,7 @@ public sealed class DashboardModel : PageModel
             cancellationToken);
         Activity = await _activityStore.GetSnapshotAsync(cancellationToken);
         var auditEvents = await _auditEventStore.GetRecentAsync(
-            count: 1,
+            count: 100,
             cancellationToken);
 
         TotalCapabilities = capabilities.Count;
@@ -78,6 +86,10 @@ public sealed class DashboardModel : PageModel
         TotalIdentities = _identityLoader.GetIdentities().Count;
         TotalRelationships = relationships.Count;
         AuditEventsAvailable = auditEvents.Count > 0;
+        Live = CreateLiveSnapshot(
+            auditEvents,
+            _governanceModeStore.GetMode(),
+            DateTimeOffset.UtcNow);
         TotalRuntimeDecisions = Activity.Capabilities.Sum(
             capability => capability.TotalRequests);
         AllowedRuntimeDecisions = Activity.Capabilities.Sum(
@@ -137,4 +149,137 @@ public sealed class DashboardModel : PageModel
             .Take(5)
             .ToList();
     }
+
+    public async Task<JsonResult> OnGetLiveAsync(
+        CancellationToken cancellationToken)
+    {
+        var auditEvents = await _auditEventStore.GetRecentAsync(
+            count: 100,
+            cancellationToken);
+        var activity = await _activityStore.GetSnapshotAsync(cancellationToken);
+        var snapshot = CreateLiveSnapshot(
+            auditEvents,
+            _governanceModeStore.GetMode(),
+            DateTimeOffset.UtcNow) with
+        {
+            TotalDecisions = activity.Capabilities.Sum(
+                capability => capability.TotalRequests),
+            Allowed = activity.Capabilities.Sum(
+                capability => capability.AllowedCount),
+            Denied = activity.Capabilities.Sum(
+                capability => capability.DeniedCount),
+            Pending = activity.Capabilities.Sum(
+                capability => capability.PendingApprovalCount)
+        };
+
+        return new JsonResult(snapshot);
+    }
+
+    public static DashboardLiveSnapshot CreateLiveSnapshot(
+        IEnumerable<AuditEvent> auditEvents,
+        EnforcementMode currentMode,
+        DateTimeOffset now)
+    {
+        var events = auditEvents
+            .OrderByDescending(auditEvent => auditEvent.TimestampUtc)
+            .ToList();
+        var activeAfter = now - ActiveThreshold;
+        var recentEvents = events
+            .Where(auditEvent => auditEvent.TimestampUtc >= activeAfter)
+            .ToList();
+        var decisions = events
+            .Take(10)
+            .Select(ToLiveDecision)
+            .ToList();
+        var identities = events
+            .GroupBy(auditEvent => auditEvent.IdentityId)
+            .Select(group => group.First())
+            .OrderByDescending(auditEvent => auditEvent.TimestampUtc)
+            .Select(auditEvent => new DashboardActiveIdentity(
+                auditEvent.IdentityId,
+                auditEvent.CapabilityId,
+                DecisionLabel(auditEvent.Decision),
+                auditEvent.TimestampUtc,
+                auditEvent.TimestampUtc >= activeAfter ? "Live" : "Idle"))
+            .ToList();
+
+        return new DashboardLiveSnapshot(
+            currentMode.ToString(),
+            events.Count,
+            events.Count(auditEvent => auditEvent.Decision == DecisionType.Allow),
+            events.Count(auditEvent => auditEvent.Decision == DecisionType.Deny),
+            events.Count(auditEvent => auditEvent.Decision == DecisionType.RequireApproval),
+            recentEvents.Select(auditEvent => auditEvent.IdentityId).Distinct().Count(),
+            recentEvents.Select(auditEvent => auditEvent.CapabilityId).Distinct().Count(),
+            events.FirstOrDefault()?.TimestampUtc,
+            now,
+            decisions,
+            identities);
+    }
+
+    private static DashboardLiveDecision ToLiveDecision(AuditEvent auditEvent)
+    {
+        var decision = DecisionLabel(auditEvent.Decision);
+        var effectiveAction = auditEvent.Decision switch
+        {
+            DecisionType.Allow => "Executed",
+            DecisionType.RequireApproval
+                when auditEvent.EnforcementMode == EnforcementMode.Enforce
+                => "Blocked pending approval",
+            _ when auditEvent.EnforcementMode == EnforcementMode.Enforce
+                => "Blocked",
+            _ => "Executed and recorded"
+        };
+
+        return new DashboardLiveDecision(
+            auditEvent.Id,
+            auditEvent.TimestampUtc,
+            auditEvent.IdentityId,
+            auditEvent.CapabilityId,
+            decision,
+            auditEvent.EnforcementMode.ToString(),
+            effectiveAction,
+            auditEvent.Reason,
+            auditEvent.Environment,
+            auditEvent.MatchedPolicies.FirstOrDefault());
+    }
+
+    private static string DecisionLabel(DecisionType decision) =>
+        decision == DecisionType.RequireApproval ? "PendingApproval" : decision.ToString();
 }
+
+public sealed record DashboardLiveSnapshot(
+    string CurrentMode,
+    long TotalDecisions,
+    long Allowed,
+    long Denied,
+    long Pending,
+    int ActiveIdentityCount,
+    int ActiveCapabilityCount,
+    DateTimeOffset? LastEvaluationUtc,
+    DateTimeOffset GeneratedAtUtc,
+    IReadOnlyCollection<DashboardLiveDecision> Decisions,
+    IReadOnlyCollection<DashboardActiveIdentity> Identities)
+{
+    public static DashboardLiveSnapshot Empty { get; } = new(
+        "LogOnly", 0, 0, 0, 0, 0, 0, null, DateTimeOffset.UtcNow, [], []);
+}
+
+public sealed record DashboardLiveDecision(
+    string Id,
+    DateTimeOffset TimestampUtc,
+    string Identity,
+    string Capability,
+    string Decision,
+    string Mode,
+    string EffectiveAction,
+    string Reason,
+    string Environment,
+    string? MatchedPolicy);
+
+public sealed record DashboardActiveIdentity(
+    string Identity,
+    string LatestCapability,
+    string LatestDecision,
+    DateTimeOffset LastSeenUtc,
+    string Status);

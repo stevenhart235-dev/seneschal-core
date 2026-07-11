@@ -40,3 +40,24 @@ policies:
     environment: production
     decision: deny
     reason: Destructive production infrastructure changes require manual break-glass approval
+
+  - name: Deployment worker can deploy to production
+    identity: deployment-worker
+    capability: production.deployment.execute
+    environment: production
+    decision: allow
+    reason: Deployment worker is approved to execute production deployments
+
+  - name: Migration worker cannot migrate production database
+    identity: migration-worker
+    capability: database.migration.execute
+    environment: production
+    decision: deny
+    reason: Database migrations are blocked for the migration worker in this lab
+
+  - name: Refund worker can create production refunds
+    identity: refund-worker
+    capability: payments.refund.create
+    environment: production
+    decision: allow
+    reason: Refund worker is approved to create production refunds

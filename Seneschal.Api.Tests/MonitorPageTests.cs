@@ -79,9 +79,9 @@ public sealed class MonitorPageTests :
         Assert.Contains("Governance Recommendations", html);
         Assert.Contains("Review Unused Governance Objects", html);
         Assert.Contains("Review or archive unused governance objects", html);
-        Assert.Contains("Unused capabilities: 5", html);
-        Assert.Contains("Unused identities: 5", html);
-        Assert.Contains("Unused policies: 6", html);
+        Assert.Contains("Unused capabilities: 8", html);
+        Assert.Contains("Unused identities: 8", html);
+        Assert.Contains("Unused policies: 9", html);
     }
 
     [Fact]
@@ -184,6 +184,27 @@ public sealed class MonitorPageTests :
                     TotalRequests = 30,
                     DeniedCount = 30,
                     AverageEvaluationDurationMs = 5
+                },
+                new CapabilityActivity
+                {
+                    CapabilityId = "production.deployment.execute",
+                    TotalRequests = 30,
+                    AllowedCount = 30,
+                    AverageEvaluationDurationMs = 5
+                },
+                new CapabilityActivity
+                {
+                    CapabilityId = "database.migration.execute",
+                    TotalRequests = 30,
+                    DeniedCount = 30,
+                    AverageEvaluationDurationMs = 5
+                },
+                new CapabilityActivity
+                {
+                    CapabilityId = "payments.refund.create",
+                    TotalRequests = 30,
+                    AllowedCount = 30,
+                    AverageEvaluationDurationMs = 5
                 }
             ],
             Identities =
@@ -211,6 +232,21 @@ public sealed class MonitorPageTests :
                 new IdentityActivity
                 {
                     IdentityId = "platform-agent",
+                    TotalRequests = 1
+                },
+                new IdentityActivity
+                {
+                    IdentityId = "deployment-worker",
+                    TotalRequests = 1
+                },
+                new IdentityActivity
+                {
+                    IdentityId = "migration-worker",
+                    TotalRequests = 1
+                },
+                new IdentityActivity
+                {
+                    IdentityId = "refund-worker",
                     TotalRequests = 1
                 }
             ],
@@ -244,6 +280,21 @@ public sealed class MonitorPageTests :
                 new PolicyActivity
                 {
                     PolicyId = "Platform agent cannot destroy production infrastructure",
+                    MatchCount = 1
+                },
+                new PolicyActivity
+                {
+                    PolicyId = "Deployment worker can deploy to production",
+                    MatchCount = 1
+                },
+                new PolicyActivity
+                {
+                    PolicyId = "Migration worker cannot migrate production database",
+                    MatchCount = 1
+                },
+                new PolicyActivity
+                {
+                    PolicyId = "Refund worker can create production refunds",
                     MatchCount = 1
                 }
             ]

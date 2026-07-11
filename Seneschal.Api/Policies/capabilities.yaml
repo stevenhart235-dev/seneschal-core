@@ -23,3 +23,18 @@ capabilities:
     description: Destroy production infrastructure resources
     risk: Critical
     category: Infrastructure
+
+  - name: production.deployment.execute
+    description: Execute a production application deployment
+    risk: High
+    category: Deployment
+
+  - name: database.migration.execute
+    description: Execute a production database migration
+    risk: Critical
+    category: Database
+
+  - name: payments.refund.create
+    description: Create a merchant refund
+    risk: High
+    category: Payments

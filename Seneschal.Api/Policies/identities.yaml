@@ -18,3 +18,15 @@ identities:
   - name: platform-agent
     description: Autonomous platform operations agent
     type: Agent
+
+  - name: deployment-worker
+    description: Multi-application lab deployment worker
+    type: Service
+
+  - name: migration-worker
+    description: Multi-application lab database migration worker
+    type: Service
+
+  - name: refund-worker
+    description: Multi-application lab refund worker
+    type: Service

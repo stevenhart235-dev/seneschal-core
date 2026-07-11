@@ -30,3 +30,30 @@ integrationKeys:
     allowedCapabilities:
       - infrastructure.production.plan
     environment: production
+
+  - name: deployment-worker-lab
+    key: dev-deployment-worker-key
+    enabled: true
+    allowedIdentities:
+      - deployment-worker
+    allowedCapabilities:
+      - production.deployment.execute
+    environment: production
+
+  - name: migration-worker-lab
+    key: dev-migration-worker-key
+    enabled: true
+    allowedIdentities:
+      - migration-worker
+    allowedCapabilities:
+      - database.migration.execute
+    environment: production
+
+  - name: refund-worker-lab
+    key: dev-refund-worker-key
+    enabled: true
+    allowedIdentities:
+      - refund-worker
+    allowedCapabilities:
+      - payments.refund.create
+    environment: production

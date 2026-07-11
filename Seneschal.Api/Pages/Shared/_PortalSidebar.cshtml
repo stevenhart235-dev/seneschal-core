@@ -1,0 +1,38 @@
+@model string
+@{
+    string Active(string key) => Model == key ? "active" : string.Empty;
+    string? Current(string key) => Model == key ? "page" : null;
+}
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <span>Seneschal</span>
+        <small>Capability control plane</small>
+    </div>
+    <nav class="sidebar-nav" aria-label="Primary navigation">
+        <div class="nav-section">
+            <div class="nav-section-title">Overview</div>
+            <a class="@Active("dashboard")" href="/dashboard" aria-current="@Current("dashboard")"><span>Dashboard</span></a>
+            <a class="@Active("monitor")" aria-current="@Current("monitor")" href="/monitor"><span>Monitor</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Governance</div>
+            <a class="@Active("governance")" aria-current="@Current("governance")" href="/governance"><span>Runtime Governance</span></a>
+            <a class="@Active("policies")" aria-current="@Current("policies")" href="/policies"><span>Policies</span></a>
+            <a class="@Active("capabilities")" aria-current="@Current("capabilities")" href="/capability-explorer"><span>Capabilities</span></a>
+            <a class="@Active("identities")" aria-current="@Current("identities")" href="/identities"><span>Identities</span></a>
+            <a class="@Active("resources")" aria-current="@Current("resources")" href="/resources"><span>Resources</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Operations</div>
+            <a class="@Active("capability-activity")" aria-current="@Current("capability-activity")" href="/capability-activity"><span>Capability Activity</span></a>
+            <a class="@Active("identity-activity")" aria-current="@Current("identity-activity")" href="/identity-activity"><span>Identity Activity</span></a>
+            <a class="@Active("audit")" aria-current="@Current("audit")" href="/audit"><span>Audit Trail</span></a>
+            <a class="@Active("incidents")" aria-current="@Current("incidents")" href="/incidents"><span>Incidents</span></a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">System<span class="visually-hidden"> (Explore)</span></div>
+            <a class="@Active("graph")" aria-current="@Current("graph")" href="/graph-view"><span>Relationship Graph</span></a>
+            <a class="@Active("diagnostics")" aria-current="@Current("diagnostics")" href="/diagnostics"><span>Diagnostics</span></a>
+        </div>
+    </nav>
+</aside>

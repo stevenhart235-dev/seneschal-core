@@ -38,3 +38,8 @@ capabilities:
     description: Create a merchant refund
     risk: High
     category: Payments
+
+  - name: production.release.approve
+    description: Approve a production application release
+    risk: High
+    category: Deployment

@@ -79,9 +79,9 @@ public sealed class MonitorPageTests :
         Assert.Contains("Governance Recommendations", html);
         Assert.Contains("Review Unused Governance Objects", html);
         Assert.Contains("Review or archive unused governance objects", html);
-        Assert.Contains("Unused capabilities: 8", html);
-        Assert.Contains("Unused identities: 8", html);
-        Assert.Contains("Unused policies: 9", html);
+        Assert.Contains("Unused capabilities: 9", html);
+        Assert.Contains("Unused identities: 9", html);
+        Assert.Contains("Unused policies: 10", html);
     }
 
     [Fact]
@@ -205,6 +205,13 @@ public sealed class MonitorPageTests :
                     TotalRequests = 30,
                     AllowedCount = 30,
                     AverageEvaluationDurationMs = 5
+                },
+                new CapabilityActivity
+                {
+                    CapabilityId = "production.release.approve",
+                    TotalRequests = 30,
+                    PendingApprovalCount = 30,
+                    AverageEvaluationDurationMs = 5
                 }
             ],
             Identities =
@@ -247,6 +254,11 @@ public sealed class MonitorPageTests :
                 new IdentityActivity
                 {
                     IdentityId = "refund-worker",
+                    TotalRequests = 1
+                },
+                new IdentityActivity
+                {
+                    IdentityId = "release-approval-worker",
                     TotalRequests = 1
                 }
             ],
@@ -295,6 +307,11 @@ public sealed class MonitorPageTests :
                 new PolicyActivity
                 {
                     PolicyId = "Refund worker can create production refunds",
+                    MatchCount = 1
+                },
+                new PolicyActivity
+                {
+                    PolicyId = "Release approval worker requires production approval",
                     MatchCount = 1
                 }
             ]

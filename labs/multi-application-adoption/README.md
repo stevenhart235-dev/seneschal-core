@@ -12,10 +12,11 @@ operation.
 | DeploymentWorker | 5 seconds | Allow |
 | DatabaseMigrationWorker | 7 seconds | Deny |
 | RefundWorker | 10 seconds | Allow |
+| ApprovalWorker | 8 seconds | PendingApproval |
 
-In `LogOnly`, all three operations execute and the migration worker displays
-its deny. In `Enforce`, deployment and refund continue while migration is
-blocked.
+In `LogOnly`, all four operations execute while migration displays its deny
+and approval displays PendingApproval. In `Enforce`, deployment and refund
+continue while migration and approval are blocked.
 
 > **Enforce does not deny everything.** Global `Enforce` applies the decisions
 > produced by existing policies. It blocks deny and pending-approval decisions
@@ -58,6 +59,12 @@ Start RefundWorker in a separate terminal:
 
 ```powershell
 Start-Process powershell -ArgumentList '-NoExit','-Command','dotnet run --project labs/multi-application-adoption/RefundWorker/RefundWorker.csproj'
+```
+
+Start ApprovalWorker in a separate terminal:
+
+```powershell
+dotnet run --project labs/multi-application-adoption/ApprovalWorker/ApprovalWorker.csproj
 ```
 
 Open the portal:

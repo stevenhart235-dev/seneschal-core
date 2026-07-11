@@ -61,3 +61,10 @@ policies:
     environment: production
     decision: allow
     reason: Refund worker is approved to create production refunds
+
+  - name: Release approval worker requires production approval
+    identity: release-approval-worker
+    capability: production.release.approve
+    environment: production
+    decision: requires_approval
+    reason: Production release approval requires a human approval decision

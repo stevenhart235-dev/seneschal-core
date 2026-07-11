@@ -57,3 +57,12 @@ integrationKeys:
     allowedCapabilities:
       - payments.refund.create
     environment: production
+
+  - name: release-approval-worker-lab
+    key: dev-release-approval-worker-key
+    enabled: true
+    allowedIdentities:
+      - release-approval-worker
+    allowedCapabilities:
+      - production.release.approve
+    environment: production

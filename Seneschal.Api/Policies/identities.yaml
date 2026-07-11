@@ -30,3 +30,7 @@ identities:
   - name: refund-worker
     description: Multi-application lab refund worker
     type: Service
+
+  - name: release-approval-worker
+    description: Multi-application lab production release approval worker
+    type: Service

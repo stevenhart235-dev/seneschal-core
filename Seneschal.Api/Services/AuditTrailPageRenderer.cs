@@ -26,36 +26,38 @@ public static class AuditTrailPageRenderer
         html.AppendLine("<body>");
         html.AppendLine("    <div class=\"app-shell\">");
         html.AppendLine("        <aside class=\"sidebar\">");
-        html.AppendLine("            <div class=\"sidebar-brand\">Seneschal</div>");
+        html.AppendLine("            <div class=\"sidebar-brand\"><span>Seneschal</span><small>Capability control plane</small></div>");
         html.AppendLine("            <nav class=\"sidebar-nav\" aria-label=\"Primary navigation\">");
         html.AppendLine("                <div class=\"nav-section\">");
         html.AppendLine("                    <div class=\"nav-section-title\">Overview</div>");
-        html.AppendLine("                    <a href=\"/dashboard\"><span class=\"nav-icon\">▦</span><span>Dashboard</span></a>");
-        html.AppendLine("                    <a href=\"/monitor\"><span class=\"nav-icon\">◉</span><span>Monitor</span></a>");
+        html.AppendLine("                    <a href=\"/dashboard\"><span>Dashboard</span></a>");
+        html.AppendLine("                    <a href=\"/monitor\"><span>Monitor</span></a>");
         html.AppendLine("                </div>");
         html.AppendLine("                <div class=\"nav-section\">");
         html.AppendLine("                    <div class=\"nav-section-title\">Governance</div>");
-        html.AppendLine("                    <a href=\"/capability-explorer\"><span class=\"nav-icon\">◇</span><span>Capabilities</span></a>");
-        html.AppendLine("                    <a href=\"/policies\"><span class=\"nav-icon\">§</span><span>Policies</span></a>");
-        html.AppendLine("                    <a href=\"/identities\"><span class=\"nav-icon\">◎</span><span>Identities</span></a>");
-        html.AppendLine("                    <a href=\"/resources\"><span class=\"nav-icon\">▱</span><span>Resources</span></a>");
+        html.AppendLine("                    <a href=\"/governance\"><span>Runtime Governance</span></a>");
+        html.AppendLine("                    <a href=\"/policies\"><span>Policies</span></a>");
+        html.AppendLine("                    <a href=\"/capability-explorer\"><span>Capabilities</span></a>");
+        html.AppendLine("                    <a href=\"/identities\"><span>Identities</span></a>");
+        html.AppendLine("                    <a href=\"/resources\"><span>Resources</span></a>");
         html.AppendLine("                </div>");
         html.AppendLine("                <div class=\"nav-section\">");
         html.AppendLine("                    <div class=\"nav-section-title\">Operations</div>");
-        html.AppendLine("                    <a class=\"active\" href=\"/audit\"><span class=\"nav-icon\">◷</span><span>Audit</span></a>");
-        html.AppendLine("                    <a href=\"/incidents\"><span class=\"nav-icon\">△</span><span>Incidents</span></a>");
-        html.AppendLine("                    <a href=\"/capability-activity\"><span class=\"nav-icon\">↗</span><span>Capability Activity</span></a>");
-        html.AppendLine("                    <a href=\"/identity-activity\"><span class=\"nav-icon\">↔</span><span>Identity Activity</span></a>");
+        html.AppendLine("                    <a href=\"/capability-activity\"><span>Capability Activity</span></a>");
+        html.AppendLine("                    <a href=\"/identity-activity\"><span>Identity Activity</span></a>");
+        html.AppendLine("                    <a class=\"active\" href=\"/audit\" aria-current=\"page\"><span>Audit Trail</span></a>");
+        html.AppendLine("                    <a href=\"/incidents\"><span>Incidents</span></a>");
         html.AppendLine("                </div>");
         html.AppendLine("                <div class=\"nav-section\">");
-        html.AppendLine("                    <div class=\"nav-section-title\">Explore</div>");
-        html.AppendLine("                    <a href=\"/graph-view\"><span class=\"nav-icon\">✣</span><span>Relationship Graph</span></a>");
+        html.AppendLine("                    <div class=\"nav-section-title\">System</div>");
+        html.AppendLine("                    <a href=\"/graph-view\"><span>Relationship Graph</span></a>");
+        html.AppendLine("                    <a href=\"/diagnostics\"><span>Diagnostics</span></a>");
         html.AppendLine("                </div>");
         html.AppendLine("            </nav>");
         html.AppendLine("        </aside>");
         html.AppendLine("        <main class=\"container explorer-page\">");
         html.AppendLine("            <header class=\"page-header\">");
-        html.AppendLine("                <div class=\"breadcrumb\">Operations / Audit</div>");
+        html.AppendLine("                <div class=\"breadcrumb\">Operations / Audit Trail</div>");
         html.AppendLine("                <h1>Seneschal Audit Trail</h1>");
         html.AppendLine("                <p class=\"subtitle\">Recent completed policy evaluations.</p>");
         html.AppendLine("            </header>");
@@ -77,6 +79,7 @@ public static class AuditTrailPageRenderer
 
             html.AppendLine("            <section class=\"panel\">");
             html.AppendLine("                <h2>Recent Audit Events</h2>");
+            html.AppendLine("                <div class=\"table-scroll\" tabindex=\"0\" role=\"region\" aria-label=\"Recent audit events\">");
             html.AppendLine("                <table class=\"audit-table\">");
             html.AppendLine("                    <thead>");
             html.AppendLine("                        <tr>");
@@ -98,6 +101,7 @@ public static class AuditTrailPageRenderer
 
             html.AppendLine("                    </tbody>");
             html.AppendLine("                </table>");
+            html.AppendLine("                </div>");
             html.AppendLine("            </section>");
         }
 

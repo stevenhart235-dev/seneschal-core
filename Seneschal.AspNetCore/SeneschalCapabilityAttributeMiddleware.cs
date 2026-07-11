@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Seneschal.Client;
 using Seneschal.Client.Models;
@@ -13,6 +14,7 @@ public sealed class SeneschalCapabilityAttributeMiddleware
     private readonly RequestDelegate _next;
     private readonly ISeneschalClient _client;
     private readonly SeneschalOptions _options;
+    private readonly ILogger<SeneschalCapabilityAttributeMiddleware>? _logger;
 
     /// <summary>
     /// Initializes a new instance of the
@@ -41,10 +43,12 @@ public sealed class SeneschalCapabilityAttributeMiddleware
     /// <param name="next">The next delegate in the pipeline.</param>
     /// <param name="client">The Seneschal decision client.</param>
     /// <param name="options">The configured Seneschal options.</param>
+    /// <param name="logger">The optional diagnostic logger.</param>
     public SeneschalCapabilityAttributeMiddleware(
         RequestDelegate next,
         ISeneschalClient client,
-        IOptions<SeneschalOptions> options)
+        IOptions<SeneschalOptions> options,
+        ILogger<SeneschalCapabilityAttributeMiddleware>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(next);
         ArgumentNullException.ThrowIfNull(client);
@@ -53,6 +57,7 @@ public sealed class SeneschalCapabilityAttributeMiddleware
         _next = next;
         _client = client;
         _options = options.Value;
+        _logger = logger;
     }
 
     /// <summary>
@@ -75,9 +80,36 @@ public sealed class SeneschalCapabilityAttributeMiddleware
             return;
         }
 
-        var decision = await _client.EvaluateAsync(
-            BuildDecisionRequest(context, attribute),
-            context.RequestAborted);
+        DecisionResult decision;
+        try
+        {
+            decision = await _client.EvaluateAsync(
+                BuildDecisionRequest(context, attribute),
+                context.RequestAborted);
+        }
+        catch (OperationCanceledException)
+            when (context.RequestAborted.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (SeneschalClientException exception)
+        {
+            _logger?.LogWarning(
+                exception,
+                "Seneschal evaluation failed with status {StatusCode}.",
+                exception.StatusCode);
+
+            if (_options.FailureBehavior == SeneschalFailureBehavior.FailOpen)
+            {
+                await _next(context);
+                return;
+            }
+
+            await SeneschalDecisionHandler.WriteFailureResponseAsync(
+                context,
+                exception);
+            return;
+        }
 
         if (SeneschalDecisionHandler.ShouldContinue(
                 decision,

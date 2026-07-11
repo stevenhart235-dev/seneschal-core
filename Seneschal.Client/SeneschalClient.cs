@@ -15,6 +15,7 @@ public sealed class SeneschalClient : ISeneschalClient
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
+    private const string ClientUserAgent = "Seneschal.Client/0.1.0-alpha.1";
 
     private readonly HttpClient _httpClient;
     private readonly SeneschalClientOptions _options;
@@ -83,6 +84,7 @@ public sealed class SeneschalClient : ISeneschalClient
             HttpMethod.Post,
             BuildEvaluationUri());
         httpRequest.Content = JsonContent.Create(request, options: JsonOptions);
+        httpRequest.Headers.UserAgent.ParseAdd(ClientUserAgent);
 
         if (!string.IsNullOrWhiteSpace(_options.ApiKey))
         {
@@ -107,7 +109,9 @@ public sealed class SeneschalClient : ISeneschalClient
             exception is HttpRequestException or TaskCanceledException)
         {
             throw new SeneschalClientException(
-                "Unable to reach the Seneschal runtime.",
+                exception is TaskCanceledException
+                    ? "The Seneschal evaluation request timed out."
+                    : "Unable to reach the Seneschal runtime.",
                 exception);
         }
 

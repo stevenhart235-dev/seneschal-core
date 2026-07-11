@@ -78,6 +78,7 @@ public sealed class SeneschalCapabilityMiddlewareTests
             Decision = "requires_approval",
             Mode = "Enforce",
             Reason = "Needs approval",
+            PolicyMatched = "approval-policy",
             Obligations = ["ticket-required"]
         });
         var middleware = CreateMiddleware(
@@ -97,7 +98,8 @@ public sealed class SeneschalCapabilityMiddlewareTests
         var body = await ReadBodyAsync(context);
         Assert.Contains("requires_approval", body);
         Assert.Contains("Needs approval", body);
-        Assert.Contains("ticket-required", body);
+        Assert.Contains("approval-policy", body);
+        Assert.DoesNotContain("ticket-required", body);
     }
 
     [Fact]

@@ -25,4 +25,9 @@ public sealed record SeneschalClientOptions
     /// Gets the request header name used when <see cref="ApiKey"/> is set.
     /// </summary>
     public string ApiKeyHeaderName { get; set; } = "X-Seneschal-Api-Key";
+
+    /// <summary>
+    /// Gets or sets the timeout used by the configured HTTP client.
+    /// </summary>
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(10);
 }

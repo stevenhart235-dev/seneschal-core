@@ -54,4 +54,12 @@ public sealed record DecisionResult
     /// Gets a future audit event identifier, when returned.
     /// </summary>
     public string? EventId { get; init; }
+
+    /// <summary>
+    /// Gets whether application code should proceed with the governed action.
+    /// </summary>
+    public bool ShouldProceed =>
+        string.Equals(Mode, "LogOnly", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(Mode, "Monitor", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(Decision, "allow", StringComparison.OrdinalIgnoreCase);
 }

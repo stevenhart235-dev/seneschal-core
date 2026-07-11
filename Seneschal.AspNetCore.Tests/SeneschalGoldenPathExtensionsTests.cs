@@ -94,6 +94,7 @@ public sealed class SeneschalGoldenPathExtensionsTests
         services.AddSeneschal(options =>
         {
             options.BaseUrl = new Uri("http://localhost:5000");
+            options.ApiKey = "test-key";
             options.IdentityResolver = _ => "golden-path-user";
             options.DefaultEnvironment = "production";
         });

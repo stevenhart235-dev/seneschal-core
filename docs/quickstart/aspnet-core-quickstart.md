@@ -1,107 +1,68 @@
 # ASP.NET Core Quickstart
 
-Run Seneschal locally, protect one ASP.NET Core endpoint, and verify
-`LogOnly` versus `Enforce` behavior.
+Install the packaged SDK, protect one endpoint, and verify `LogOnly` versus
+`Enforce` in about 15 minutes.
 
-> **Current requirement:** Packages are produced locally and are not published
-> to NuGet.org. Run `dotnet pack -c Release` in `Seneschal.AspNetCore` first.
-
-## 1. Prerequisites
-
-- .NET 8 SDK
-- This repository checked out locally
-- PowerShell
-- An ASP.NET Core project in or near this repository
-- Ports `5000` and `5010` available
-
-The test uses the checked-in development configuration:
-
-- API key: `dev-sample-key`
-- Identity: `anonymous`
-- Capability: `DeployApplication`
-- Environment: `dev`
-- Expected decision: default `Deny`
-
-## 2. Start Seneschal on port 5000
+## 1. Pack and start Seneschal
 
 From the repository root:
 
 ```powershell
+dotnet pack Seneschal.AspNetCore/Seneschal.AspNetCore.csproj -c Release
 dotnet run --project Seneschal.Api --urls http://localhost:5000
 ```
 
-In another terminal, verify readiness:
+Verify readiness in another terminal:
 
 ```powershell
 Invoke-RestMethod http://localhost:5000/ready
 ```
 
-Seneschal starts in `LogOnly` mode.
+Seneschal starts in `LogOnly`.
 
-## 3. Verify the development integration key
+## 2. Install the local package
 
-Confirm `Seneschal.Api/Policies/integration-keys.yaml` contains this scope:
-
-```yaml
-integrationKeys:
-  - name: sample-protected-api
-    key: dev-sample-key
-    enabled: true
-    allowedIdentities:
-      - Developer
-      - UnknownService
-      - anonymous
-    allowedCapabilities:
-      - DeployApplication
-```
-
-Restart Seneschal after any YAML change.
-
-> **Development only:** The checked-in key is plaintext sample configuration.
-> Do not use it in production.
-
-## 4. Install and register the SDK
-
-Add the generated local package source and install the ASP.NET Core package:
+In a .NET 8 ASP.NET Core application:
 
 ```powershell
-$appProject = "MyApi/MyApi.csproj"
-dotnet nuget add source "$PWD/artifacts/packages" --name SeneschalLocal
-dotnet add $appProject package Seneschal.AspNetCore --version 0.1.0-alpha.1
+dotnet nuget add source C:\path\to\seneschal-core\artifacts\packages --name SeneschalLocal
+dotnet add package Seneschal.AspNetCore --version 0.1.0-alpha.1
 ```
 
-`Seneschal.AspNetCore` installs `Seneschal.Client` as a package dependency.
+`Seneschal.Client` resolves transitively.
 
-Add the namespace to `Program.cs`:
+## 3. Add configuration
+
+`appsettings.json`:
+
+```json
+{
+  "Seneschal": {
+    "BaseUrl": "http://localhost:5000",
+    "ApiKey": "dev-sample-key",
+    "DefaultEnvironment": "dev",
+    "FailureBehavior": "FailClosed"
+  }
+}
+```
+
+The sample key permits identity `anonymous` and capability
+`DeployApplication`.
+
+## 4. Register and protect
+
+`Program.cs`:
 
 ```csharp
 using Seneschal.AspNetCore;
-```
 
-Register Seneschal before `builder.Build()`:
+var builder = WebApplication.CreateBuilder(args);
 
-```csharp
-builder.Services.AddSeneschal(options =>
-{
-    options.BaseUrl = new Uri("http://localhost:5000");
-    options.ApiKey = "dev-sample-key";
-    options.IdentityResolver = context =>
-        context.User.Identity?.Name ?? "anonymous";
-    options.DefaultEnvironment = "dev";
-});
-```
+builder.Services.AddSeneschal(
+    builder.Configuration.GetSection("Seneschal"));
 
-The inline key keeps this quickstart short. Move it to configuration or a
-development secret for normal use.
-
-## 5. Protect one endpoint
-
-Register middleware after routing and map an attributed handler:
-
-```csharp
 var app = builder.Build();
 
-app.UseRouting();
 app.UseSeneschal();
 
 app.MapPost("/governed-operation", () =>
@@ -111,108 +72,97 @@ app.MapPost("/governed-operation", () =>
 app.Run();
 ```
 
-With no ASP.NET Core authentication configured, middleware submits identity
-`anonymous`. No policy allows that identity, so Seneschal returns default deny.
+Attribute style is equivalent:
 
-Start the application on port `5010`:
+```csharp
+[RequiresCapability("DeployApplication")]
+static IResult GovernedOperation() =>
+    Results.Ok(new { executed = true });
+```
+
+Run on port `5010`:
 
 ```powershell
-$appProject = "MyApi/MyApi.csproj"
-dotnet run --project $appProject --urls http://localhost:5010
+dotnet run --urls http://localhost:5010
 ```
 
-## 6. Test in LogOnly mode
-
-Confirm `LogOnly` at:
-
-```text
-http://localhost:5000/governance
-```
-
-Call the protected endpoint:
+## 5. Verify LogOnly
 
 ```powershell
 curl.exe -i -X POST http://localhost:5010/governed-operation
 ```
 
-Expected result:
+Expected:
 
 ```text
 HTTP/1.1 200 OK
 {"executed":true}
 ```
 
-Seneschal records a default `Deny`, but `LogOnly` allows the handler to run.
-Inspect `/audit` or `/capability-activity` on port `5000`.
+The underlying default deny appears in
+`http://localhost:5000/audit`, but `LogOnly` permits execution.
 
-## 7. Switch runtime governance to Enforce
+## 6. Verify Enforce
 
-Open:
-
-```text
-http://localhost:5000/governance
-```
-
-Select **Enforce**. No application restart or policy change is required.
-
-## 8. Rerun and verify blocking
-
-Run the same request:
+Open `http://localhost:5000/governance` and select **Enforce**, then repeat:
 
 ```powershell
 curl.exe -i -X POST http://localhost:5010/governed-operation
 ```
 
-Expected result:
+Expected:
 
 ```text
 HTTP/1.1 403 Forbidden
+{"decision":"deny","reason":"No matching allow policy found","policyMatched":"default-deny"}
 ```
 
-The response contains the deny decision and reason. The endpoint handler does
-not run; `/audit` records the decision with `Enforce` mode.
+## Troubleshooting
 
-## 9. Troubleshooting
+### Startup validation failure
 
-### 401 from Seneschal
+- `BaseUrl is required`: add `Seneschal:BaseUrl`.
+- `BaseUrl must be an absolute URI`: include `http://` or `https://`.
+- `ApiKey is required`: configure a non-empty integration key.
 
-- Cause: missing, blank, or unknown `X-Seneschal-Api-Key`.
-- Check `options.ApiKey` and `integration-keys.yaml` for an exact match.
-- Restart Seneschal after changing YAML.
+Validation errors never print the configured key value.
 
-### 403 before policy evaluation
+### HTTP 401: authentication failed
 
-- Cause: the key is disabled or does not allow the submitted identity,
-  capability, or environment.
-- For this quickstart, allow `anonymous` and `DeployApplication`.
-- Key-scope denial says: `The Seneschal API key is not authorized.`
+The key is missing or unknown. Compare `Seneschal:ApiKey` with
+`Seneschal.Api/Policies/integration-keys.yaml`.
 
-### 403 after switching to Enforce
+### HTTP 403: integration forbidden
 
-- This is the expected policy result for the quickstart.
-- Confirm `/audit` shows `Deny`, `Enforce`, and the default-deny reason.
+The key exists but is outside identity, capability, or environment scope.
+This is distinct from a policy-denial 403, whose decision is `deny`.
 
-### Unexpected default deny
+### HTTP 502: invalid response
 
-- Default deny means no allow policy matched the submitted context.
-- Check exact identity, capability, environment, and resource values.
-- This quickstart uses default deny intentionally.
+Seneschal returned malformed or unsupported decision content. Check the API
+version and API logs.
 
-### Wrong port or unavailable runtime
+### HTTP 503: timeout or unavailable API
 
-- Seneschal URL: `http://localhost:5000`
-- Application URL: `http://localhost:5010`
-- Ensure `SeneschalClientOptions.BaseUrl` points to port `5000`.
-- Verify Seneschal directly with
-  `Invoke-RestMethod http://localhost:5000/ready`.
+Verify the configured port and readiness:
 
-## Success looks like
+```powershell
+Invoke-RestMethod http://localhost:5000/ready
+```
 
-- [ ] Seneschal reports ready on port `5000`.
-- [ ] The application runs on port `5010`.
-- [ ] The integration key permits `anonymous` and `DeployApplication`.
-- [ ] `LogOnly` returns HTTP `200` and executes the handler.
-- [ ] Audit shows an underlying default `Deny` in `LogOnly` mode.
-- [ ] `Enforce` returns HTTP `403` for the same request.
-- [ ] Audit shows the second `Deny` in `Enforce` mode.
-- [ ] No application or policy change was needed between the two calls.
+`FailClosed` blocks by default. `FailOpen` must be selected explicitly and
+allows governed operations to continue during evaluation failures.
+
+### Wrong BaseUrl
+
+- Seneschal: `http://localhost:5000`
+- Application: `http://localhost:5010`
+- `Seneschal:BaseUrl` must point to Seneschal, not the application.
+
+## Success checklist
+
+- [ ] Package installs without source project references.
+- [ ] Invalid configuration fails during registration.
+- [ ] `LogOnly` records deny and returns HTTP 200.
+- [ ] `Enforce` blocks the same request with HTTP 403.
+- [ ] Audit shows identity, capability, environment, policy, and mode.

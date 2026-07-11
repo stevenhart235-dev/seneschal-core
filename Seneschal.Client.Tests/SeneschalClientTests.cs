@@ -67,6 +67,9 @@ public sealed class SeneschalClientTests
         Assert.Equal(
             "https://seneschal.example/evaluate",
             handler.Requests.Single().RequestUri?.ToString());
+        Assert.Contains(
+            "Seneschal.Client/0.1.0-alpha.1",
+            handler.Requests.Single().Headers["User-Agent"]);
 
         using var document = JsonDocument.Parse(handler.Requests.Single().Body);
 
@@ -167,6 +170,46 @@ public sealed class SeneschalClientTests
         Assert.IsType<HttpRequestException>(exception.InnerException);
     }
 
+    [Fact]
+    public async Task EvaluateAsync_PropagatesCallerCancellation()
+    {
+        var handler = new CancellationAwareHandler();
+        using var httpClient = new HttpClient(handler);
+        var client = SeneschalClient.Create(
+            httpClient,
+            new Uri("https://seneschal.example"));
+        using var cancellation = new CancellationTokenSource();
+
+        var evaluation = client.EvaluateAsync(
+            CreateRequest(),
+            cancellation.Token);
+        await handler.RequestStarted;
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            async () => await evaluation);
+        Assert.True(handler.ObservedCancellationToken.IsCancellationRequested);
+    }
+
+    [Theory]
+    [InlineData("allow", "Enforce", true)]
+    [InlineData("deny", "Enforce", false)]
+    [InlineData("requires_approval", "Enforce", false)]
+    [InlineData("deny", "LogOnly", true)]
+    public void DecisionResult_ShouldProceedReflectsDecisionAndMode(
+        string decision,
+        string mode,
+        bool expected)
+    {
+        var result = new DecisionResult
+        {
+            Decision = decision,
+            Mode = mode
+        };
+
+        Assert.Equal(expected, result.ShouldProceed);
+    }
+
     private static DecisionRequest CreateRequest()
     {
         return new DecisionRequest
@@ -214,6 +257,25 @@ public sealed class SeneschalClientTests
                 body));
 
             return _handler(request);
+        }
+    }
+
+    private sealed class CancellationAwareHandler : HttpMessageHandler
+    {
+        private readonly TaskCompletionSource _requestStarted = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task RequestStarted => _requestStarted.Task;
+        public CancellationToken ObservedCancellationToken { get; private set; }
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            ObservedCancellationToken = cancellationToken;
+            _requestStarted.SetResult();
+            await Task.Delay(System.Threading.Timeout.Infinite, cancellationToken);
+            throw new InvalidOperationException("Unreachable.");
         }
     }
 

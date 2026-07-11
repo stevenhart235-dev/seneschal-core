@@ -1,5 +1,7 @@
 using System.Text.Json;
+using System.Net;
 using Microsoft.AspNetCore.Http;
+using Seneschal.Client;
 using Seneschal.Client.Models;
 
 namespace Seneschal.AspNetCore;
@@ -39,7 +41,7 @@ internal static class SeneschalDecisionHandler
                 {
                     decision = decision.Decision,
                     reason = decision.Reason,
-                    obligations = decision.Obligations
+                    policyMatched = decision.PolicyMatched
                 },
                 statusCode: StatusCodes.Status409Conflict);
         }
@@ -76,7 +78,7 @@ internal static class SeneschalDecisionHandler
             {
                 decision = decision.Decision,
                 reason = decision.Reason,
-                obligations = decision.Obligations
+                policyMatched = decision.PolicyMatched
             };
         }
         else
@@ -93,6 +95,43 @@ internal static class SeneschalDecisionHandler
         await JsonSerializer.SerializeAsync(
             context.Response.Body,
             response,
+            cancellationToken: context.RequestAborted);
+    }
+
+    public static async Task WriteFailureResponseAsync(
+        HttpContext context,
+        SeneschalClientException exception)
+    {
+        var (statusCode, decision, reason) = exception.StatusCode switch
+        {
+            HttpStatusCode.Unauthorized => (
+                StatusCodes.Status401Unauthorized,
+                "authentication_failed",
+                "Seneschal rejected the integration API key."),
+            HttpStatusCode.Forbidden => (
+                StatusCodes.Status403Forbidden,
+                "integration_forbidden",
+                "The Seneschal integration key is not authorized for this capability request."),
+            _ when exception.InnerException is JsonException => (
+                StatusCodes.Status502BadGateway,
+                "invalid_response",
+                "Seneschal returned an invalid decision response."),
+            _ => (
+                StatusCodes.Status503ServiceUnavailable,
+                "unavailable",
+                "Seneschal is unavailable or did not return a decision in time.")
+        };
+
+        context.Response.StatusCode = statusCode;
+        context.Response.ContentType = "application/json";
+        await JsonSerializer.SerializeAsync(
+            context.Response.Body,
+            new
+            {
+                decision,
+                reason,
+                policyMatched = (string?)null
+            },
             cancellationToken: context.RequestAborted);
     }
 

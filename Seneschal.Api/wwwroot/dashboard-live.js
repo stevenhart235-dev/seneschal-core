@@ -16,6 +16,7 @@
     };
 
     const decisionClass = value => `decision-${value.toLowerCase()}`;
+    const decisionLabel = value => value === "PendingApproval" ? "Pending Approval" : value;
     const element = (tag, className, text) => {
         const node = document.createElement(tag);
         if (className) node.className = className;
@@ -26,62 +27,87 @@
     function renderDecision(decision, isNew) {
         const item = element("li", isNew && !reducedMotion.matches ? "live-event-new" : "");
         item.dataset.eventId = decision.id;
-        const summary = element("div", "live-event-summary");
         const time = element("time", "", relativeTime(decision.timestampUtc));
         time.dateTime = decision.timestampUtc;
         time.dataset.relativeTime = decision.timestampUtc;
-        summary.append(time, element("strong", "", decision.identity), element("span", "", "requested"), element("strong", "code", decision.capability));
-        const outcome = element("div", "live-event-outcome");
+        const request = element("div", "reference-event-request");
+        request.append(element("a", "", decision.identity), element("span", "", "requested"), element("a", "", decision.capability), element("small", "", decision.reason));
+        request.children[0].href = `/identity-activity?identityId=${encodeURIComponent(decision.identity)}`;
+        request.children[2].href = `/capability-activity?capabilityId=${encodeURIComponent(decision.capability)}`;
+        const outcome = element("div", "reference-event-result");
         outcome.append(
-            element("span", `decision-badge ${decisionClass(decision.decision)}`, decision.decision.toUpperCase()),
-            element("span", "outcome-arrow", "→"),
-            element("span", `status-badge mode-${decision.mode.toLowerCase()}`, `Mode: ${decision.mode}`),
-            element("strong", `effective-action effective-${decision.effectiveAction.toLowerCase().replaceAll(" ", "-")}`, `PROJECTED: ${decision.effectiveAction.toUpperCase()}`));
-        item.append(summary, outcome, element("p", "", decision.reason));
+            element("span", `decision-badge ${decisionClass(decision.decision)}`, decisionLabel(decision.decision)),
+            element("strong", `effective-action effective-${decision.effectiveAction.toLowerCase().replaceAll(" ", "-")}`, `Projected: ${decision.effectiveAction}`),
+            element("small", "", decision.mode));
+        item.append(time, request, outcome);
         return item;
     }
 
     function render(data) {
         const enforce = data.currentMode === "Enforce";
         const posture = document.querySelector("#governance-posture");
-        posture.className = `governance-posture mode-posture-${data.currentMode.toLowerCase()}`;
-        document.querySelector("#governance-posture-title").textContent = enforce ? "ENFORCEMENT ACTIVE" : "MONITORING ACTIVE";
+        posture.className = `reference-kpi mode-kpi mode-posture-${data.currentMode.toLowerCase()}`;
+        document.querySelector("#governance-posture-title").textContent = enforce ? "Enforcing" : "Monitoring";
         document.querySelector("#governance-posture-description").textContent = enforce
-            ? "Denied and pending decisions may block integrated operations."
-            : "Denied and pending decisions are recorded but do not block.";
+            ? "Deny and pending projected blocked"
+            : "Decisions recorded; operations continue";
         document.querySelector("#governance-posture-mode").textContent = data.currentMode;
         document.querySelector("#live-identity-count").textContent = data.activeIdentityCount;
         document.querySelector("#live-capability-count").textContent = data.activeCapabilityCount;
         document.querySelector("#live-total-decisions").textContent = data.totalDecisions;
         const lastEvaluation = document.querySelector("#live-last-evaluation");
-        lastEvaluation.dataset.relativeTime = data.lastEvaluationUtc || "";
-        lastEvaluation.textContent = relativeTime(data.lastEvaluationUtc);
+        if (lastEvaluation) {
+            lastEvaluation.dataset.relativeTime = data.lastEvaluationUtc || "";
+            lastEvaluation.textContent = relativeTime(data.lastEvaluationUtc);
+        }
 
         const newIds = data.decisions.filter(decision => !knownEventIds.has(decision.id)).map(decision => decision.id);
         const feed = document.querySelector("#live-decision-feed");
-        feed.replaceChildren(...data.decisions.map(decision => renderDecision(decision, newIds.includes(decision.id))));
+        feed.replaceChildren(...data.decisions.slice(0, 6).map(decision => renderDecision(decision, newIds.includes(decision.id))));
         document.querySelector("#live-decision-empty")?.remove();
         knownEventIds = new Set(data.decisions.map(decision => decision.id));
 
         const workers = document.querySelector("#active-worker-list");
-        workers.replaceChildren(...data.identities.map(identity => {
+        workers?.replaceChildren(...data.identities.map(identity => {
             const item = element("li");
             const details = element("div");
             details.append(element("strong", "", identity.identity), element("span", "code", identity.latestCapability));
             const presence = element("span", `worker-presence worker-${identity.status.toLowerCase()}`);
             presence.append(element("span"), document.createTextNode(`${identity.status} · ${relativeTime(identity.lastSeenUtc)}`));
-            item.append(details, element("span", `decision-badge ${decisionClass(identity.latestDecision)}`, identity.latestDecision), presence);
+            item.append(details, element("span", `decision-badge ${decisionClass(identity.latestDecision)}`, decisionLabel(identity.latestDecision)), presence);
             return item;
         }));
 
+        const affected = data.denied + data.pending;
+        const impactValue = document.querySelector("#application-impact-value");
+        const impactDescription = document.querySelector("#application-impact-description");
+        if (impactValue && impactDescription) {
+            impactValue.textContent = data.currentMode === "Enforce" ? affected : 0;
+            impactDescription.textContent = data.currentMode === "Enforce"
+                ? "Denied and pending operations are projected as blocked while Enforce is active."
+                : `${affected} denied or pending operations are projected to continue and be recorded.`;
+        }
+        const denyCount = document.querySelector("#attention-deny-count");
+        const pendingCount = document.querySelector("#attention-pending-count");
+        if (denyCount) denyCount.textContent = data.denied;
+        if (pendingCount) pendingCount.textContent = data.pending;
+        const denyDetailCount = document.querySelector("#attention-deny-detail-count");
+        const pendingDetailCount = document.querySelector("#attention-pending-detail-count");
+        if (denyDetailCount) denyDetailCount.textContent = data.denied;
+        if (pendingDetailCount) pendingDetailCount.textContent = data.pending;
+
         const distribution = document.querySelector("#decision-distribution");
-        const values = [["allow", "Allow", data.allowed], ["deny", "Deny", data.denied], ["pending", "Pending", data.pending]];
-        distribution.replaceChildren(...values.map(([kind, label, count]) => {
-            const row = element("div", `distribution-${kind}`);
-            row.style.setProperty("--decision-count", count);
-            row.append(element("span", "", label), element("strong", "", count));
-            return row;
-        }));
+        if (distribution?.classList.contains("reference-donut")) {
+            const total = Math.max(1, data.totalDecisions);
+            distribution.style.setProperty("--allow", data.allowed * 100 / total);
+            distribution.style.setProperty("--deny", data.denied * 100 / total);
+            distribution.style.setProperty("--pending", data.pending * 100 / total);
+            distribution.classList.toggle("is-empty", data.totalDecisions === 0);
+            distribution.setAttribute("aria-label", `Allow ${data.allowed}, Deny ${data.denied}, Pending Approval ${data.pending}`);
+            document.querySelector("#distribution-allow-count").textContent = data.allowed;
+            document.querySelector("#distribution-deny-count").textContent = data.denied;
+            document.querySelector("#distribution-pending-count").textContent = data.pending;
+        }
 
         document.querySelector("#dashboard-refresh-status").textContent = `Polling active; refreshed ${relativeTime(data.generatedAtUtc)}`;
         if (newIds.length) document.querySelector("#live-update-label").textContent = `${newIds.length} new evaluation${newIds.length === 1 ? "" : "s"}`;

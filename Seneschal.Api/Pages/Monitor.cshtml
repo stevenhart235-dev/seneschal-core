@@ -59,8 +59,9 @@
                         Current Mode: @Model.CurrentMode
                     </span>
                     <p>
-                        Policies are evaluated and audited, but runtime requests
-                        are not blocked.
+                        @(Model.CurrentMode == "Monitor"
+                            ? "Policies are evaluated and audited, but runtime requests are not blocked."
+                            : "Policies are evaluated and audited; denied and pending approval requests are projected as blocked.")
                     </p>
                 </div>
             </section>

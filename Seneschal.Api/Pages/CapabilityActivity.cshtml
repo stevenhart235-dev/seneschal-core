@@ -55,9 +55,9 @@
                             <tr>
                                 <th>Capability</th>
                                 <th>Total Requests</th>
-                                <th>Allowed</th>
-                                <th>Denied</th>
-                                <th>Pending Approval</th>
+                                <th class="outcome-allow">Allowed</th>
+                                <th class="outcome-deny">Denied</th>
+                                <th class="outcome-pending">Pending Approval</th>
                                 <th>Last Used</th>
                                 <th>Avg Duration ms</th>
                             </tr>
@@ -72,11 +72,11 @@
                                         </a>
                                     </td>
                                     <td>@capability.TotalRequests</td>
-                                    <td>@capability.AllowedCount</td>
-                                    <td>@capability.DeniedCount</td>
-                                    <td>@capability.PendingApprovalCount</td>
-                                    <td>@(capability.LastUsedUtc?.ToString("u") ?? "n/a")</td>
-                                    <td>@capability.AverageEvaluationDurationMs.ToString("0.##")</td>
+                                    <td class="outcome-allow">@capability.AllowedCount</td>
+                                    <td class="outcome-deny">@capability.DeniedCount</td>
+                                    <td class="outcome-pending">@capability.PendingApprovalCount</td>
+                                    <td class="activity-timestamp">@(capability.LastUsedUtc?.ToString("u") ?? "n/a")</td>
+                                    <td class="activity-duration">@capability.AverageEvaluationDurationMs.ToString("0.##")</td>
                                 </tr>
                             }
                         </tbody>

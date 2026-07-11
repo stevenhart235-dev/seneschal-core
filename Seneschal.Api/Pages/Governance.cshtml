@@ -25,65 +25,118 @@
                 </p>
             </header>
 
-            <section class="monitor-status-banner">
-                <div>
-                    <span class="badge monitor-mode-badge">
-                        Current Mode: @Model.CurrentModeLabel
-                    </span>
+            <section class="governance-active-panel mode-posture-@Model.CurrentModeLabel.ToLowerInvariant()" aria-labelledby="active-mode-title">
+                <div class="governance-active-copy">
+                    <span class="status-badge mode-@Model.CurrentModeLabel.ToLowerInvariant()">Current</span>
+                    <h2 id="active-mode-title">@(Model.CurrentModeLabel == "LogOnly" ? "MONITORING ACTIVE" : "ENFORCEMENT ACTIVE")</h2>
+                    <p class="governance-canonical-mode">Canonical mode: <strong>@Model.CurrentModeLabel</strong></p>
                     <p>@Model.CurrentModeDescription</p>
-                    <p class="muted">
-                        Runtime governance mode is in-memory only. Restarting
-                        Seneschal resets the mode to LogOnly.
-                    </p>
+                </div>
+                <div class="governance-mode-action">
+                    @if (Model.CurrentModeLabel == "LogOnly")
+                    {
+                        <button class="button-destructive" type="button" data-dialog-trigger="enforce-confirmation">Switch to Enforce</button>
+                    }
+                    else
+                    {
+                        <button class="button-secondary" type="button" data-dialog-trigger="logonly-confirmation">Return to LogOnly</button>
+                    }
                 </div>
             </section>
 
-            <section class="dashboard-columns">
-                <article class="panel">
-                    <h2>LogOnly</h2>
-                    <p class="muted">
-                        Policies are evaluated and audited. Deny and pending
-                        approval decisions are recorded, but integrations may
-                        continue execution.
-                    </p>
-                    <form method="post" action="/governance?handler=SetMode">
-                        <input type="hidden" name="mode" value="LogOnly" />
-                        <button class="button-link" type="submit">
-                            Switch to LogOnly
-                        </button>
-                    </form>
-                </article>
+            <p class="governance-volatile-note">
+                <strong>Temporary setting.</strong> Runtime governance mode is in memory and resets to LogOnly when Seneschal restarts.
+            </p>
 
-                <article class="panel">
-                    <h2>Enforce</h2>
-                    <p class="muted">
-                        Callers must honor Seneschal decisions. Allow proceeds;
-                        Deny and PendingApproval may block the operation.
-                    </p>
-                    <div class="empty-state warning-state">
-                        <p>
-                            Deny and pending approval decisions may block
-                            integrated applications.
-                        </p>
+            <section class="governance-summary-grid">
+                <article class="panel governance-impact-panel">
+                    <div class="section-header">
+                        <div>
+                            <h2>Current Impact</h2>
+                            <p class="muted">Based on up to 100 recent evaluations in this runtime.</p>
+                        </div>
                     </div>
-                    <form method="post" action="/governance?handler=SetMode">
-                        <input type="hidden" name="mode" value="Enforce" />
-                        <button class="button-link" type="submit">
-                            Switch to Enforce
-                        </button>
-                    </form>
+                    <dl class="governance-impact-metrics">
+                        <div><dt>Active identities</dt><dd>@Model.Impact.ActiveIdentities</dd></div>
+                        <div><dt>Active capabilities</dt><dd>@Model.Impact.ActiveCapabilities</dd></div>
+                        <div><dt>Recent Allow</dt><dd class="impact-allow">@Model.Impact.RecentAllows</dd></div>
+                        <div><dt>Recent Deny</dt><dd class="impact-deny">@Model.Impact.RecentDenials</dd></div>
+                        <div><dt>Recent Pending Approval</dt><dd class="impact-pending">@Model.Impact.RecentPendingApprovals</dd></div>
+                    </dl>
+                    <div class="governance-affected-capabilities">
+                        <p><span>Most recent denied capability</span><strong>@(Model.Impact.MostRecentDeniedCapability ?? "None observed")</strong></p>
+                        <p><span>Most recent pending capability</span><strong>@(Model.Impact.MostRecentPendingCapability ?? "None observed")</strong></p>
+                    </div>
+                </article>
+
+                <article class="panel governance-consequence-panel">
+                    <h2>Mode Consequences</h2>
+                    <p class="muted">Projected integration behavior for each policy decision.</p>
+                    <div class="table-scroll">
+                        <table class="consequence-matrix">
+                            <thead><tr><th>Policy decision</th><th>LogOnly</th><th>Enforce</th></tr></thead>
+                            <tbody>
+                                <tr><th scope="row"><span class="decision-badge decision-allow">Allow</span></th><td>Execute</td><td>Execute</td></tr>
+                                <tr><th scope="row"><span class="decision-badge decision-deny">Deny</span></th><td>Execute and record</td><td>Block</td></tr>
+                                <tr><th scope="row"><span class="decision-badge decision-pendingapproval">Pending Approval</span></th><td>Execute and record</td><td>Block pending approval</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </article>
             </section>
 
-            <section class="panel">
-                <h2>Operational Note</h2>
-                <p class="muted">
-                    This first version is intentionally non-persistent and
-                    portal-first. Mode changes should become administrative
-                    audit events before this control is used in production.
-                </p>
-            </section>
+            @if (Model.CurrentModeLabel == "LogOnly")
+            {
+            <dialog class="governance-dialog" id="enforce-confirmation" aria-labelledby="enforce-dialog-title" aria-describedby="enforce-dialog-description">
+                <form method="post" action="/governance?handler=SetMode">
+                    <input type="hidden" name="mode" value="Enforce" />
+                    <h2 id="enforce-dialog-title">Enable runtime enforcement?</h2>
+                    <div id="enforce-dialog-description">
+                        <ul>
+                            <li>Deny and Pending Approval decisions may begin blocking integrated operations immediately.</li>
+                            <li>Existing Allow decisions will continue.</li>
+                            <li>Policy configuration will not change.</li>
+                            <li>Runtime mode resets to LogOnly when Seneschal restarts.</li>
+                        </ul>
+                        <div class="dialog-impact-summary">
+                            <strong>Current impact</strong>
+                            <span>@Model.Impact.ActiveIdentities active identities</span>
+                            <span>@Model.Impact.ActiveCapabilities active capabilities</span>
+                            <span>@Model.Impact.RecentDenials recent denied decisions</span>
+                            <span>@Model.Impact.RecentPendingApprovals recent pending approvals</span>
+                            @if (Model.Impact.MostRecentDeniedCapability is not null)
+                            {
+                                <span><b>@Model.Impact.MostRecentDeniedCapability</b> would currently be blocked.</span>
+                            }
+                            @if (Model.Impact.MostRecentPendingCapability is not null)
+                            {
+                                <span><b>@Model.Impact.MostRecentPendingCapability</b> would currently be blocked pending approval.</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="dialog-actions">
+                        <button class="button-secondary" type="button" data-dialog-close>Cancel</button>
+                        <button class="button-destructive" type="submit">Enable Enforce</button>
+                    </div>
+                </form>
+            </dialog>
+            }
+            else
+            {
+            <dialog class="governance-dialog" id="logonly-confirmation" aria-labelledby="logonly-dialog-title" aria-describedby="logonly-dialog-description">
+                <form method="post" action="/governance?handler=SetMode">
+                    <input type="hidden" name="mode" value="LogOnly" />
+                    <h2 id="logonly-dialog-title">Return to LogOnly?</h2>
+                    <p id="logonly-dialog-description">Denied and Pending Approval decisions will continue to be recorded but will no longer block integrated operations.</p>
+                    <div class="dialog-actions">
+                        <button class="button-secondary" type="button" data-dialog-close>Cancel</button>
+                        <button class="button-primary" type="submit">Return to LogOnly</button>
+                    </div>
+                </form>
+            </dialog>
+            }
         </main>
     </div>
+    <script src="/governance-dialog.js" defer></script>
 </body>
 </html>

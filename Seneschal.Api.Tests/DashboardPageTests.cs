@@ -26,7 +26,7 @@ public sealed class DashboardPageTests :
     }
 
     [Fact]
-    public async Task Dashboard_RendersInventorySummaryAndQuickLink()
+    public async Task Dashboard_RendersRuntimeCommandCenterLayout()
     {
         using var response = await _client.GetAsync("/dashboard");
 
@@ -34,7 +34,8 @@ public sealed class DashboardPageTests :
 
         var html = await response.Content.ReadAsStringAsync();
 
-        Assert.Contains("Seneschal Dashboard", html);
+        Assert.Contains("<h1>Dashboard</h1>", html);
+        Assert.Contains("Runtime governance across integrated applications.", html);
         Assert.Contains("Overview", html);
         Assert.Contains("Governance", html);
         Assert.Contains("Operations", html);
@@ -45,21 +46,24 @@ public sealed class DashboardPageTests :
         Assert.Contains("/monitor", html);
         Assert.Contains("/resources", html);
         Assert.Contains("/graph-view", html);
-        Assert.Contains("Runtime Activity", html);
+        Assert.Contains("Runtime posture", html);
+        Assert.Contains("Live Decision Activity", html);
+        Assert.Contains("Needs Attention", html);
+        Assert.Contains("Most Active Capabilities", html);
+        Assert.Contains("Governance coverage", html);
         Assert.Contains("Capability Activity", html);
         Assert.Contains("/capability-activity", html);
         Assert.Contains("Identity Activity", html);
         Assert.Contains("/identity-activity", html);
-        Assert.Contains("Total Runtime Decisions", html);
-        Assert.Contains("Total Capabilities", html);
-        Assert.Contains("Total Policies", html);
-        Assert.Contains("Total Identities", html);
-        Assert.Contains("Total Relationships", html);
-        Assert.Contains("Highest Risk Capabilities", html);
-        Assert.Contains("Recently Added Capabilities", html);
-        Assert.Contains("Open Capability Explorer", html);
+        Assert.Contains("Total decisions", html);
+        Assert.Contains("Capabilities", html);
+        Assert.Contains("Policies", html);
+        Assert.Contains("Identities", html);
         Assert.Contains("/capability-explorer", html);
-        Assert.Contains("Seneschal v0.2.1-alpha", html);
+        Assert.DoesNotContain("First-Run Guide", html);
+        Assert.DoesNotContain("Quick Actions", html);
+        Assert.DoesNotContain("Highest Risk Capabilities", html);
+        Assert.DoesNotContain("Recently Added Capabilities", html);
     }
 
     [Fact]
@@ -87,26 +91,10 @@ public sealed class DashboardPageTests :
 
         var html = await response.Content.ReadAsStringAsync();
 
-        Assert.Contains("No runtime activity has been observed yet.", html);
-        Assert.Contains("Activity appears automatically", html);
-        Assert.Contains("/evaluate", html);
-        Assert.Contains("First-Run Guide", html);
-        Assert.Contains("Adoption Checklist", html);
-        Assert.Contains("Configure capabilities", html);
-        Assert.Contains("Configure identities", html);
-        Assert.Contains("Configure policies", html);
-        Assert.Contains("Connect an application", html);
-        Assert.Contains("Observe runtime activity", html);
-        Assert.Contains("Review Monitor dashboard", html);
-        Assert.Contains("Enable enforcement when ready", html);
-        Assert.Contains("dotnet run --project Seneschal.Api", html);
-        Assert.Contains(
-            "dotnet run --project Seneschal.Samples.ProtectedApi",
-            html);
-        Assert.Contains("curl -X POST http://localhost:5000/deploy", html);
-        Assert.Contains("Capability Explorer", html);
-        Assert.Contains("Policy Explorer", html);
-        Assert.Contains("Seneschal.Samples.ProtectedApi/README.md", html);
+        Assert.Contains("No evaluations have been recorded", html);
+        Assert.Contains("Runtime posture", html);
+        Assert.Contains("Governance coverage", html);
+        Assert.DoesNotContain("First-Run Guide", html);
     }
 
     [Fact]
@@ -137,24 +125,17 @@ public sealed class DashboardPageTests :
 
         var html = await response.Content.ReadAsStringAsync();
 
-        Assert.Contains("Total Runtime Decisions", html);
-        Assert.Contains("Allowed Decisions", html);
-        Assert.Contains("Denied Decisions", html);
-        Assert.Contains("Pending Approval Decisions", html);
-        Assert.Contains("Most Active Capability", html);
-        Assert.Contains("Most Active Identity", html);
-        Assert.Contains("Most Matched Policy", html);
-        Assert.Contains("Avg Evaluation Duration ms", html);
-        Assert.Contains("Top Capabilities", html);
-        Assert.Contains("Most Denied Capabilities", html);
-        Assert.Contains("Most Active Identities", html);
+        Assert.Contains("Total decisions", html);
+        Assert.Contains("Decision Distribution", html);
+        Assert.Contains("Live Decision Activity", html);
+        Assert.Contains("Most Active Capabilities", html);
         Assert.Contains(capability, html);
         Assert.Contains(identity, html);
-        Assert.Contains("Audit evidence available", html);
+        Assert.Contains("Governance coverage", html);
     }
 
     [Fact]
-    public async Task Dashboard_HidesFirstRunGuideAfterRuntimeActivityGrows()
+    public async Task Dashboard_KeepsOperationalStoryAfterRuntimeActivityGrows()
     {
         var identity = $"DashboardFirstRun-{Guid.NewGuid():N}";
 
@@ -183,8 +164,9 @@ public sealed class DashboardPageTests :
         var html = await response.Content.ReadAsStringAsync();
 
         Assert.DoesNotContain("First-Run Guide", html);
-        Assert.Contains("Runtime Activity", html);
-        Assert.Contains("Top Capabilities", html);
+        Assert.Contains("Runtime posture", html);
+        Assert.Contains("Live Decision Activity", html);
+        Assert.Contains("Most Active Capabilities", html);
     }
 
     [Fact]
@@ -215,12 +197,12 @@ public sealed class DashboardPageTests :
 
         var html = await _client.GetStringAsync("/dashboard");
 
-        Assert.Contains("Live operations", html);
-        Assert.Contains("Runtime mode:", html);
+        Assert.Contains("Runtime posture", html);
+        Assert.Contains("Canonical mode:", html);
         Assert.Contains("LogOnly", html);
         Assert.Contains("Live Decision Activity", html);
         Assert.Contains(identity, html);
-        Assert.Contains("PROJECTED:", html);
+        Assert.Contains("Executed and recorded", html);
     }
 
     [Fact]
@@ -294,7 +276,7 @@ public sealed class DashboardPageTests :
 
         var html = await _client.GetStringAsync("/dashboard");
         Assert.Contains("release-approval-worker", html);
-        Assert.Contains("PendingApproval", html);
+        Assert.Contains("Pending Approval", html);
         Assert.Contains("Decision Distribution", html);
         Assert.Contains("distribution-pending", html);
 

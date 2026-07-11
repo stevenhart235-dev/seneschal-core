@@ -16,7 +16,7 @@ public sealed class GovernanceModePageTests :
     }
 
     [Fact]
-    public async Task GovernancePage_RendersCurrentMode()
+    public async Task GovernancePage_RendersActiveLogOnlyStateAndOnlyEnforceAction()
     {
         using var client = CreateIsolatedClient();
 
@@ -27,13 +27,69 @@ public sealed class GovernanceModePageTests :
         var html = await response.Content.ReadAsStringAsync();
 
         Assert.Contains("Runtime Governance", html);
-        Assert.Contains("Current Mode: LogOnly", html);
+        Assert.Contains("MONITORING ACTIVE", html);
+        Assert.Contains("Pending Approval decisions are recorded", html);
+        Assert.Contains("Canonical mode: <strong>LogOnly</strong>", html);
+        Assert.Contains("Current", html);
         Assert.Contains("Switch to Enforce", html);
-        Assert.Contains("Switch to LogOnly", html);
-        Assert.Contains("Deny and pending approval decisions may block", html);
-        Assert.Contains("integrated applications", html);
-        Assert.Contains("Restarting", html);
-        Assert.Contains("resets the mode to LogOnly", html);
+        Assert.DoesNotContain("Return to LogOnly?", html);
+        Assert.Contains("Enable runtime enforcement?", html);
+        Assert.Contains("Existing Allow decisions will continue", html);
+        Assert.Contains("Runtime governance mode is in memory", html);
+        Assert.Contains("resets to LogOnly when Seneschal restarts", html);
+    }
+
+    [Fact]
+    public async Task GovernancePage_RendersActiveEnforceStateAndOnlyLogOnlyAction()
+    {
+        using var client = CreateIsolatedClient();
+        await SetModeAsync(client, "Enforce");
+
+        var html = await client.GetStringAsync("/governance");
+
+        Assert.Contains("ENFORCEMENT ACTIVE", html);
+        Assert.Contains("Pending Approval decisions are projected as blocked", html);
+        Assert.Contains("Canonical mode: <strong>Enforce</strong>", html);
+        Assert.Contains("Return to LogOnly", html);
+        Assert.Contains("Return to LogOnly?", html);
+        Assert.Contains("will no longer block integrated operations", html);
+        Assert.DoesNotContain("Enable runtime enforcement?", html);
+        Assert.DoesNotContain(">Switch to Enforce</button>", html);
+    }
+
+    [Fact]
+    public async Task EnforceConfirmation_RendersRecentImpact()
+    {
+        using var client = CreateIsolatedClient();
+        using (var denied = await client.PostAsJsonAsync("/evaluate", new
+        {
+            identity = "governance-impact-denied",
+            capability = "database.migration.unmatched",
+            context = new { environment = "production", resource = "db" }
+        }))
+        {
+            Assert.Equal(HttpStatusCode.OK, denied.StatusCode);
+        }
+        using (var pending = await client.PostAsJsonAsync("/evaluate", new
+        {
+            identity = "release-approval-worker",
+            capability = "production.release.approve",
+            context = new { environment = "production", resource = "checkout-api" }
+        }))
+        {
+            Assert.Equal(HttpStatusCode.OK, pending.StatusCode);
+        }
+
+        var html = await client.GetStringAsync("/governance");
+
+        Assert.Contains("2 active identities", html);
+        Assert.Contains("2 active capabilities", html);
+        Assert.Contains("1 recent denied decisions", html);
+        Assert.Contains("1 recent pending approvals", html);
+        Assert.Contains("database.migration.unmatched", html);
+        Assert.Contains("would currently be blocked.", html);
+        Assert.Contains("production.release.approve", html);
+        Assert.Contains("would currently be blocked pending approval.", html);
     }
 
     [Fact]

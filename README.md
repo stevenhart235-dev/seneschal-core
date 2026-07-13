@@ -51,6 +51,22 @@ Together, the workers show the difference between observation and enforcement:
 
 See the lab README for package preparation, configuration, and exact PowerShell commands.
 
+## Local Demo
+
+From the repository root, launch the runtime, all four workers, and the Dashboard with one command:
+
+```powershell
+.\demo.ps1
+```
+
+Stop the demo with:
+
+```powershell
+.\stop-demo.ps1
+```
+
+Process output is written to `artifacts/demo/logs/`.
+
 ## Architecture
 
 Seneschal sits on the execution path of an integrated operation. The application remains responsible for honoring the returned effective action.

@@ -64,6 +64,8 @@ BenchmarkDotNet.Artifacts/
 project.lock.json
 project.fragment.lock.json
 artifacts/
+# Runtime process state written by demo.ps1 (scripts remain tracked).
+artifacts/demo/
 
 # Tye
 .tye/

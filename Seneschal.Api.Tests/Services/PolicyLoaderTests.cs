@@ -77,4 +77,61 @@ public sealed class PolicyLoaderTests :
             defaultDeny.Reason);
         Assert.Empty(defaultDeny.Conditions);
     }
+
+    [Fact]
+    public void ProductionFreezeProfile_PrependsDenialsAndPreservesWorkerPolicies()
+    {
+        var repositoryRoot = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            ".."));
+        var loader = new PolicyLoader(Path.Combine(
+            repositoryRoot,
+            "Seneschal.Api",
+            "Policies",
+            "policies.production-freeze.yaml"));
+
+        var policies = loader.GetPolicies();
+        var corePolicies = loader.GetCorePolicies();
+
+        Assert.Equal(14, policies.Count);
+        Assert.Collection(
+            policies.Take(2),
+            policy =>
+            {
+                Assert.Equal(
+                    "Production freeze blocks GitHub Actions deployments",
+                    policy.Name);
+                Assert.Equal("deny", policy.Decision);
+                Assert.Equal("Production freeze is active.", policy.Reason);
+            },
+            policy =>
+            {
+                Assert.Equal(
+                    "Production freeze blocks Terraform applies",
+                    policy.Name);
+                Assert.Equal("deny", policy.Decision);
+                Assert.Equal("Production freeze is active.", policy.Reason);
+            });
+        Assert.Equal(14, corePolicies[0].Priority);
+        Assert.Equal(13, corePolicies[1].Priority);
+        Assert.Contains(
+            policies,
+            policy => policy.Name == "Deployment worker can deploy to production" &&
+                policy.Decision == "allow");
+        Assert.Contains(
+            policies,
+            policy => policy.Name == "Migration worker cannot migrate production database" &&
+                policy.Decision == "deny");
+        Assert.Contains(
+            policies,
+            policy => policy.Name == "Refund worker can create production refunds" &&
+                policy.Decision == "allow");
+        Assert.Contains(
+            policies,
+            policy => policy.Name == "Release approval worker requires production approval" &&
+                policy.Decision == "requires_approval");
+    }
 }

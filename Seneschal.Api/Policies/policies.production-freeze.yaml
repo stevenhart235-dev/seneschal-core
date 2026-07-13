@@ -1,0 +1,100 @@
+# Demo-only policy profile.
+# The first two policies have the highest priority and simulate a production freeze.
+policies:
+  - name: Production freeze blocks GitHub Actions deployments
+    identity: github-actions-production
+    capability: production.deployment.execute
+    environment: production
+    decision: deny
+    reason: Production freeze is active.
+
+  - name: Production freeze blocks Terraform applies
+    identity: terraform-production
+    capability: infrastructure.production.apply
+    environment: production
+    decision: deny
+    reason: Production freeze is active.
+
+  - name: Developers can deploy to dev
+    identity: Developer
+    capability: DeployApplication
+    environment: dev
+    decision: allow
+    reason: Developer is allowed to deploy applications to dev
+
+  - name: Developers cannot delete production databases
+    identity: Developer
+    capability: DeleteProductionDatabase
+    environment: prod
+    decision: deny
+    reason: Developers cannot delete production databases
+
+  - name: Support secret reads require approval
+    identity: SupportAgent
+    capability: azure.keyvault.secret.read
+    environment: prod
+    decision: requires_approval
+    reason: Reading production secrets requires approval
+
+  - name: Platform engineers can deploy to dev
+    identity: PlatformEngineer
+    capability: DeployApplication
+    environment: dev
+    decision: allow
+    reason: Platform engineers are allowed to deploy applications to dev
+
+  - name: Platform agent can apply production infrastructure
+    identity: platform-agent
+    capability: infrastructure.production.apply
+    environment: production
+    decision: allow
+    reason: Platform agent is approved to apply production infrastructure changes
+
+  - name: Platform agent cannot destroy production infrastructure
+    identity: platform-agent
+    capability: infrastructure.production.destroy
+    environment: production
+    decision: deny
+    reason: Destructive production infrastructure changes require manual break-glass approval
+
+  - name: Deployment worker can deploy to production
+    identity: deployment-worker
+    capability: production.deployment.execute
+    environment: production
+    decision: allow
+    reason: Deployment worker is approved to execute production deployments
+
+  - name: Migration worker cannot migrate production database
+    identity: migration-worker
+    capability: database.migration.execute
+    environment: production
+    decision: deny
+    reason: Database migrations are blocked for the migration worker in this lab
+
+  - name: Refund worker can create production refunds
+    identity: refund-worker
+    capability: payments.refund.create
+    environment: production
+    decision: allow
+    reason: Refund worker is approved to create production refunds
+
+  - name: Release approval worker requires production approval
+    identity: release-approval-worker
+    capability: production.release.approve
+    environment: production
+    decision: requires_approval
+    reason: Production release approval requires a human approval decision
+
+  - name: GitHub Actions can deploy checkout API to production
+    identity: github-actions-production
+    capability: production.deployment.execute
+    environment: production
+    decision: allow
+    reason: GitHub Actions production workflow is approved to deploy checkout-api
+
+  - name: Terraform can apply production infrastructure
+    identity: terraform-production
+    capability: infrastructure.production.apply
+    environment: production
+    decision: allow
+    reason: Terraform production workflow is approved to apply production infrastructure

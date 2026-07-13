@@ -80,8 +80,8 @@ public sealed class MonitorPageTests :
         Assert.Contains("Review Unused Governance Objects", html);
         Assert.Contains("Review or archive unused governance objects", html);
         Assert.Contains("Unused capabilities: 9", html);
-        Assert.Contains("Unused identities: 9", html);
-        Assert.Contains("Unused policies: 10", html);
+        Assert.Contains("Unused identities: 10", html);
+        Assert.Contains("Unused policies: 11", html);
     }
 
     [Fact]
@@ -260,6 +260,11 @@ public sealed class MonitorPageTests :
                 {
                     IdentityId = "release-approval-worker",
                     TotalRequests = 1
+                },
+                new IdentityActivity
+                {
+                    IdentityId = "github-actions-production",
+                    TotalRequests = 1
                 }
             ],
             Policies =
@@ -312,6 +317,11 @@ public sealed class MonitorPageTests :
                 new PolicyActivity
                 {
                     PolicyId = "Release approval worker requires production approval",
+                    MatchCount = 1
+                },
+                new PolicyActivity
+                {
+                    PolicyId = "GitHub Actions can deploy checkout API to production",
                     MatchCount = 1
                 }
             ]

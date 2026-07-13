@@ -1,0 +1,32 @@
+name: Production deployment with Seneschal gate
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build deployment artifact
+        shell: pwsh
+        run: Write-Host "Build complete (simulated)."
+
+      - name: Evaluate production deployment capability
+        shell: pwsh
+        env:
+          SENESCHAL_URL: ${{ secrets.SENESCHAL_URL }}
+          SENESCHAL_API_KEY: ${{ secrets.SENESCHAL_API_KEY }}
+        run: |
+          ./integrations/github-actions/invoke-seneschal-gate.ps1 `
+            -BaseUrl $env:SENESCHAL_URL `
+            -ApiKey $env:SENESCHAL_API_KEY `
+            -Identity github-actions-production `
+            -Capability production.deployment.execute `
+            -Environment production `
+            -Resource checkout-api
+
+      - name: Deploy checkout-api
+        shell: pwsh
+        run: Write-Host "Deploying checkout-api (simulated)."

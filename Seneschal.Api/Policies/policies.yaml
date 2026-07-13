@@ -68,3 +68,10 @@ policies:
     environment: production
     decision: requires_approval
     reason: Production release approval requires a human approval decision
+
+  - name: GitHub Actions can deploy checkout API to production
+    identity: github-actions-production
+    capability: production.deployment.execute
+    environment: production
+    decision: allow
+    reason: GitHub Actions production workflow is approved to deploy checkout-api

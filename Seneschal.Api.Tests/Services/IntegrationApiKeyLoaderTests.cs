@@ -25,5 +25,12 @@ public sealed class IntegrationApiKeyLoaderTests :
                 key.AllowedIdentities.Contains("platform-agent") &&
                 key.AllowedCapabilities.Contains(
                     "infrastructure.production.apply"));
+        Assert.Contains(
+            keys,
+            key => key.Name == "github-actions-production-development" &&
+                key.Key == "dev-github-actions-key" &&
+                key.Environment == "production" &&
+                key.AllowedIdentities.SequenceEqual(["github-actions-production"]) &&
+                key.AllowedCapabilities.SequenceEqual(["production.deployment.execute"]));
     }
 }

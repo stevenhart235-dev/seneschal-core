@@ -34,3 +34,7 @@ identities:
   - name: release-approval-worker
     description: Multi-application lab production release approval worker
     type: Service
+
+  - name: github-actions-production
+    description: GitHub Actions production deployment workflow
+    type: Service

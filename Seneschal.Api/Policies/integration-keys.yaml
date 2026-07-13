@@ -66,3 +66,12 @@ integrationKeys:
     allowedCapabilities:
       - production.release.approve
     environment: production
+
+  - name: github-actions-production-development
+    key: dev-github-actions-key
+    enabled: true
+    allowedIdentities:
+      - github-actions-production
+    allowedCapabilities:
+      - production.deployment.execute
+    environment: production

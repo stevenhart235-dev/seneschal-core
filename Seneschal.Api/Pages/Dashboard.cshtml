@@ -68,18 +68,23 @@
                         @foreach (var decision in Model.Live.Decisions.Take(6))
                         {
                             <li data-event-id="@decision.Id">
-                                <time datetime="@decision.TimestampUtc.ToString("O")" data-relative-time="@decision.TimestampUtc.ToString("O")">@decision.TimestampUtc.ToString("u")</time>
-                                <div class="reference-event-request">
-                                    <a href="/identity-activity?identityId=@Uri.EscapeDataString(decision.Identity)">@decision.Identity</a>
-                                    <span>requested</span>
-                                    <a href="/capability-activity?capabilityId=@Uri.EscapeDataString(decision.Capability)">@decision.Capability</a>
-                                    <small>@decision.Reason</small>
-                                </div>
-                                <div class="reference-event-result">
-                                    <span class="decision-badge decision-@decision.Decision.ToLowerInvariant()">@(decision.Decision == "PendingApproval" ? "Pending Approval" : decision.Decision)</span>
-                                    <strong class="effective-action effective-@decision.EffectiveAction.Replace(" ", "-").ToLowerInvariant()">Projected: @decision.EffectiveAction</strong>
-                                    <small>@decision.Mode</small>
-                                </div>
+                                <details class="reference-event-disclosure">
+                                    <summary>
+                                        <a class="reference-event-identity" href="/identity-activity?identityId=@Uri.EscapeDataString(decision.Identity)">@decision.Identity</a>
+                                        <a class="reference-event-capability" href="/capability-activity?capabilityId=@Uri.EscapeDataString(decision.Capability)">@decision.Capability</a>
+                                        <span class="decision-badge decision-@decision.Decision.ToLowerInvariant()">@(decision.Decision == "PendingApproval" ? "Pending Approval" : decision.Decision)</span>
+                                        <strong class="effective-action effective-@decision.EffectiveAction.Replace(" ", "-").ToLowerInvariant()">→ @decision.EffectiveAction</strong>
+                                        <time datetime="@decision.TimestampUtc.ToString("O")" data-relative-time="@decision.TimestampUtc.ToString("O")">@decision.TimestampUtc.ToString("u")</time>
+                                        <span class="reference-event-chevron" aria-hidden="true"></span>
+                                    </summary>
+                                    <dl class="reference-event-details">
+                                        <div><dt>Reason</dt><dd>@decision.Reason</dd></div>
+                                        <div><dt>Matched policy</dt><dd>@(string.IsNullOrWhiteSpace(decision.MatchedPolicy) ? "None" : decision.MatchedPolicy)</dd></div>
+                                        <div><dt>Runtime mode</dt><dd>@decision.Mode</dd></div>
+                                        <div><dt>Identity</dt><dd>@decision.Identity</dd></div>
+                                        <div><dt>Capability</dt><dd>@decision.Capability</dd></div>
+                                    </dl>
+                                </details>
                             </li>
                         }
                     </ol>
@@ -125,10 +130,11 @@
                 <article class="reference-card projected-impact-card">
                     <header class="reference-card-header"><div><h2>Projected Application Impact</h2><p>Mode-derived behavior; external execution is not confirmed</p></div></header>
                     <div class="reference-impact-value"><strong id="application-impact-value">@(Model.Live.CurrentMode == "Enforce" ? projectedAffected : 0)</strong><span>projected blocked</span></div>
-                    <p id="application-impact-description">@(Model.Live.CurrentMode == "LogOnly" ? $"{projectedAffected} denied or pending operations are projected to continue and be recorded." : "Denied and pending operations are projected as blocked while Enforce is active.")</p>
-                    <div id="latest-evaluation" class="reference-latest-evaluation">
-                        <span>Last evaluation</span><time id="live-last-evaluation" data-relative-time="@Model.Live.LastEvaluationUtc?.ToString("O")">@(Model.Live.LastEvaluationUtc is null ? "No evaluations" : Model.Live.LastEvaluationUtc.Value.ToString("u"))</time>
-                    </div>
+                    <p id="application-impact-description">@(Model.Live.CurrentMode == "LogOnly" ? $"{projectedAffected} denied or pending operations would continue and be recorded." : "Denied and pending operations are projected as blocked while Enforce is active.")</p>
+                    <dl class="reference-impact-breakdown @(Model.Live.CurrentMode == "Enforce" ? "" : "is-hidden")" id="application-impact-breakdown">
+                        <div><dt>Denied</dt><dd id="application-impact-denied">@Model.DeniedRuntimeDecisions</dd></div>
+                        <div><dt>Pending approval</dt><dd id="application-impact-pending">@Model.PendingApprovalRuntimeDecisions</dd></div>
+                    </dl>
                     <footer><a href="/governance">Review runtime governance →</a></footer>
                 </article>
 

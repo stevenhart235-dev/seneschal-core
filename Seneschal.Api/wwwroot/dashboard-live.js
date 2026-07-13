@@ -27,19 +27,31 @@
     function renderDecision(decision, isNew) {
         const item = element("li", isNew && !reducedMotion.matches ? "live-event-new" : "");
         item.dataset.eventId = decision.id;
+        const disclosure = element("details", "reference-event-disclosure");
+        const summary = element("summary");
         const time = element("time", "", relativeTime(decision.timestampUtc));
         time.dateTime = decision.timestampUtc;
         time.dataset.relativeTime = decision.timestampUtc;
-        const request = element("div", "reference-event-request");
-        request.append(element("a", "", decision.identity), element("span", "", "requested"), element("a", "", decision.capability), element("small", "", decision.reason));
-        request.children[0].href = `/identity-activity?identityId=${encodeURIComponent(decision.identity)}`;
-        request.children[2].href = `/capability-activity?capabilityId=${encodeURIComponent(decision.capability)}`;
-        const outcome = element("div", "reference-event-result");
-        outcome.append(
+        const identity = element("a", "reference-event-identity", decision.identity);
+        identity.href = `/identity-activity?identityId=${encodeURIComponent(decision.identity)}`;
+        const capability = element("a", "reference-event-capability", decision.capability);
+        capability.href = `/capability-activity?capabilityId=${encodeURIComponent(decision.capability)}`;
+        summary.append(
+            identity,
+            capability,
             element("span", `decision-badge ${decisionClass(decision.decision)}`, decisionLabel(decision.decision)),
-            element("strong", `effective-action effective-${decision.effectiveAction.toLowerCase().replaceAll(" ", "-")}`, `Projected: ${decision.effectiveAction}`),
-            element("small", "", decision.mode));
-        item.append(time, request, outcome);
+            element("strong", `effective-action effective-${decision.effectiveAction.toLowerCase().replaceAll(" ", "-")}`, `→ ${decision.effectiveAction}`),
+            time,
+            element("span", "reference-event-chevron"));
+        summary.lastChild.setAttribute("aria-hidden", "true");
+        const details = element("dl", "reference-event-details");
+        [["Reason", decision.reason], ["Matched policy", decision.matchedPolicy || "None"], ["Runtime mode", decision.mode], ["Identity", decision.identity], ["Capability", decision.capability]].forEach(([label, value]) => {
+            const group = element("div");
+            group.append(element("dt", "", label), element("dd", "", value));
+            details.append(group);
+        });
+        disclosure.append(summary, details);
+        item.append(disclosure);
         return item;
     }
 
@@ -85,8 +97,14 @@
             impactValue.textContent = data.currentMode === "Enforce" ? affected : 0;
             impactDescription.textContent = data.currentMode === "Enforce"
                 ? "Denied and pending operations are projected as blocked while Enforce is active."
-                : `${affected} denied or pending operations are projected to continue and be recorded.`;
+                : `${affected} denied or pending operations would continue and be recorded.`;
         }
+        const impactBreakdown = document.querySelector("#application-impact-breakdown");
+        impactBreakdown?.classList.toggle("is-hidden", data.currentMode !== "Enforce");
+        const impactDenied = document.querySelector("#application-impact-denied");
+        const impactPending = document.querySelector("#application-impact-pending");
+        if (impactDenied) impactDenied.textContent = data.denied;
+        if (impactPending) impactPending.textContent = data.pending;
         const denyCount = document.querySelector("#attention-deny-count");
         const pendingCount = document.querySelector("#attention-pending-count");
         if (denyCount) denyCount.textContent = data.denied;

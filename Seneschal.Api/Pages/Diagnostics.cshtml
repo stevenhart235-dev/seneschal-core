@@ -1,0 +1,40 @@
+@page "/diagnostics-view"
+@model Seneschal.Api.Pages.DiagnosticsModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seneschal Diagnostics</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+    <div class="app-shell">
+        @await Html.PartialAsync("Shared/_PortalSidebar", "diagnostics")
+        <main class="container explorer-page">
+            <header class="page-header">
+                <div>
+                    <div class="breadcrumb">System / Diagnostics</div>
+                    <h1>Diagnostics</h1>
+                    <p class="subtitle">Current runtime configuration and in-memory evidence status.</p>
+                </div>
+                <div class="page-actions"><a class="button secondary" href="/diagnostics">View raw JSON</a></div>
+            </header>
+
+            <section class="panel">
+                <h2>Runtime status</h2>
+                <dl class="metadata-grid">
+                    <div><dt>Runtime mode</dt><dd>@Model.RuntimeMode</dd></div>
+                    <div><dt>Capabilities</dt><dd>@Model.CapabilityCount</dd></div>
+                    <div><dt>Identities</dt><dd>@Model.IdentityCount</dd></div>
+                    <div><dt>Policies</dt><dd>@Model.PolicyCount</dd></div>
+                    <div><dt>Audit events</dt><dd>@Model.AuditEventCount</dd></div>
+                </dl>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

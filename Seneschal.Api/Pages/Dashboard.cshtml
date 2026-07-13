@@ -142,7 +142,7 @@
                     <header class="reference-card-header"><div><h2>Runtime Health</h2></div></header>
                     <div class="reference-health-state"><span aria-hidden="true"></span><strong>Healthy</strong><small>Seneschal is responding</small></div>
                     <dl><div><dt>Runtime mode</dt><dd>@Model.Live.CurrentMode</dd></div><div><dt>Audit evidence</dt><dd>@(Model.AuditEventsAvailable ? "Available" : "Not observed")</dd></div><div><dt>Evaluations</dt><dd>@Model.TotalRuntimeDecisions</dd></div></dl>
-                    <footer><a href="/diagnostics">View diagnostics →</a></footer>
+                    <footer><a href="/diagnostics-view">View diagnostics →</a></footer>
                 </article>
 
                 <article class="reference-card reference-capabilities-card">
@@ -163,7 +163,7 @@
             <section class="reference-coverage-strip" aria-label="Governance coverage">
                 <span>Governance coverage</span>
                 <a href="/capability-explorer"><strong>@Model.TotalCapabilities</strong> capabilities</a>
-                <a href="/identities"><strong>@Model.TotalIdentities</strong> identities</a>
+                <a href="/identity-explorer"><strong>@Model.TotalIdentities</strong> identities</a>
                 <a href="/policies"><strong>@Model.TotalPolicies</strong> policies</a>
                 <a href="/audit"><strong>@Model.TotalRuntimeDecisions</strong> evaluations</a>
             </section>

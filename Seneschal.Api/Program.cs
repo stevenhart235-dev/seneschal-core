@@ -56,10 +56,11 @@ builder.Services.AddSingleton<GraphBuilder>();
 
 var app = builder.Build();
 
-app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.Services.GetRequiredService<PolicyValidator>();
+
+app.MapGet("/", () => Results.Redirect("/dashboard"));
 
 app.MapPost("/evaluate", (
     DecisionRequest request,

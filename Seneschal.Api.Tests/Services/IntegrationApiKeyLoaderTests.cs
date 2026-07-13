@@ -32,5 +32,12 @@ public sealed class IntegrationApiKeyLoaderTests :
                 key.Environment == "production" &&
                 key.AllowedIdentities.SequenceEqual(["github-actions-production"]) &&
                 key.AllowedCapabilities.SequenceEqual(["production.deployment.execute"]));
+        Assert.Contains(
+            keys,
+            key => key.Name == "terraform-production-development" &&
+                key.Key == "dev-terraform-production-key" &&
+                key.Environment == "production" &&
+                key.AllowedIdentities.SequenceEqual(["terraform-production"]) &&
+                key.AllowedCapabilities.SequenceEqual(["infrastructure.production.apply"]));
     }
 }

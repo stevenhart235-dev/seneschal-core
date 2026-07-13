@@ -75,3 +75,10 @@ policies:
     environment: production
     decision: allow
     reason: GitHub Actions production workflow is approved to deploy checkout-api
+
+  - name: Terraform can apply production infrastructure
+    identity: terraform-production
+    capability: infrastructure.production.apply
+    environment: production
+    decision: allow
+    reason: Terraform production workflow is approved to apply production infrastructure

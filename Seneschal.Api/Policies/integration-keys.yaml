@@ -75,3 +75,12 @@ integrationKeys:
     allowedCapabilities:
       - production.deployment.execute
     environment: production
+
+  - name: terraform-production-development
+    key: dev-terraform-production-key
+    enabled: true
+    allowedIdentities:
+      - terraform-production
+    allowedCapabilities:
+      - infrastructure.production.apply
+    environment: production

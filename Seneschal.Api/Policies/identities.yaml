@@ -38,3 +38,7 @@ identities:
   - name: github-actions-production
     description: GitHub Actions production deployment workflow
     type: Service
+
+  - name: terraform-production
+    description: Terraform and OpenTofu production apply workflow
+    type: Service

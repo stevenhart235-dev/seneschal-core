@@ -47,7 +47,12 @@ Write-Host "Reason: $reason"
 
 $shouldProceed = $decision -eq 'allow' -or $mode -eq 'LogOnly'
 if ($shouldProceed) {
-    Write-Host 'Governance gate: proceed'
+    if ($decision -ne 'allow') {
+        Write-Host 'Governance gate: proceed (decision observed but not enforced in LogOnly)'
+    }
+    else {
+        Write-Host 'Governance gate: proceed'
+    }
     exit 0
 }
 

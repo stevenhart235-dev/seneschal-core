@@ -80,8 +80,8 @@ public sealed class MonitorPageTests :
         Assert.Contains("Review Unused Governance Objects", html);
         Assert.Contains("Review or archive unused governance objects", html);
         Assert.Contains("Unused capabilities: 9", html);
-        Assert.Contains("Unused identities: 10", html);
-        Assert.Contains("Unused policies: 11", html);
+        Assert.Contains("Unused identities: 11", html);
+        Assert.Contains("Unused policies: 12", html);
     }
 
     [Fact]
@@ -265,6 +265,11 @@ public sealed class MonitorPageTests :
                 {
                     IdentityId = "github-actions-production",
                     TotalRequests = 1
+                },
+                new IdentityActivity
+                {
+                    IdentityId = "terraform-production",
+                    TotalRequests = 1
                 }
             ],
             Policies =
@@ -322,6 +327,11 @@ public sealed class MonitorPageTests :
                 new PolicyActivity
                 {
                     PolicyId = "GitHub Actions can deploy checkout API to production",
+                    MatchCount = 1
+                },
+                new PolicyActivity
+                {
+                    PolicyId = "Terraform can apply production infrastructure",
                     MatchCount = 1
                 }
             ]

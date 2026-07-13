@@ -17,6 +17,15 @@ public sealed class GitHubActionsGateScriptTests
         "integrations",
         "github-actions",
         "invoke-seneschal-gate.ps1"));
+    private static readonly string TerraformScriptPath = Path.GetFullPath(Path.Combine(
+        AppContext.BaseDirectory,
+        "..",
+        "..",
+        "..",
+        "..",
+        "integrations",
+        "terraform",
+        "invoke-seneschal-gate.ps1"));
 
     [Theory]
     [InlineData("allow", "LogOnly", "allow", 0)]
@@ -87,6 +96,120 @@ public sealed class GitHubActionsGateScriptTests
         Assert.DoesNotContain(secret, result.StandardError);
     }
 
+    [Theory]
+    [InlineData("allow", "LogOnly", "allow", 0)]
+    [InlineData("deny", "LogOnly", "logged_only", 0)]
+    [InlineData("deny", "Enforce", "deny", 1)]
+    [InlineData("requires_approval", "Enforce", "requires_approval", 1)]
+    public async Task TerraformGate_DecisionResponseProducesExpectedExitCode(
+        string decision,
+        string mode,
+        string effectiveAction,
+        int expectedExitCode)
+    {
+        await using var server = await GateStubServer.StartAsync(
+            HttpStatusCode.OK,
+            $$"""
+            {"decision":"{{decision}}","mode":"{{mode}}","effectiveAction":"{{effectiveAction}}","policyMatched":"terraform-policy","reason":"terraform reason"}
+            """);
+
+        var result = await RunTerraformGateAsync(server.BaseUrl, "terraform-secret");
+
+        Assert.Equal(expectedExitCode, result.ExitCode);
+        Assert.Contains($"Decision: {decision}", result.StandardOutput);
+        if (decision == "deny" && mode == "LogOnly")
+        {
+            Assert.Contains("observed but not enforced", result.StandardOutput);
+        }
+    }
+
+    [Fact]
+    public async Task TerraformGate_InvalidKeyFailsClosed()
+    {
+        await using var server = await GateStubServer.StartAsync(
+            HttpStatusCode.Unauthorized,
+            "{\"reason\":\"invalid key\"}");
+
+        var result = await RunTerraformGateAsync(server.BaseUrl, "invalid-key");
+
+        Assert.NotEqual(0, result.ExitCode);
+        Assert.Contains("fail-closed", result.StandardError);
+    }
+
+    [Fact]
+    public async Task TerraformGate_RuntimeUnavailableFailsClosed()
+    {
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+
+        var result = await RunTerraformGateAsync(
+            $"http://127.0.0.1:{port}",
+            "unavailable-key");
+
+        Assert.NotEqual(0, result.ExitCode);
+        Assert.Contains("fail-closed", result.StandardError);
+    }
+
+    [Fact]
+    public async Task TerraformGate_ApiKeyIsNeverWrittenToOutput()
+    {
+        const string secret = "never-print-terraform-api-key";
+        await using var server = await GateStubServer.StartAsync(
+            HttpStatusCode.OK,
+            "{\"decision\":\"allow\",\"mode\":\"LogOnly\",\"effectiveAction\":\"allow\",\"policyMatched\":\"safe\",\"reason\":\"allowed\"}");
+
+        var result = await RunTerraformGateAsync(server.BaseUrl, secret);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.DoesNotContain(secret, result.StandardOutput);
+        Assert.DoesNotContain(secret, result.StandardError);
+    }
+
+    [Fact]
+    public async Task TerraformGate_MissingPlanFileFailsClearly()
+    {
+        var missingPath = Path.Combine(Path.GetTempPath(), $"missing-{Guid.NewGuid():N}.tfplan");
+
+        var result = await RunTerraformGateAsync(
+            "http://127.0.0.1:1",
+            "unused-key",
+            missingPath);
+
+        Assert.Equal(3, result.ExitCode);
+        Assert.Contains("Plan file not found", result.StandardError);
+    }
+
+    [Fact]
+    public async Task TerraformGate_PrintsOnlySafePlanMetadata()
+    {
+        const string sensitivePlanContent = "sensitive-plan-value-must-not-be-printed";
+        var planPath = Path.Combine(Path.GetTempPath(), $"gate-{Guid.NewGuid():N}.tfplan");
+        await File.WriteAllTextAsync(planPath, sensitivePlanContent);
+        try
+        {
+            await using var server = await GateStubServer.StartAsync(
+                HttpStatusCode.OK,
+                "{\"decision\":\"allow\",\"mode\":\"LogOnly\",\"effectiveAction\":\"allow\",\"policyMatched\":\"safe\",\"reason\":\"allowed\"}");
+
+            var result = await RunTerraformGateAsync(
+                server.BaseUrl,
+                "terraform-secret",
+                planPath);
+
+            Assert.Equal(0, result.ExitCode);
+            Assert.Contains($"Plan file: {Path.GetFileName(planPath)}", result.StandardOutput);
+            Assert.Contains($"Plan size: {new FileInfo(planPath).Length} bytes", result.StandardOutput);
+            Assert.DoesNotContain(sensitivePlanContent, result.StandardOutput);
+            Assert.DoesNotContain(sensitivePlanContent, result.StandardError);
+        }
+        finally
+        {
+            File.Delete(planPath);
+        }
+    }
+
     private static async Task<GateResult> RunGateAsync(
         string baseUrl,
         string apiKey)
@@ -112,6 +235,50 @@ public sealed class GitHubActionsGateScriptTests
         })
         {
             startInfo.ArgumentList.Add(argument);
+        }
+
+        using var process = Process.Start(startInfo) ??
+            throw new InvalidOperationException("Could not start PowerShell.");
+        var standardOutput = process.StandardOutput.ReadToEndAsync();
+        var standardError = process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(20));
+        return new GateResult(
+            process.ExitCode,
+            await standardOutput,
+            await standardError);
+    }
+
+    private static async Task<GateResult> RunTerraformGateAsync(
+        string baseUrl,
+        string apiKey,
+        string? planFile = null)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "powershell.exe",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        foreach (var argument in new[]
+        {
+            "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+            "-File", TerraformScriptPath,
+            "-BaseUrl", baseUrl,
+            "-ApiKey", apiKey,
+            "-Identity", "terraform-production",
+            "-Capability", "infrastructure.production.apply",
+            "-Environment", "production",
+            "-Resource", "prod-subscription"
+        })
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+        if (planFile is not null)
+        {
+            startInfo.ArgumentList.Add("-PlanFile");
+            startInfo.ArgumentList.Add(planFile);
         }
 
         using var process = Process.Start(startInfo) ??

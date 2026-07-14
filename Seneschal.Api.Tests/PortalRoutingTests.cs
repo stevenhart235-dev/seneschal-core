@@ -41,6 +41,7 @@ public sealed class PortalRoutingTests : IClassFixture<ApiApplicationFactory>
     [InlineData("/audit", "/audit")]
     [InlineData("/incidents", "/incidents")]
     [InlineData("/graph-view", "/graph-view")]
+    [InlineData("/developer-quickstart", "/developer-quickstart")]
     [InlineData("/diagnostics-view", "/diagnostics-view")]
     public async Task SidebarRoute_RendersSharedPortalShell(
         string route,
@@ -104,6 +105,7 @@ public sealed class PortalRoutingTests : IClassFixture<ApiApplicationFactory>
     [InlineData("/policies", "class=\"active\" href=\"/policies\" aria-current=\"page\"")]
     [InlineData("/audit", "class=\"active\" href=\"/audit\" aria-current=\"page\"")]
     [InlineData("/diagnostics-view", "class=\"active\" href=\"/diagnostics-view\" aria-current=\"page\"")]
+    [InlineData("/developer-quickstart", "class=\"active\" href=\"/developer-quickstart\" aria-current=\"page\"")]
     public async Task RepresentativePages_MarkCorrectNavigationItemActive(
         string route,
         string expectedMarkup)

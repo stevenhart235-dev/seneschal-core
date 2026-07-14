@@ -26,6 +26,7 @@ public static class PortalSidebarRenderer
             ("audit", "/audit", "Audit Trail"),
             ("incidents", "/incidents", "Incidents"));
         AppendGroup(html, "System",
+            ("developer-quickstart", "/developer-quickstart", "Developer Quickstart"),
             ("graph", "/graph-view", "Relationship Graph"),
             ("diagnostics", "/diagnostics-view", "Diagnostics"));
         html.AppendLine("            </nav>");

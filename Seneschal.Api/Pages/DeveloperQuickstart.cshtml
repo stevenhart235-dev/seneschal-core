@@ -1,0 +1,107 @@
+@page "/developer-quickstart"
+@model Seneschal.Api.Pages.DeveloperQuickstartModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seneschal Developer Quickstart</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+    <div class="app-shell">
+        @await Html.PartialAsync("Shared/_PortalSidebar", "developer-quickstart")
+
+        <main class="container explorer-page developer-quickstart-page">
+            <header class="page-header">
+                <div>
+                    <div class="breadcrumb">System / Developer Quickstart</div>
+                    <h1>Developer Quickstart</h1>
+                    <p class="subtitle">
+                        Use a checked-in integration example to evaluate one configured capability.
+                    </p>
+                </div>
+            </header>
+
+            <aside class="warning-panel quickstart-demo-warning" aria-label="Development credential warning">
+                <strong>Development/demo only</strong>
+                <span>Checked-in keys are for local evaluation. Do not use them in production.</span>
+            </aside>
+
+            <section class="panel quickstart-controls" aria-labelledby="integrationHeading">
+                <div>
+                    <h2 id="integrationHeading">Choose an integration</h2>
+                    <div class="quickstart-tabs" role="tablist" aria-label="Integration type">
+                        <button type="button" role="tab" data-integration="aspnet" aria-selected="true">ASP.NET Core</button>
+                        <button type="button" role="tab" data-integration="client" aria-selected="false">.NET Client</button>
+                        <button type="button" role="tab" data-integration="github" aria-selected="false">GitHub Actions</button>
+                        <button type="button" role="tab" data-integration="terraform" aria-selected="false">Terraform / OpenTofu</button>
+                    </div>
+                </div>
+
+                <div class="quickstart-capability-control">
+                    <label for="quickstartCapability">Capability</label>
+                    <select id="quickstartCapability"></select>
+                </div>
+            </section>
+
+            <section class="panel quickstart-key-panel" aria-labelledby="demoKeyHeading">
+                <div>
+                    <p class="quickstart-label">Development/demo only</p>
+                    <h2 id="demoKeyHeading">Scoped integration API key</h2>
+                    <p id="quickstartKeyContext" class="muted"></p>
+                </div>
+                <div id="quickstartKeyAvailable" class="quickstart-key-value" hidden>
+                    <code id="quickstartMaskedKey">••••••••••••••••••••••••</code>
+                    <button id="revealQuickstartKey" class="button secondary" type="button" aria-pressed="false">Reveal</button>
+                </div>
+                <p id="quickstartKeyUnavailable" class="notice" hidden>
+                    No checked-in development key is scoped to this capability.
+                </p>
+            </section>
+
+            <section class="quickstart-snippet-grid" aria-live="polite">
+                <article class="panel quickstart-snippet-card">
+                    <header>
+                        <div><p class="quickstart-step">1</p><h2>Install or prepare</h2></div>
+                        <button class="button secondary copy-snippet" type="button" data-copy-target="quickstartInstall">Copy</button>
+                    </header>
+                    <pre><code id="quickstartInstall"></code></pre>
+                </article>
+
+                <article class="panel quickstart-snippet-card">
+                    <header>
+                        <div><p class="quickstart-step">2</p><h2>Configure</h2></div>
+                        <button class="button secondary copy-snippet" type="button" data-copy-target="quickstartConfiguration">Copy</button>
+                    </header>
+                    <pre><code id="quickstartConfiguration"></code></pre>
+                </article>
+
+                <article class="panel quickstart-snippet-card quickstart-example-card">
+                    <header>
+                        <div><p class="quickstart-step">3</p><h2>Evaluate before execution</h2></div>
+                        <button class="button secondary copy-snippet" type="button" data-copy-target="quickstartExample">Copy</button>
+                    </header>
+                    <pre><code id="quickstartExample"></code></pre>
+                </article>
+            </section>
+
+            <section class="panel quickstart-docs-panel">
+                <div>
+                    <h2>Repository documentation</h2>
+                    <p class="muted">Open the maintained example used by this quickstart.</p>
+                </div>
+                <a id="quickstartDocsLink" class="button-link" target="_blank" rel="noopener noreferrer">Open documentation</a>
+            </section>
+
+            <footer class="app-footer">Seneschal v0.2.1-alpha</footer>
+        </main>
+    </div>
+
+    <script id="quickstartData" type="application/json">@Html.Raw(Model.QuickstartJson)</script>
+    <script src="/developer-quickstart.js"></script>
+</body>
+</html>

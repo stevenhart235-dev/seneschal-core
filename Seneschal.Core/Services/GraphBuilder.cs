@@ -25,6 +25,10 @@ public sealed class GraphBuilder
 
         foreach (var capability in capabilities)
         {
+            var displayName = string.IsNullOrWhiteSpace(capability.DisplayName)
+                ? capability.Name
+                : capability.DisplayName;
+
             AddNode(
                 nodes,
                 new GovernanceEntityReference
@@ -32,14 +36,19 @@ public sealed class GraphBuilder
                     Type = GovernanceEntityType.Capability,
                     Id = capability.Id
                 },
-                capability.Name,
+                displayName,
                 new Dictionary<string, string>
                 {
                     ["domainId"] = capability.Id,
+                    ["displayName"] = displayName,
                     ["provider"] = capability.Provider,
+                    ["owner"] = capability.Owner,
                     ["category"] = capability.Category,
                     ["description"] = capability.Description,
-                    ["riskLevel"] = capability.RiskLevel.ToString()
+                    ["riskLevel"] = capability.RiskLevel.ToString(),
+                    ["lifecycle"] = capability.Lifecycle,
+                    ["documentationUrl"] = capability.DocumentationUrl,
+                    ["tags"] = string.Join(", ", capability.Tags)
                 });
         }
 

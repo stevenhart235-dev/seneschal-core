@@ -1831,15 +1831,15 @@ button {
 }
 
 .graph-panel {
-    padding: 12px;
+    padding: 14px;
 }
 
 .graph-toolbar {
-    align-items: flex-start;
+    align-items: center;
     display: flex;
     gap: 16px;
     justify-content: space-between;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
 .graph-toolbar h2,
@@ -1848,33 +1848,40 @@ button {
 }
 
 .graph-toolbar-actions button {
+    min-height: 30px;
     margin-top: 0;
+    padding: 5px 10px;
+}
+
+.graph-toolbar-utilities,
+.graph-toolbar-actions {
+    align-items: center;
+    display: flex;
+    gap: 8px;
 }
 
 .graph-legend {
     align-items: center;
-    background: #0F172A;
-    border: 1px solid #374151;
-    border-radius: 999px;
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 9px;
     list-style: none;
     margin: 0;
-    padding: 8px 10px;
+    padding: 0;
 }
 
 .graph-legend li {
     align-items: center;
     color: #CBD5E1;
     display: inline-flex;
-    font-size: 12px;
-    gap: 6px;
+    font-size: 11px;
+    gap: 5px;
     white-space: nowrap;
 }
 
 .legend-marker {
-    border: 2px solid #93C5FD;
+    border: 1px solid #93C5FD;
+    border-radius: 999px;
     display: inline-block;
     height: 11px;
     width: 11px;
@@ -1883,27 +1890,24 @@ button {
 .legend-capability {
     background: #1E3A8A;
     border-color: #60A5FA;
-    border-radius: 4px;
-    width: 18px;
+    width: 11px;
 }
 
 .legend-identity {
-    background: #064E3B;
-    border-color: #34D399;
+    background: #1E3A8A;
+    border-color: #60A5FA;
     border-radius: 999px;
 }
 
 .legend-policy {
-    background: #312E81;
-    border-color: #A5B4FC;
-    transform: rotate(45deg);
+    background: #78350F;
+    border-color: #F59E0B;
 }
 
 .legend-resource {
-    background: #78350F;
-    border-color: #FBBF24;
-    clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
-    width: 14px;
+    background: #374151;
+    border-color: #9CA3AF;
+    width: 11px;
 }
 
 .interactive-graph {
@@ -1913,8 +1917,8 @@ button {
     background-size: 18px 18px;
     border: 1px solid #374151;
     border-radius: 12px;
-    height: 620px;
-    min-height: 420px;
+    height: 700px;
+    min-height: 520px;
     width: 100%;
 }
 
@@ -1926,6 +1930,7 @@ button {
 }
 
 .graph-inspector-panel {
+    align-content: start;
     display: grid;
     gap: 12px;
 }
@@ -1952,25 +1957,161 @@ button {
 }
 
 .graph-inspector-type-identity {
-    background: #064E3B;
-    color: #D1FAE5;
+    background: #1E3A8A;
+    color: #DBEAFE;
 }
 
 .graph-inspector-type-policy {
-    background: #312E81;
-    color: #E0E7FF;
+    background: #78350F;
+    color: #FEF3C7;
 }
 
 .graph-inspector-type-resource {
-    background: #78350F;
-    color: #FEF3C7;
+    background: #374151;
+    color: #E5E7EB;
+}
+
+.graph-capability-selector {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 12px 16px;
+}
+
+.graph-capability-selector label {
+    color: #CBD5E1;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.graph-capability-selector select {
+    min-width: min(520px, 100%);
+}
+
+.graph-explorer-layout {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(0, 3fr) minmax(310px, 1fr);
+}
+
+.graph-explorer-layout .graph-panel,
+.graph-explorer-layout .graph-inspector-panel {
+    min-width: 0;
+}
+
+.d3-relationship-graph svg {
+    display: block;
+    height: 100%;
+    width: 100%;
+}
+
+.d3-graph-links line {
+    stroke: #526176;
+    stroke-width: 1.35;
+}
+
+.d3-graph-edge-labels text {
+    fill: #94A3B8;
+    font-size: 10px;
+    paint-order: stroke;
+    stroke: #0F172A;
+    stroke-width: 4px;
+    text-anchor: middle;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 100ms ease;
+}
+
+.d3-graph-edge-labels text.is-visible {
+    opacity: 1;
+}
+
+.d3-graph-node {
+    cursor: grab;
+    outline: none;
+}
+
+.d3-graph-node:active {
+    cursor: grabbing;
+}
+
+.d3-graph-node circle {
+    stroke-width: 3;
+    transition: stroke-width 120ms ease;
+}
+
+.d3-node-capability circle {
+    fill: #312E81;
+    stroke: #A78BFA;
+}
+
+.d3-node-identity circle {
+    fill: #1E3A8A;
+    stroke: #60A5FA;
+}
+
+.d3-node-policy circle {
+    fill: #78350F;
+    stroke: #F59E0B;
+}
+
+.d3-node-resource circle {
+    fill: #374151;
+    stroke: #9CA3AF;
+}
+
+.d3-graph-node.is-selected circle,
+.d3-graph-node:focus-visible circle {
+    stroke: #F8FAFC;
+    stroke-width: 6;
+}
+
+.d3-node-label {
+    fill: #F8FAFC;
+    font-size: 10px;
+    font-weight: 550;
+    pointer-events: none;
+}
+
+.d3-node-capability .d3-node-label {
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.graph-inspector-details h3 {
+    line-height: 1.35;
+    margin-bottom: 6px;
+    overflow-wrap: anywhere;
+}
+
+.graph-inspector-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.graph-accessible-fallback {
+    margin-top: 14px;
+}
+
+@media (max-width: 1050px) {
+    .graph-explorer-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .graph-capability-selector {
+        align-items: stretch;
+        flex-direction: column;
+    }
 }
 
 .graph-inspector-details {
     background: #111827;
     border: 1px solid #374151;
     border-radius: 8px;
-    padding: 10px;
+    padding: 14px;
 }
 
 .graph-inspector-fields {
@@ -1997,8 +2138,30 @@ button {
     background: #0F172A;
     border: 1px solid #273449;
     border-radius: 8px;
-    grid-template-columns: 150px 1fr;
-    padding: 10px;
+    display: grid;
+    gap: 4px;
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 16px;
+    padding: 12px;
+}
+
+.graph-metadata-grid dt {
+    color: #94A3B8;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    margin-top: 8px;
+    text-transform: uppercase;
+}
+
+.graph-metadata-grid dt:first-child {
+    margin-top: 0;
+}
+
+.graph-metadata-grid dd {
+    line-height: 1.45;
+    margin: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
 }
 
 .graph-metadata-grid p {

@@ -14,7 +14,7 @@ public sealed class GraphViewPageTests :
     }
 
     [Fact]
-    public async Task GraphView_RendersInteractiveGraphPrototype()
+    public async Task GraphView_RendersCapabilityCenteredD3Explorer()
     {
         using var response = await _client.GetAsync("/graph-view");
 
@@ -22,36 +22,66 @@ public sealed class GraphViewPageTests :
 
         var html = await response.Content.ReadAsStringAsync();
 
-        Assert.Contains("Interactive Governance Graph", html);
-        Assert.Contains("cytoscape.min.js", html);
+        Assert.Contains("Capability Relationship Graph", html);
+        Assert.Contains("/vendor/d3/d3.v7.9.0.min.js", html);
+        Assert.DoesNotContain("https://unpkg.com", html);
         Assert.Contains("id=\"interactiveGraph\"", html);
-        Assert.Contains("fetch('/graph')", html);
+        Assert.Contains("data-capability-id=", html);
+        Assert.Contains("/graph-view.js", html);
         Assert.Contains("Graph node type legend", html);
         Assert.Contains("legend-capability", html);
         Assert.Contains("legend-identity", html);
         Assert.Contains("legend-policy", html);
         Assert.Contains("legend-resource", html);
-        Assert.Contains("selector: 'node.capability'", html);
-        Assert.Contains("selector: 'node.identity'", html);
-        Assert.Contains("selector: 'node.policy'", html);
-        Assert.Contains("selector: 'node.resource'", html);
-        Assert.Contains("selector: '.selected'", html);
-        Assert.Contains("selector: '.neighbor'", html);
-        Assert.Contains("selector: '.connected-edge'", html);
-        Assert.Contains("selector: '.dimmed'", html);
-        Assert.Contains("cy.on('tap', 'node'", html);
-        Assert.Contains("id=\"clearSelectionButton\"", html);
-        Assert.Contains("Clear selection", html);
-        Assert.Contains("applyNeighborhoodHighlight(node)", html);
-        Assert.Contains("clearSelection()", html);
-        Assert.Contains("Node Inspector", html);
-        Assert.Contains("Select a node to inspect its relationships.", html);
+        Assert.Contains("id=\"resetGraphButton\"", html);
+        Assert.Contains("id=\"fitGraphButton\"", html);
+        Assert.Contains("Node details", html);
+        Assert.Contains("Select a node to inspect it.", html);
         Assert.Contains("id=\"inspectorMetadata\"", html);
-        Assert.Contains("id=\"inspectorConnectedGroups\"", html);
-        Assert.Contains("metadata: node.metadata || {}", html);
-        Assert.Contains("renderInspector(node)", html);
-        Assert.Contains("renderConnectedGroups", html);
+        Assert.Contains("id=\"inspectorLinks\"", html);
+        Assert.Contains("Relationship list", html);
+        Assert.Contains("Accessible non-graph view", html);
         Assert.Contains("Open Interactive Graph", await GetCapabilityExplorerHtml());
+    }
+
+    [Fact]
+    public async Task GraphView_UnknownCapabilityRendersSafeEmptyState()
+    {
+        using var response = await _client.GetAsync(
+            "/graph-view?capabilityId=unknown.capability");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var html = await response.Content.ReadAsStringAsync();
+        Assert.Contains("No capability graph available", html);
+        Assert.DoesNotContain("id=\"interactiveGraph\"", html);
+    }
+
+    [Fact]
+    public async Task LocalD3Asset_IsServedByTheApplication()
+    {
+        using var response = await _client.GetAsync(
+            "/vendor/d3/d3.v7.9.0.min.js");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("d3", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task GraphScript_UsesD3InteractionsAndCapabilityCentering()
+    {
+        using var response = await _client.GetAsync("/graph-view.js");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var script = await response.Content.ReadAsStringAsync();
+        Assert.Contains("d3.forceSimulation", script);
+        Assert.Contains("source: edge.sourceId", script);
+        Assert.Contains("target: edge.targetId", script);
+        Assert.Contains("d3.zoom()", script);
+        Assert.Contains("d3.drag()", script);
+        Assert.Contains("center.fx = width / 2", script);
+        Assert.Contains("fitToGraph", script);
+        Assert.Contains("resetGraphButton", script);
+        Assert.Contains("encodeURIComponent(domainId)", script);
     }
 
     private async Task<string> GetCapabilityExplorerHtml()

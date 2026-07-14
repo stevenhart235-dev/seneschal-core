@@ -2,15 +2,17 @@
 @model Seneschal.Api.Pages.GraphViewModel
 @{
     Layout = null;
+    var capability = Model.Overview?.CatalogEntry.Capability;
+    var fallbackGroups = Model.GetFallbackRelationshipGroups();
 }
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Seneschal Interactive Graph</title>
+    <title>Seneschal Relationship Graph</title>
     <link rel="stylesheet" href="/styles.css" />
-    <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+    <script src="/vendor/d3/d3.v7.9.0.min.js"></script>
 </head>
 <body>
     <div class="app-shell">
@@ -20,479 +22,121 @@
             <header class="page-header graph-page-header">
                 <div>
                     <div class="breadcrumb">Explore / Relationship Graph</div>
-                    <h1>Interactive Governance Graph</h1>
+                    <h1>Capability Relationship Graph</h1>
                     <p class="subtitle">
-                        Explore projected Seneschal relationships from the
-                        reusable graph data contract.
+                        Explore identities, policies, and resources connected to one capability.
                     </p>
                 </div>
-                <a class="button-link" href="/capability-explorer">
-                    Back to Capability Explorer
-                </a>
+                <a class="button-link" href="/capability-explorer">Back to Capability Explorer</a>
             </header>
 
-            <section class="panel graph-panel">
-                <div class="graph-toolbar">
-                    <div>
-                        <h2>Relationship Graph</h2>
-                        <p class="muted">
-                            Drag nodes, zoom, pan, and click a node to select it.
-                        </p>
-                    </div>
-                    <ul class="graph-legend" aria-label="Graph node type legend">
-                        <li>
-                            <span class="legend-marker legend-capability"></span>
-                            Capability
-                        </li>
-                        <li>
-                            <span class="legend-marker legend-identity"></span>
-                            Identity
-                        </li>
-                        <li>
-                            <span class="legend-marker legend-policy"></span>
-                            Policy
-                        </li>
-                        <li>
-                            <span class="legend-marker legend-resource"></span>
-                            Resource
-                        </li>
-                    </ul>
-                    <div class="graph-toolbar-actions">
-                        <button id="fitGraphButton" type="button">
-                            Fit graph
-                        </button>
-                        <button id="clearSelectionButton" type="button">
-                            Clear selection
-                        </button>
-                    </div>
-                </div>
+            <form class="panel graph-capability-selector" method="get">
+                <label for="capabilityId">Centered capability</label>
+                <select id="capabilityId" name="capabilityId" onchange="this.form.submit()">
+                    @foreach (var entry in Model.Capabilities)
+                    {
+                        var item = entry.Capability;
+                        <option value="@item.Id" selected="@(string.Equals(item.Id, Model.CapabilityId, StringComparison.OrdinalIgnoreCase))">
+                            @item.DisplayName (@item.Id)
+                        </option>
+                    }
+                </select>
+                <noscript><button type="submit">Load capability</button></noscript>
+            </form>
 
-                <div
-                    id="interactiveGraph"
-                    class="interactive-graph"
-                    role="img"
-                    aria-label="Interactive Seneschal governance graph">
-                </div>
-
-                <div id="graphEmptyState" class="empty-state graph-empty-state" hidden>
+            @if (capability is null)
+            {
+                <section class="panel empty-state graph-empty-state">
+                    <h2>No capability graph available</h2>
                     <p class="muted">
-                        No graph data is available yet.
+                        Select a configured capability with projected relationships.
                     </p>
-                    <p class="muted">
-                        Graph data is projected from configured capabilities,
-                        identities, policies, resources, and relationships.
-                    </p>
-                </div>
-            </section>
+                </section>
+            }
+            else
+            {
+                <section class="graph-explorer-layout">
+                    <article class="panel graph-panel">
+                        <div class="graph-toolbar">
+                            <div>
+                                <h2>@capability.DisplayName</h2>
+                                <p class="muted code">@capability.Id</p>
+                            </div>
+                            <div class="graph-toolbar-utilities">
+                                <ul class="graph-legend" aria-label="Graph node type legend">
+                                    <li><span class="legend-marker legend-capability"></span>Capability</li>
+                                    <li><span class="legend-marker legend-identity"></span>Identity</li>
+                                    <li><span class="legend-marker legend-policy"></span>Policy</li>
+                                    <li><span class="legend-marker legend-resource"></span>Resource</li>
+                                </ul>
+                                <div class="graph-toolbar-actions" aria-label="Graph view controls">
+                                    <button id="resetGraphButton" type="button">Reset</button>
+                                    <button id="fitGraphButton" type="button">Fit</button>
+                                </div>
+                            </div>
+                        </div>
 
-            <section class="panel graph-inspector-panel" aria-label="Node inspector">
-                <div class="graph-inspector-header">
-                    <div>
-                        <h2>Node Inspector</h2>
-                        <p id="inspectorDefaultState" class="muted">
-                            Select a node to inspect its relationships.
-                        </p>
-                    </div>
-                    <span id="inspectorTypeBadge" class="badge graph-inspector-type" hidden></span>
-                </div>
+                        <div
+                            id="interactiveGraph"
+                            class="interactive-graph d3-relationship-graph"
+                            data-capability-id="@capability.Id"
+                            role="img"
+                            aria-label="Interactive relationship graph centered on @capability.DisplayName">
+                        </div>
 
-                <div id="inspectorDetails" class="graph-inspector-details" hidden>
-                    <dl class="trace-fields graph-inspector-fields">
-                        <dt>Label</dt>
-                        <dd id="inspectorLabel"></dd>
+                        <div id="graphEmptyState" class="empty-state graph-empty-state" hidden>
+                            <p class="muted">No relationships are available for this capability.</p>
+                        </div>
+                    </article>
 
-                        <dt>Type</dt>
-                        <dd id="inspectorType"></dd>
+                    <aside class="panel graph-inspector-panel" aria-label="Node details" aria-live="polite">
+                        <div class="graph-inspector-header">
+                            <div>
+                                <h2>Node details</h2>
+                                <p id="inspectorDefaultState" class="muted">Select a node to inspect it.</p>
+                            </div>
+                            <span id="inspectorTypeBadge" class="badge graph-inspector-type" hidden></span>
+                        </div>
+                        <div id="inspectorDetails" class="graph-inspector-details" hidden>
+                            <h3 id="inspectorName"></h3>
+                            <p id="inspectorId" class="code"></p>
+                            <p id="inspectorDescription" class="muted"></p>
+                            <dl id="inspectorMetadata" class="metadata-grid graph-metadata-grid"></dl>
+                            <nav id="inspectorLinks" class="graph-inspector-links" aria-label="Node drill-down links"></nav>
+                        </div>
+                    </aside>
+                </section>
 
-                        <dt>Id</dt>
-                        <dd id="inspectorId"></dd>
-
-                        <dt>Connected Nodes</dt>
-                        <dd id="inspectorConnectedCount"></dd>
-                    </dl>
-
-                    <section class="graph-inspector-section">
-                        <h3>Metadata</h3>
-                        <dl id="inspectorMetadata" class="metadata-grid graph-metadata-grid"></dl>
-                    </section>
-
-                    <section class="graph-inspector-section">
-                        <h3>Connected Nodes</h3>
-                        <div id="inspectorConnectedGroups" class="connected-node-groups"></div>
-                    </section>
-                </div>
-            </section>
+                <section class="panel graph-accessible-fallback" aria-labelledby="relationshipListHeading">
+                    <h2 id="relationshipListHeading">Relationship list</h2>
+                    <p class="muted">Accessible non-graph view of the same projected relationships.</p>
+                    @if (fallbackGroups.Count == 0)
+                    {
+                        <div class="empty-state"><p class="muted">No related identities, policies, or resources are available.</p></div>
+                    }
+                    else
+                    {
+                        <div class="relationship-compact-grid">
+                            @foreach (var group in fallbackGroups)
+                            {
+                                <section class="relationship-group relationship-compact-group">
+                                    <h3>Related @group.Type</h3>
+                                    <ul class="relationship-compact-list">
+                                        @foreach (var entityId in group.EntityIds)
+                                        {
+                                            <li><span class="relationship-chip">@entityId</span></li>
+                                        }
+                                    </ul>
+                                </section>
+                            }
+                        </div>
+                    }
+                </section>
+            }
 
             <footer class="app-footer">Seneschal v0.2.1-alpha</footer>
         </main>
     </div>
-
-    <script>
-        (async () => {
-            const graphElement = document.getElementById('interactiveGraph');
-            const emptyState = document.getElementById('graphEmptyState');
-            const inspectorDefaultState = document.getElementById('inspectorDefaultState');
-            const inspectorDetails = document.getElementById('inspectorDetails');
-            const inspectorTypeBadge = document.getElementById('inspectorTypeBadge');
-            const inspectorLabel = document.getElementById('inspectorLabel');
-            const inspectorType = document.getElementById('inspectorType');
-            const inspectorId = document.getElementById('inspectorId');
-            const inspectorConnectedCount = document.getElementById('inspectorConnectedCount');
-            const inspectorMetadata = document.getElementById('inspectorMetadata');
-            const inspectorConnectedGroups = document.getElementById('inspectorConnectedGroups');
-            const fitGraphButton = document.getElementById('fitGraphButton');
-            const clearSelectionButton = document.getElementById('clearSelectionButton');
-
-            if (!window.cytoscape) {
-                inspectorDefaultState.textContent = 'Cytoscape.js could not be loaded.';
-                return;
-            }
-
-            const response = await fetch('/graph');
-
-            if (!response.ok) {
-                inspectorDefaultState.textContent = 'Graph data could not be loaded.';
-                return;
-            }
-
-            const graph = await response.json();
-            const nodes = (graph.nodes || []).map(node => ({
-                data: {
-                    id: node.id,
-                    label: node.label,
-                    type: node.type,
-                    group: node.group,
-                    metadata: node.metadata || {}
-                },
-                classes: (node.type || '').toLowerCase()
-            }));
-            const edges = (graph.edges || []).map((edge, index) => ({
-                data: {
-                    id: `edge-${index}`,
-                    source: edge.sourceId,
-                    target: edge.targetId,
-                    label: edge.label || edge.relationshipType,
-                    relationshipType: edge.relationshipType
-                }
-            }));
-
-            if (nodes.length === 0) {
-                graphElement.hidden = true;
-                emptyState.hidden = false;
-                return;
-            }
-
-            const cy = cytoscape({
-                container: graphElement,
-                elements: [...nodes, ...edges],
-                wheelSensitivity: 0.2,
-                style: [
-                    {
-                        selector: 'node',
-                        style: {
-                            'background-color': '#2563EB',
-                            'border-color': '#93C5FD',
-                            'border-width': 2,
-                            'color': '#F9FAFB',
-                            'font-size': 10,
-                            'font-weight': 700,
-                            'label': 'data(label)',
-                            'min-zoomed-font-size': 7,
-                            'overlay-opacity': 0,
-                            'text-halign': 'center',
-                            'text-valign': 'center',
-                            'text-wrap': 'wrap',
-                            'text-max-width': 96,
-                            'text-outline-color': '#0F172A',
-                            'text-outline-width': 2,
-                            'width': 48,
-                            'height': 48
-                        }
-                    },
-                    {
-                        selector: 'node.capability',
-                        style: {
-                            'background-color': '#1E3A8A',
-                            'border-color': '#60A5FA',
-                            'shape': 'round-rectangle',
-                            'height': 44,
-                            'width': 96
-                        }
-                    },
-                    {
-                        selector: 'node.identity',
-                        style: {
-                            'background-color': '#064E3B',
-                            'border-color': '#34D399',
-                            'shape': 'ellipse'
-                        }
-                    },
-                    {
-                        selector: 'node.policy',
-                        style: {
-                            'background-color': '#312E81',
-                            'border-color': '#A5B4FC',
-                            'height': 56,
-                            'shape': 'diamond',
-                            'width': 56
-                        }
-                    },
-                    {
-                        selector: 'node.resource',
-                        style: {
-                            'background-color': '#78350F',
-                            'border-color': '#FBBF24',
-                            'height': 54,
-                            'shape': 'hexagon',
-                            'width': 62
-                        }
-                    },
-                    {
-                        selector: 'edge',
-                        style: {
-                            'curve-style': 'bezier',
-                            'line-color': '#64748B',
-                            'target-arrow-color': '#94A3B8',
-                            'target-arrow-shape': 'triangle',
-                            'target-arrow-fill': 'filled',
-                            'width': 2,
-                            'label': 'data(label)',
-                            'font-size': 9,
-                            'color': '#CBD5E1',
-                            'text-background-color': '#111827',
-                            'text-background-opacity': 0.92,
-                            'text-background-padding': 3,
-                            'text-rotation': 'autorotate'
-                        }
-                    },
-                    {
-                        selector: '.selected',
-                        style: {
-                            'border-color': '#FDE68A',
-                            'border-width': 5,
-                            'color': '#FFFFFF',
-                            'font-size': 12,
-                            'shadow-blur': 18,
-                            'shadow-color': '#FBBF24',
-                            'shadow-opacity': 0.85,
-                            'text-outline-color': '#451A03',
-                            'z-index': 999
-                        }
-                    },
-                    {
-                        selector: '.neighbor',
-                        style: {
-                            'border-color': '#BAE6FD',
-                            'border-width': 4,
-                            'shadow-blur': 10,
-                            'shadow-color': '#38BDF8',
-                            'shadow-opacity': 0.55,
-                            'z-index': 800
-                        }
-                    },
-                    {
-                        selector: '.connected-edge',
-                        style: {
-                            'color': '#E0F2FE',
-                            'font-size': 10,
-                            'line-color': '#38BDF8',
-                            'target-arrow-color': '#38BDF8',
-                            'text-background-color': '#0F172A',
-                            'width': 3.5,
-                            'z-index': 700
-                        }
-                    },
-                    {
-                        selector: '.dimmed',
-                        style: {
-                            'opacity': 0.18,
-                            'text-opacity': 0.12
-                        }
-                    },
-                    {
-                        selector: 'edge:selected',
-                        style: {
-                            'line-color': '#FBBF24',
-                            'target-arrow-color': '#FBBF24',
-                            'width': 3
-                        }
-                    }
-                ],
-                layout: {
-                    name: 'cose',
-                    animate: false,
-                    fit: true,
-                    padding: 36
-                }
-            });
-
-            cy.on('tap', 'node', event => {
-                const node = event.target;
-                applyNeighborhoodHighlight(node);
-                renderInspector(node);
-            });
-
-            cy.on('tap', event => {
-                if (event.target === cy) {
-                    clearSelection();
-                }
-            });
-
-            fitGraphButton.addEventListener('click', () => {
-                cy.fit(undefined, 36);
-            });
-
-            clearSelectionButton.addEventListener('click', () => {
-                clearSelection();
-            });
-
-            function applyNeighborhoodHighlight(node) {
-                clearGraphHighlight();
-
-                const connectedEdges = node.connectedEdges();
-                const connectedNodes = connectedEdges
-                    .connectedNodes()
-                    .filter(connectedNode => connectedNode.id() !== node.id());
-                const neighborhood = node
-                    .union(connectedEdges)
-                    .union(connectedNodes);
-
-                cy.elements().difference(neighborhood).addClass('dimmed');
-                node.addClass('selected');
-                connectedNodes.addClass('neighbor');
-                connectedEdges.addClass('connected-edge');
-            }
-
-            function clearGraphHighlight() {
-                cy.elements()
-                    .removeClass('selected')
-                    .removeClass('neighbor')
-                    .removeClass('connected-edge')
-                    .removeClass('dimmed');
-            }
-
-            function clearSelection() {
-                clearGraphHighlight();
-                resetInspector();
-            }
-
-            function resetInspector() {
-                inspectorDefaultState.hidden = false;
-                inspectorDefaultState.textContent =
-                    'Select a node to inspect its relationships.';
-                inspectorDetails.hidden = true;
-                inspectorTypeBadge.hidden = true;
-                inspectorTypeBadge.textContent = '';
-                inspectorTypeBadge.className = 'badge graph-inspector-type';
-            }
-
-            function renderInspector(node) {
-                const connectedNodes = node
-                    .connectedEdges()
-                    .connectedNodes()
-                    .filter(connectedNode => connectedNode.id() !== node.id());
-                const uniqueConnectedNodes = connectedNodes
-                    .filter((connectedNode, index, collection) =>
-                        collection.indexOf(connectedNode) === index);
-
-                inspectorDefaultState.hidden = true;
-                inspectorDetails.hidden = false;
-                inspectorTypeBadge.hidden = false;
-                inspectorTypeBadge.textContent = node.data('type');
-                inspectorTypeBadge.className =
-                    `badge graph-inspector-type graph-inspector-type-${(node.data('type') || '').toLowerCase()}`;
-
-                inspectorLabel.textContent = node.data('label') || '';
-                inspectorType.textContent = node.data('type') || '';
-                inspectorId.textContent = node.id();
-                inspectorConnectedCount.textContent = uniqueConnectedNodes.length;
-
-                renderMetadata(node.data('metadata') || {});
-                renderConnectedGroups(uniqueConnectedNodes);
-            }
-
-            function renderMetadata(metadata) {
-                inspectorMetadata.replaceChildren();
-
-                const entries = Object.entries(metadata)
-                    .filter(([, value]) => value !== null && value !== undefined && `${value}`.trim() !== '')
-                    .sort(([left], [right]) => left.localeCompare(right));
-
-                if (entries.length === 0) {
-                    const empty = document.createElement('p');
-                    empty.className = 'muted';
-                    empty.textContent = 'No metadata is available for this node.';
-                    inspectorMetadata.appendChild(empty);
-                    return;
-                }
-
-                for (const [key, value] of entries) {
-                    const term = document.createElement('dt');
-                    term.textContent = formatLabel(key);
-
-                    const description = document.createElement('dd');
-                    description.textContent = value;
-
-                    inspectorMetadata.append(term, description);
-                }
-            }
-
-            function renderConnectedGroups(nodes) {
-                inspectorConnectedGroups.replaceChildren();
-
-                if (nodes.length === 0) {
-                    const empty = document.createElement('p');
-                    empty.className = 'muted';
-                    empty.textContent = 'No connected nodes are available.';
-                    inspectorConnectedGroups.appendChild(empty);
-                    return;
-                }
-
-                const groups = {};
-
-                nodes.forEach(node => {
-                    const type = node.data('type') || 'Unknown';
-                    groups[type] = groups[type] || [];
-                    groups[type].push(node);
-                });
-
-                Object.keys(groups)
-                    .sort()
-                    .forEach(type => {
-                        const section = document.createElement('section');
-                        section.className = 'connected-node-group';
-
-                        const heading = document.createElement('h4');
-                        heading.textContent = type;
-
-                        const list = document.createElement('ul');
-
-                        groups[type]
-                            .sort((left, right) =>
-                                (left.data('label') || left.id())
-                                    .localeCompare(right.data('label') || right.id()))
-                            .forEach(node => {
-                                const item = document.createElement('li');
-                                const label = document.createElement('span');
-                                label.textContent = node.data('label') || node.id();
-                                const id = document.createElement('small');
-                                id.textContent = node.id();
-                                item.append(label, id);
-                                list.appendChild(item);
-                            });
-
-                        section.append(heading, list);
-                        inspectorConnectedGroups.appendChild(section);
-                    });
-            }
-
-            function formatLabel(value) {
-                return value
-                    .replace(/([a-z])([A-Z])/g, '$1 $2')
-                    .replace(/[-_]/g, ' ')
-                    .replace(/^./, character => character.toUpperCase());
-            }
-        })();
-    </script>
+    <script src="/graph-view.js"></script>
 </body>
 </html>

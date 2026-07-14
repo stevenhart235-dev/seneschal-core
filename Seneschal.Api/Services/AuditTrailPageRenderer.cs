@@ -60,6 +60,7 @@ public static class AuditTrailPageRenderer
             html.AppendLine("                            <th>Decision</th>");
         html.AppendLine("                            <th>Matched Policy</th>");
         html.AppendLine("                            <th>Reason</th>");
+        html.AppendLine("                            <th>Governance Window</th>");
         html.AppendLine("                            <th>Trace</th>");
         html.AppendLine("                        </tr>");
             html.AppendLine("                    </thead>");
@@ -255,6 +256,13 @@ public static class AuditTrailPageRenderer
             AppendTimelineField(html, "Identity", auditEvent.IdentityId);
             AppendTimelineField(html, "Capability", auditEvent.CapabilityId);
             AppendTimelineField(html, "Environment", auditEvent.Environment);
+            if (!string.IsNullOrWhiteSpace(auditEvent.GovernanceWindowName))
+            {
+                AppendTimelineField(
+                    html,
+                    "Governance Window",
+                    $"{auditEvent.GovernanceWindowName} ({auditEvent.GovernanceWindowMode})");
+            }
             html.AppendLine("                            </dl>");
             html.Append("                            <p class=\"timeline-reason\">")
                 .Append(Encode(auditEvent.Reason))
@@ -390,6 +398,9 @@ public static class AuditTrailPageRenderer
             html,
             auditEvent.MatchedPolicies.FirstOrDefault() ?? "none");
         AppendCell(html, auditEvent.Reason);
+        AppendCell(
+            html,
+            auditEvent.GovernanceWindowMessage ?? "—");
         html.Append("                            <td><a class=\"table-link\" href=\"/audit/")
             .Append(Uri.EscapeDataString(auditEvent.Id))
             .AppendLine("\">View trace</a></td>");

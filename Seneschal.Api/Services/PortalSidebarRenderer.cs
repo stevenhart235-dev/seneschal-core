@@ -16,6 +16,7 @@ public static class PortalSidebarRenderer
             ("monitor", "/monitor", "Monitor"));
         AppendGroup(html, "Governance",
             ("governance", "/governance", "Runtime Governance"),
+            ("governance-windows", "/governance-windows", "Governance Windows"),
             ("policies", "/policies", "Policies"),
             ("capabilities", "/capability-explorer", "Capabilities"),
             ("identities", "/identity-explorer", "Identities"),

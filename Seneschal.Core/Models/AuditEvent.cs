@@ -16,4 +16,7 @@ public sealed record AuditEvent
     public List<string> Obligations { get; init; } = new();
     public required string Reason { get; init; }
     public int EvaluationDurationMs { get; init; }
+    public string? GovernanceWindowName { get; init; }
+    public string? GovernanceWindowMode { get; init; }
+    public string? GovernanceWindowMessage { get; init; }
 }

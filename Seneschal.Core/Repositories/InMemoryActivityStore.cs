@@ -110,6 +110,7 @@ public sealed class InMemoryActivityStore : IActivityStore
         public long AllowedCount { get; private set; }
         public long DeniedCount { get; private set; }
         public long PendingApprovalCount { get; private set; }
+        public long GovernedEvaluationCount { get; private set; }
         public DateTimeOffset? LastUsedUtc { get; private set; }
 
         public void Record(AuditEvent decisionEvent)
@@ -117,6 +118,11 @@ public sealed class InMemoryActivityStore : IActivityStore
             TotalRequests++;
             _totalDurationMs += decisionEvent.EvaluationDurationMs;
             LastUsedUtc = Latest(LastUsedUtc, decisionEvent.TimestampUtc);
+
+            if (!string.IsNullOrWhiteSpace(decisionEvent.GovernanceWindowName))
+            {
+                GovernedEvaluationCount++;
+            }
 
             if (decisionEvent.Decision == DecisionType.Allow)
             {
@@ -141,6 +147,7 @@ public sealed class InMemoryActivityStore : IActivityStore
                 AllowedCount = AllowedCount,
                 DeniedCount = DeniedCount,
                 PendingApprovalCount = PendingApprovalCount,
+                GovernedEvaluationCount = GovernedEvaluationCount,
                 LastUsedUtc = LastUsedUtc,
                 AverageEvaluationDurationMs = TotalRequests == 0
                     ? 0

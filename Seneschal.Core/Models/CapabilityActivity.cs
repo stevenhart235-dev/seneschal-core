@@ -7,6 +7,7 @@ public sealed record CapabilityActivity
     public long AllowedCount { get; init; }
     public long DeniedCount { get; init; }
     public long PendingApprovalCount { get; init; }
+    public long GovernedEvaluationCount { get; init; }
     public DateTimeOffset? LastUsedUtc { get; init; }
     public double AverageEvaluationDurationMs { get; init; }
 }

@@ -14,4 +14,7 @@ public class AuditEvent
     public List<string> Obligations { get; set; } = new();
     public string Reason { get; set; } = "";
     public long EvaluationDurationMs { get; set; }
+    public string? GovernanceWindowName { get; set; }
+    public string? GovernanceWindowMode { get; set; }
+    public string? GovernanceWindowMessage { get; set; }
 }

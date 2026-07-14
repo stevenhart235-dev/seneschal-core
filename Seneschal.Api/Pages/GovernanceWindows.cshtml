@@ -1,0 +1,107 @@
+@page "/governance-windows"
+@model Seneschal.Api.Pages.GovernanceWindowsModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seneschal Governance Windows</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+    <div class="app-shell">
+        @await Html.PartialAsync("Shared/_PortalSidebar", "governance-windows")
+
+        <main class="container explorer-page governance-windows-page">
+            <header class="page-header">
+                <div>
+                    <div class="breadcrumb">Governance / Governance Windows</div>
+                    <h1>Governance Windows</h1>
+                    <p class="subtitle">Manually observe or enforce a temporary capability-governance window.</p>
+                </div>
+            </header>
+
+            <p class="governance-volatile-note">
+                <strong>Temporary runtime state.</strong> Governance windows are in memory and reset when Seneschal restarts. Scheduling and exceptions are not available.
+            </p>
+
+            <section class="governance-window-posture window-@(Model.Window.Enabled ? Model.Window.Mode.ToString().ToLowerInvariant() : "inactive")">
+                <div>
+                    <span class="status-badge">@(Model.Window.Enabled ? "Active" : "Inactive")</span>
+                    <h2>@Model.Window.Name</h2>
+                    <p>@Model.Window.Description</p>
+                </div>
+                <dl>
+                    <div><dt>Enabled</dt><dd>@(Model.Window.Enabled ? "Yes" : "No")</dd></div>
+                    <div><dt>Mode</dt><dd>@Model.Window.Mode</dd></div>
+                </dl>
+            </section>
+
+            <section class="governance-window-grid">
+                <article class="panel">
+                    <h2>Runtime state</h2>
+                    <p class="muted">Changing this state affects future evaluations immediately.</p>
+                    <form method="post" action="/governance-windows?handler=SetState" class="governance-window-form">
+                        <label class="governance-window-toggle">
+                            <input type="checkbox" name="enabled" value="true" checked="@Model.Window.Enabled" />
+                            <span>Enable Production Freeze</span>
+                        </label>
+
+                        <fieldset>
+                            <legend>Window mode</legend>
+                            <label>
+                                <input type="radio" name="mode" value="Observe" checked="@(Model.Window.Mode == Seneschal.Core.Enums.GovernanceWindowMode.Observe)" />
+                                <span><strong>Observe</strong><small>Record window participation without changing the policy decision.</small></span>
+                            </label>
+                            <label>
+                                <input type="radio" name="mode" value="Enforce" checked="@(Model.Window.Mode == Seneschal.Core.Enums.GovernanceWindowMode.Enforce)" />
+                                <span><strong>Enforce</strong><small>Override an Allow decision with Deny for affected capabilities.</small></span>
+                            </label>
+                        </fieldset>
+
+                        <button class="button-primary" type="submit">Apply runtime state</button>
+                    </form>
+                </article>
+
+                <article class="panel governance-window-definition">
+                    <h2>Built-in window definition</h2>
+                    <dl class="metadata-grid">
+                        <div><dt>Name</dt><dd>@Model.Window.Name</dd></div>
+                        <div><dt>Reason</dt><dd>@Model.Window.Reason</dd></div>
+                    </dl>
+
+                    <label for="affectedCapabilities">Affected capabilities</label>
+                    <select id="affectedCapabilities" multiple disabled size="@Math.Min(Model.Capabilities.Count, 9)" aria-describedby="capabilityHelp">
+                        @foreach (var entry in Model.Capabilities)
+                        {
+                            var capability = entry.Capability;
+                            var affected = Model.Window.AffectedCapabilities.Contains(
+                                capability.Id,
+                                StringComparer.OrdinalIgnoreCase);
+                            <option selected="@affected">@capability.DisplayName (@capability.Id)</option>
+                        }
+                    </select>
+                    <p id="capabilityHelp" class="muted">The Phase 1 window definition is read-only.</p>
+                </article>
+            </section>
+
+            <section class="panel governance-window-consequences">
+                <h2>Evaluation behavior</h2>
+                <div class="table-scroll">
+                    <table class="consequence-matrix">
+                        <thead><tr><th>Window state</th><th>Policy decision</th><th>Result</th><th>Audit evidence</th></tr></thead>
+                        <tbody>
+                            <tr><td>Observe</td><td>Any</td><td>Unchanged</td><td>Governance Window matched: Production Freeze</td></tr>
+                            <tr><td>Enforce</td><td>Allow</td><td>Deny</td><td>Blocked by Governance Window: Production Freeze</td></tr>
+                            <tr><td>Enforce</td><td>Deny or Pending Approval</td><td>Unchanged</td><td>Governance Window matched: Production Freeze</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

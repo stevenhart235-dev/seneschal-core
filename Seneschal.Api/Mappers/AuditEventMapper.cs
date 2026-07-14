@@ -23,7 +23,10 @@ public static class AuditEventMapper
             MatchedPolicies = auditEvent.MatchedPolicies,
             Obligations = auditEvent.Obligations,
             Reason = auditEvent.Reason,
-            EvaluationDurationMs = auditEvent.EvaluationDurationMs
+            EvaluationDurationMs = auditEvent.EvaluationDurationMs,
+            GovernanceWindowName = auditEvent.GovernanceWindowName,
+            GovernanceWindowMode = auditEvent.GovernanceWindowMode,
+            GovernanceWindowMessage = auditEvent.GovernanceWindowMessage
         };
     }
 }

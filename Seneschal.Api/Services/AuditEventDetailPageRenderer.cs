@@ -46,6 +46,17 @@ public static class AuditEventDetailPageRenderer
                 ("Decision", auditEvent.Decision),
                 ("EnforcementMode", auditEvent.EnforcementMode)
             ]);
+        if (!string.IsNullOrWhiteSpace(auditEvent.GovernanceWindowName))
+        {
+            AppendTraceStep(
+                html,
+                "Governance Window",
+                [
+                    ("Name", auditEvent.GovernanceWindowName),
+                    ("Mode", auditEvent.GovernanceWindowMode ?? string.Empty),
+                    ("Participation", auditEvent.GovernanceWindowMessage ?? string.Empty)
+                ]);
+        }
         AppendTraceStep(
             html,
             "Obligations",
@@ -75,6 +86,9 @@ public static class AuditEventDetailPageRenderer
         AppendMetadata(html, "MatchedPolicies", FormatList(auditEvent.MatchedPolicies));
         AppendMetadata(html, "Obligations", FormatList(auditEvent.Obligations));
         AppendMetadata(html, "Reason", auditEvent.Reason);
+        AppendMetadata(html, "GovernanceWindowName", auditEvent.GovernanceWindowName ?? string.Empty);
+        AppendMetadata(html, "GovernanceWindowMode", auditEvent.GovernanceWindowMode ?? string.Empty);
+        AppendMetadata(html, "GovernanceWindowMessage", auditEvent.GovernanceWindowMessage ?? string.Empty);
         AppendMetadata(html, "EvaluationDurationMs", auditEvent.EvaluationDurationMs.ToString());
         html.AppendLine("                </dl>");
         html.AppendLine("            </section>");

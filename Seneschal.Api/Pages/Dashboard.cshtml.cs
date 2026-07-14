@@ -16,6 +16,7 @@ public sealed class DashboardModel : PageModel
     private readonly IdentityLoader _identityLoader;
     private readonly PolicyLoader _policyLoader;
     private readonly IGovernanceModeStore _governanceModeStore;
+    private readonly IGovernanceWindowStore _governanceWindowStore;
 
     public static readonly TimeSpan ActiveThreshold = TimeSpan.FromSeconds(20);
 
@@ -26,7 +27,8 @@ public sealed class DashboardModel : PageModel
         IAuditEventStore auditEventStore,
         IdentityLoader identityLoader,
         PolicyLoader policyLoader,
-        IGovernanceModeStore governanceModeStore)
+        IGovernanceModeStore governanceModeStore,
+        IGovernanceWindowStore governanceWindowStore)
     {
         _capabilityCatalog = capabilityCatalog;
         _governanceGraph = governanceGraph;
@@ -35,6 +37,7 @@ public sealed class DashboardModel : PageModel
         _identityLoader = identityLoader;
         _policyLoader = policyLoader;
         _governanceModeStore = governanceModeStore;
+        _governanceWindowStore = governanceWindowStore;
     }
 
     public int TotalCapabilities { get; private set; }
@@ -64,6 +67,7 @@ public sealed class DashboardModel : PageModel
         { get; private set; } = [];
     public bool AuditEventsAvailable { get; private set; }
     public DashboardLiveSnapshot Live { get; private set; } = DashboardLiveSnapshot.Empty;
+    public GovernanceWindow GovernanceWindow { get; private set; } = null!;
 
     public bool HasRuntimeActivity => TotalRuntimeDecisions > 0;
     public bool ShowFirstRunExperience => TotalRuntimeDecisions < 3;
@@ -73,6 +77,7 @@ public sealed class DashboardModel : PageModel
         var capabilities = await _capabilityCatalog.SearchAsync(
             new CapabilityCatalogQuery(),
             cancellationToken);
+        GovernanceWindow = _governanceWindowStore.GetWindow();
         var relationships = await _governanceGraph.QueryAsync(
             new GovernanceRelationshipQuery(),
             cancellationToken);

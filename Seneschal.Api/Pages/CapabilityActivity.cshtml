@@ -58,6 +58,7 @@
                                 <th class="outcome-allow">Allowed</th>
                                 <th class="outcome-deny">Denied</th>
                                 <th class="outcome-pending">Pending Approval</th>
+                                <th>Governed</th>
                                 <th>Last Used</th>
                                 <th>Avg Duration ms</th>
                             </tr>
@@ -75,6 +76,16 @@
                                     <td class="outcome-allow">@capability.AllowedCount</td>
                                     <td class="outcome-deny">@capability.DeniedCount</td>
                                     <td class="outcome-pending">@capability.PendingApprovalCount</td>
+                                    <td>
+                                        @if (capability.GovernedEvaluationCount > 0)
+                                        {
+                                            <span class="status-badge status-warning">@capability.GovernedEvaluationCount window</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="muted">0</span>
+                                        }
+                                    </td>
                                     <td class="activity-timestamp">@(capability.LastUsedUtc?.ToString("u") ?? "n/a")</td>
                                     <td class="activity-duration">@capability.AverageEvaluationDurationMs.ToString("0.##")</td>
                                 </tr>
@@ -127,6 +138,10 @@
                             <article class="dashboard-card activity-card">
                                 <strong>@capability.PendingApprovalCount</strong>
                                 <span>Pending Approval Count</span>
+                            </article>
+                            <article class="dashboard-card activity-card">
+                                <strong>@capability.GovernedEvaluationCount</strong>
+                                <span>Governance Window Evaluations</span>
                             </article>
                         </section>
 

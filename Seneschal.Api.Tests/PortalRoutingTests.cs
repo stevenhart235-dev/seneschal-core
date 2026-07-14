@@ -32,6 +32,7 @@ public sealed class PortalRoutingTests : IClassFixture<ApiApplicationFactory>
     [InlineData("/dashboard", "/dashboard")]
     [InlineData("/monitor", "/monitor")]
     [InlineData("/governance", "/governance")]
+    [InlineData("/governance-windows", "/governance-windows")]
     [InlineData("/policies", "/policies")]
     [InlineData("/capability-explorer", "/capability-explorer")]
     [InlineData("/identity-explorer", "/identity-explorer")]
@@ -106,6 +107,7 @@ public sealed class PortalRoutingTests : IClassFixture<ApiApplicationFactory>
     [InlineData("/audit", "class=\"active\" href=\"/audit\" aria-current=\"page\"")]
     [InlineData("/diagnostics-view", "class=\"active\" href=\"/diagnostics-view\" aria-current=\"page\"")]
     [InlineData("/developer-quickstart", "class=\"active\" href=\"/developer-quickstart\" aria-current=\"page\"")]
+    [InlineData("/governance-windows", "class=\"active\" href=\"/governance-windows\" aria-current=\"page\"")]
     public async Task RepresentativePages_MarkCorrectNavigationItemActive(
         string route,
         string expectedMarkup)

@@ -25,6 +25,7 @@ builder.Services.AddSingleton(new RuntimeSettings
     Mode = Seneschal.Core.Enums.EnforcementMode.LogOnly
 });
 builder.Services.AddSingleton<IGovernanceModeStore, InMemoryGovernanceModeStore>();
+builder.Services.AddSingleton<IGovernanceWindowStore, InMemoryGovernanceWindowStore>();
 builder.Services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
 builder.Services.AddSingleton<IntegrationApiKeyLoader>();
 builder.Services.AddSingleton<IntegrationApiKeyAuthorizer>();

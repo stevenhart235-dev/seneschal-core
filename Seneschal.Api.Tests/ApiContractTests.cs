@@ -163,7 +163,10 @@ public sealed class ApiContractTests :
             "matchedPolicies",
             "obligations",
             "reason",
-            "evaluationDurationMs");
+            "evaluationDurationMs",
+            "governanceWindowName",
+            "governanceWindowMode",
+            "governanceWindowMessage");
     }
 
     private async Task<HttpResponseMessage> PostEvaluationAsync(

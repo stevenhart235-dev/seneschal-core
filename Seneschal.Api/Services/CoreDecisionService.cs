@@ -23,6 +23,7 @@ public sealed class CoreDecisionService
     private readonly IDecisionExporter? _decisionExporter;
     private readonly IDecisionMetrics? _decisionMetrics;
     private readonly IGovernanceIncidentStore? _governanceIncidentStore;
+    private readonly IGovernanceWindowStore? _governanceWindowStore;
 
     public CoreDecisionService(
         PolicyLoader policyLoader,
@@ -32,7 +33,8 @@ public sealed class CoreDecisionService
         IActivityStore? activityStore = null,
         IDecisionExporter? decisionExporter = null,
         IDecisionMetrics? decisionMetrics = null,
-        IGovernanceIncidentStore? governanceIncidentStore = null)
+        IGovernanceIncidentStore? governanceIncidentStore = null,
+        IGovernanceWindowStore? governanceWindowStore = null)
     {
         _policyLoader = policyLoader;
         _policyEvaluator = policyEvaluator;
@@ -42,6 +44,7 @@ public sealed class CoreDecisionService
         _decisionExporter = decisionExporter;
         _decisionMetrics = decisionMetrics;
         _governanceIncidentStore = governanceIncidentStore;
+        _governanceWindowStore = governanceWindowStore;
     }
 
     public ApiDecisionResult Evaluate(ApiDecisionRequest request)
@@ -69,6 +72,9 @@ public sealed class CoreDecisionService
             coreRequest,
             corePolicies,
             _governanceModeStore.GetMode());
+        var windowEvaluation = EvaluateGovernanceWindow(
+            coreRequest.Capability.Id,
+            ref coreResult);
         stopwatch.Stop();
 
         coreResult = coreResult with
@@ -82,7 +88,8 @@ public sealed class CoreDecisionService
 
         WriteAuditEvent(
             coreRequest,
-            coreResult);
+            coreResult,
+            windowEvaluation);
 
         return DecisionResultMapper.ToApi(
             coreResult,
@@ -134,7 +141,8 @@ public sealed class CoreDecisionService
 
     private void WriteAuditEvent(
         DecisionRequest request,
-        DecisionResult result)
+        DecisionResult result,
+        GovernanceWindowEvaluation? windowEvaluation)
     {
         if (_auditSink is null &&
             _activityStore is null &&
@@ -158,7 +166,10 @@ public sealed class CoreDecisionService
             MatchedPolicies = result.MatchedPolicies,
             Obligations = result.Obligations,
             Reason = result.Reason,
-            EvaluationDurationMs = result.LatencyMs
+            EvaluationDurationMs = result.LatencyMs,
+            GovernanceWindowName = windowEvaluation?.Name,
+            GovernanceWindowMode = windowEvaluation?.Mode.ToString(),
+            GovernanceWindowMessage = windowEvaluation?.Message
         };
 
         _auditSink?.WriteAsync(auditEvent).GetAwaiter().GetResult();
@@ -166,6 +177,54 @@ public sealed class CoreDecisionService
         TryExport(auditEvent);
         TryRecordMetrics(auditEvent);
         TryRecordIncident(auditEvent);
+    }
+
+    private GovernanceWindowEvaluation? EvaluateGovernanceWindow(
+        string capabilityId,
+        ref DecisionResult result)
+    {
+        if (_governanceWindowStore is null)
+        {
+            return null;
+        }
+
+        var window = _governanceWindowStore.GetWindow();
+        if (!window.Enabled || !window.AffectedCapabilities.Contains(
+                capabilityId,
+                StringComparer.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var message = $"Governance Window matched: {window.Name}";
+        var evaluation = result.Evaluation.ToList();
+        evaluation.Add(new EvaluationStep
+        {
+            Property = "GovernanceWindow",
+            Expected = string.Join(", ", window.AffectedCapabilities),
+            Actual = capabilityId,
+            Matched = true
+        });
+
+        if (window.Mode == GovernanceWindowMode.Enforce &&
+            result.Decision == DecisionType.Allow)
+        {
+            result = result with
+            {
+                Decision = DecisionType.Deny,
+                Reason = $"Blocked by Governance Window: {window.Name}",
+                Evaluation = evaluation
+            };
+        }
+        else
+        {
+            result = result with { Evaluation = evaluation };
+        }
+
+        return new GovernanceWindowEvaluation(
+            window.Name,
+            window.Mode,
+            message);
     }
 
     private void TryExport(AuditEvent auditEvent)
@@ -226,3 +285,8 @@ public sealed class CoreDecisionService
         }
     }
 }
+
+internal sealed record GovernanceWindowEvaluation(
+    string Name,
+    GovernanceWindowMode Mode,
+    string Message);

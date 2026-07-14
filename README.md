@@ -20,6 +20,14 @@ cd seneschal-core
 
 The launcher packs the local client package, starts Seneschal and four package-based workers, waits for readiness, and opens the Dashboard automatically.
 
+Run the guided Production Freeze story after the demo is ready:
+
+```powershell
+.\demo-run.ps1
+```
+
+The runner pauses between presenter stages, exercises the GitHub Actions and Terraform/OpenTofu gates, and restores `LogOnly` with the Production Freeze disabled when it exits.
+
 Stop only the processes created by the launcher with:
 
 ```powershell
@@ -61,7 +69,7 @@ The GitHub Actions and Terraform/OpenTofu integrations are repository scripts an
 
 ## Demo Scenarios
 
-- [Production Freeze](docs/demos/production-freeze.md) — runs an alternate, demo-only policy profile to show GitHub and Terraform requests proceeding in `LogOnly` and blocking in `Enforce`.
+- [Production Freeze](docs/demos/production-freeze.md) — uses the guided runner and in-memory Governance Window to show GitHub and Terraform requests being observed and then blocked.
 - [Multi-application adoption lab](labs/multi-application-adoption/README.md) — continuously produces Allow, Deny, and Pending Approval decisions from four independent workers.
 
 ## Architecture

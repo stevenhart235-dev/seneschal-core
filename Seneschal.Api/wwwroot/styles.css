@@ -3063,3 +3063,28 @@ button:hover,
     .container { padding: var(--portal-space-5) var(--portal-space-4); }
     .governance-impact-metrics div { border-bottom: 1px solid var(--portal-border); border-right: 0; }
 }
+/* Governance Windows */
+.governance-window-status-strip { align-items: center; background: var(--portal-surface); border: 1px solid var(--portal-border); border-left: 3px solid var(--portal-logonly); border-radius: var(--portal-radius); display: flex; justify-content: space-between; margin-bottom: var(--portal-space-4); padding: var(--portal-space-3) var(--portal-space-4); }
+.governance-window-status-strip strong, .governance-window-status-strip p { margin: 0; }
+.governance-window-status-strip p { color: var(--portal-muted); font-size: 13px; }
+.governance-window-posture { align-items: center; background: var(--portal-surface); border: 1px solid var(--portal-border); border-left: 3px solid var(--portal-muted); border-radius: var(--portal-radius); display: flex; justify-content: space-between; margin-bottom: var(--portal-space-5); padding: var(--portal-space-5); }
+.governance-window-posture.window-observe { border-left-color: var(--portal-logonly); }
+.governance-window-posture.window-enforce { border-left-color: var(--portal-enforce); }
+.governance-window-posture h2 { margin: var(--portal-space-2) 0; }
+.governance-window-posture p { color: var(--portal-muted); margin: 0; }
+.governance-window-posture dl { display: flex; gap: var(--portal-space-6); margin: 0; }
+.governance-window-posture dt { color: var(--portal-muted); font-size: 11px; text-transform: uppercase; }
+.governance-window-posture dd { margin: 3px 0 0; }
+.governance-window-grid { display: grid; gap: var(--portal-space-5); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.governance-window-form { display: grid; gap: var(--portal-space-4); }
+.governance-window-toggle { align-items: center; display: flex; gap: var(--portal-space-3); }
+.governance-window-form fieldset { border: 1px solid var(--portal-border); border-radius: 6px; display: grid; gap: var(--portal-space-3); padding: var(--portal-space-4); }
+.governance-window-form fieldset label { align-items: start; display: flex; gap: var(--portal-space-3); }
+.governance-window-form fieldset span { display: grid; gap: 3px; }
+.governance-window-form small { color: var(--portal-muted); }
+.governance-window-definition select { background: var(--portal-surface-raised); color: var(--portal-text); margin-top: var(--portal-space-2); min-height: 190px; padding: var(--portal-space-2); width: 100%; }
+.governance-window-consequences { margin-top: var(--portal-space-5); }
+@media (max-width: 900px) {
+    .governance-window-grid { grid-template-columns: 1fr; }
+    .governance-window-posture, .governance-window-status-strip { align-items: stretch; flex-direction: column; gap: var(--portal-space-3); }
+}

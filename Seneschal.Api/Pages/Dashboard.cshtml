@@ -34,6 +34,15 @@
                 </div>
             </header>
 
+            <section class="dashboard-window-strip @(Model.GovernanceWindow.Enabled ? "is-active" : "")" aria-label="Active Governance Windows">
+                <div>
+                    <span>Active Governance Windows</span>
+                    <strong>@(Model.GovernanceWindow.Enabled ? "1" : "0")</strong>
+                </div>
+                <p>@(Model.GovernanceWindow.Enabled ? $"{Model.GovernanceWindow.Name} · {Model.GovernanceWindow.Mode}" : "No governance windows are active.")</p>
+                <a href="/governance-windows">Review governance windows</a>
+            </section>
+
             <section class="reference-kpi-grid" aria-label="Runtime summary">
                 <article class="reference-kpi mode-kpi" id="governance-posture">
                     <span class="reference-kpi-symbol" aria-hidden="true">◆</span>

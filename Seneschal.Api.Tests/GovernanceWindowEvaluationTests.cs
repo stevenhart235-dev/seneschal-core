@@ -27,6 +27,7 @@ public sealed class GovernanceWindowEvaluationTests
         Assert.Equal("allow", result.Decision);
         var auditEvent = Assert.Single(await auditStore.GetRecentAsync());
         Assert.Equal("Production Freeze", auditEvent.GovernanceWindowName);
+        Assert.Equal(DecisionType.Allow, auditEvent.PolicyDecision);
         Assert.Equal("Observe", auditEvent.GovernanceWindowMode);
         Assert.Equal(
             "Governance Window matched: Production Freeze",
@@ -56,6 +57,9 @@ public sealed class GovernanceWindowEvaluationTests
         Assert.Equal(
             "Enforce",
             Assert.Single(await auditStore.GetRecentAsync()).GovernanceWindowMode);
+        Assert.Equal(
+            DecisionType.Allow,
+            Assert.Single(await auditStore.GetRecentAsync()).PolicyDecision);
     }
 
     [Fact]

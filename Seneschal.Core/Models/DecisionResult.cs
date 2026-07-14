@@ -19,4 +19,5 @@ public sealed record DecisionResult
     public int LatencyMs { get; init; }
     public PolicyMatch? WinningPolicy { get; init; }
     public List<PolicyMatch> MatchedPolicyDetails { get; init; } = new();
+    public List<PolicyEvaluation> PolicyEvaluations { get; init; } = new();
 }

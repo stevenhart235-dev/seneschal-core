@@ -24,10 +24,23 @@ public sealed class PolicyEvaluator : IPolicyEvaluator
         EnforcementMode mode)
     {
         var matches = new List<PolicyMatch>();
+        var policyEvaluations = new List<PolicyEvaluation>();
 
         foreach (var policy in policies)
         {
             var evaluation = EvaluateConditions(request, policy);
+
+            policyEvaluations.Add(new PolicyEvaluation
+            {
+                Policy = policy,
+                Matched = evaluation.Matched,
+                Reasons = evaluation.Steps
+                    .Where(step => !step.Matched)
+                    .Select(step => $"{step.Property} mismatch")
+                    .ToList(),
+                Obligations = policy.Obligations,
+                Conditions = evaluation.Steps
+            });
 
             if (!evaluation.Matched)
             {
@@ -46,7 +59,10 @@ public sealed class PolicyEvaluator : IPolicyEvaluator
             });
         }
 
-        return _decisionResolver.Resolve(request, matches, mode);
+        return _decisionResolver.Resolve(request, matches, mode) with
+        {
+            PolicyEvaluations = policyEvaluations
+        };
     }
 
     private static (

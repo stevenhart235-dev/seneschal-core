@@ -5,6 +5,7 @@ namespace Seneschal.Core.Models;
 public sealed record AuditEvent
 {
     public required string Id { get; init; }
+    public string RequestId { get; init; } = string.Empty;
     public required DateTimeOffset TimestampUtc { get; init; }
     public required string IdentityId { get; init; }
     public required string CapabilityId { get; init; }
@@ -19,4 +20,8 @@ public sealed record AuditEvent
     public string? GovernanceWindowName { get; init; }
     public string? GovernanceWindowMode { get; init; }
     public string? GovernanceWindowMessage { get; init; }
+    public string? GovernanceWindowReason { get; init; }
+    public DecisionType PolicyDecision { get; init; }
+    public string PolicyReason { get; init; } = string.Empty;
+    public List<PolicyEvaluation> PolicyEvaluations { get; init; } = new();
 }

@@ -72,6 +72,8 @@ public sealed class CoreDecisionService
             coreRequest,
             corePolicies,
             _governanceModeStore.GetMode());
+        var policyDecision = coreResult.Decision;
+        var policyReason = coreResult.Reason;
         var windowEvaluation = EvaluateGovernanceWindow(
             coreRequest.Capability.Id,
             ref coreResult);
@@ -89,7 +91,9 @@ public sealed class CoreDecisionService
         WriteAuditEvent(
             coreRequest,
             coreResult,
-            windowEvaluation);
+            windowEvaluation,
+            policyDecision,
+            policyReason);
 
         return DecisionResultMapper.ToApi(
             coreResult,
@@ -142,7 +146,9 @@ public sealed class CoreDecisionService
     private void WriteAuditEvent(
         DecisionRequest request,
         DecisionResult result,
-        GovernanceWindowEvaluation? windowEvaluation)
+        GovernanceWindowEvaluation? windowEvaluation,
+        DecisionType policyDecision,
+        string policyReason)
     {
         if (_auditSink is null &&
             _activityStore is null &&
@@ -156,6 +162,7 @@ public sealed class CoreDecisionService
         var auditEvent = new AuditEvent
         {
             Id = result.DecisionId,
+            RequestId = request.RequestId,
             TimestampUtc = result.Timestamp,
             IdentityId = request.Identity.Id,
             CapabilityId = request.Capability.Id,
@@ -169,7 +176,11 @@ public sealed class CoreDecisionService
             EvaluationDurationMs = result.LatencyMs,
             GovernanceWindowName = windowEvaluation?.Name,
             GovernanceWindowMode = windowEvaluation?.Mode.ToString(),
-            GovernanceWindowMessage = windowEvaluation?.Message
+            GovernanceWindowMessage = windowEvaluation?.Message,
+            GovernanceWindowReason = windowEvaluation?.Reason,
+            PolicyDecision = policyDecision,
+            PolicyReason = policyReason,
+            PolicyEvaluations = result.PolicyEvaluations
         };
 
         _auditSink?.WriteAsync(auditEvent).GetAwaiter().GetResult();
@@ -224,7 +235,8 @@ public sealed class CoreDecisionService
         return new GovernanceWindowEvaluation(
             window.Name,
             window.Mode,
-            message);
+            message,
+            window.Reason);
     }
 
     private void TryExport(AuditEvent auditEvent)
@@ -289,4 +301,5 @@ public sealed class CoreDecisionService
 internal sealed record GovernanceWindowEvaluation(
     string Name,
     GovernanceWindowMode Mode,
-    string Message);
+    string Message,
+    string Reason);

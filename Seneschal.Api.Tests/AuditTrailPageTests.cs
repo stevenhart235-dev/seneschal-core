@@ -217,6 +217,20 @@ public sealed class AuditTrailPageTests :
         Assert.Contains("EnforcementMode", html);
         Assert.Contains("EvaluationDurationMs", html);
         Assert.Contains("Developers can deploy to dev", html);
+        Assert.Contains("Request Context", html);
+        Assert.Contains("Policy Evaluation", html);
+        Assert.Contains("Decision Resolution", html);
+        Assert.Contains("Final Outcome", html);
+        Assert.Contains("Winning policy", html);
+        Assert.Contains("Evaluation latency", html);
+        Assert.Contains("Condition evaluation", html);
+        Assert.Contains("identity.id == Developer", html);
+        Assert.Contains("capability.id == DeployApplication", html);
+        Assert.Contains("resource.environment == dev", html);
+        Assert.Contains("Expected", html);
+        Assert.Contains("Actual", html);
+        Assert.Contains("Matched Policies", html);
+        Assert.Contains("identity.id mismatch", html);
     }
 
     [Fact]

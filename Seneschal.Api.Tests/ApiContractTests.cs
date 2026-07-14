@@ -153,6 +153,7 @@ public sealed class ApiContractTests :
         AssertProperties(
             auditEvent,
             "id",
+            "requestId",
             "timestampUtc",
             "identityId",
             "capabilityId",
@@ -166,7 +167,11 @@ public sealed class ApiContractTests :
             "evaluationDurationMs",
             "governanceWindowName",
             "governanceWindowMode",
-            "governanceWindowMessage");
+            "governanceWindowMessage",
+            "governanceWindowReason",
+            "policyDecision",
+            "policyReason",
+            "policyEvaluations");
     }
 
     private async Task<HttpResponseMessage> PostEvaluationAsync(

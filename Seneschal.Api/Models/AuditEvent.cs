@@ -3,6 +3,7 @@ namespace Seneschal.Api.Models;
 public class AuditEvent
 {
     public string Id { get; set; } = "";
+    public string RequestId { get; set; } = "";
     public DateTimeOffset TimestampUtc { get; set; } = DateTimeOffset.UtcNow;
     public string IdentityId { get; set; } = "";
     public string CapabilityId { get; set; } = "";
@@ -17,4 +18,24 @@ public class AuditEvent
     public string? GovernanceWindowName { get; set; }
     public string? GovernanceWindowMode { get; set; }
     public string? GovernanceWindowMessage { get; set; }
+    public string? GovernanceWindowReason { get; set; }
+    public string PolicyDecision { get; set; } = "";
+    public string PolicyReason { get; set; } = "";
+    public List<AuditPolicyEvaluation> PolicyEvaluations { get; set; } = new();
+}
+
+public class AuditPolicyEvaluation
+{
+    public string PolicyId { get; set; } = "";
+    public string PolicyName { get; set; } = "";
+    public bool Matched { get; set; }
+    public List<AuditConditionEvaluation> Conditions { get; set; } = new();
+}
+
+public class AuditConditionEvaluation
+{
+    public string Condition { get; set; } = "";
+    public string Expected { get; set; } = "";
+    public string Actual { get; set; } = "";
+    public bool Passed { get; set; }
 }

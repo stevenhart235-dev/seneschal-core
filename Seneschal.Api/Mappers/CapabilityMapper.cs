@@ -10,24 +10,39 @@ public static class CapabilityMapper
     {
         ArgumentNullException.ThrowIfNull(capability);
 
+        var configuredRisk = string.IsNullOrWhiteSpace(capability.Risk)
+            ? nameof(RiskLevel.Low)
+            : capability.Risk;
+
         if (!Enum.TryParse<RiskLevel>(
-                capability.Risk,
+                configuredRisk,
                 ignoreCase: true,
                 out var riskLevel))
         {
             throw new InvalidOperationException(
                 $"Capability '{capability.Name}' has invalid risk level " +
-                $"'{capability.Risk}'.");
+                $"'{configuredRisk}'.");
         }
 
         return new CoreCapability
         {
             Id = capability.Name,
             Name = capability.Name,
+            DisplayName = string.IsNullOrWhiteSpace(capability.DisplayName)
+                ? capability.Name
+                : capability.DisplayName,
             Provider = "api",
-            Category = capability.Category,
+            Category = string.IsNullOrWhiteSpace(capability.Category)
+                ? "Uncategorized"
+                : capability.Category,
             Description = capability.Description,
-            RiskLevel = riskLevel
+            RiskLevel = riskLevel,
+            Owner = capability.Owner,
+            Lifecycle = string.IsNullOrWhiteSpace(capability.Lifecycle)
+                ? "Active"
+                : capability.Lifecycle,
+            DocumentationUrl = capability.DocumentationUrl,
+            Tags = capability.Tags?.ToList() ?? []
         };
     }
 }

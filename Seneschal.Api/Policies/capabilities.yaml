@@ -1,45 +1,90 @@
 capabilities:
   - name: DeployApplication
-    description: Deploy an application
+    displayName: Deploy Application
+    description: Deploy an application to a managed environment.
+    owner: Platform Engineering
     risk: Medium
     category: Deployment
+    lifecycle: Active
+    documentationUrl: https://github.com/stevenhart235-dev/seneschal-core/blob/main/docs/core-concepts/capability.md
+    tags: [deployment, application, legacy-sample]
 
   - name: DeleteProductionDatabase
-    description: Delete a production database
+    displayName: Delete Production Database
+    description: Permanently delete a production database.
+    owner: Database Reliability Engineering
     risk: Critical
     category: Database
+    lifecycle: Active
+    documentationUrl: https://github.com/stevenhart235-dev/seneschal-core/blob/main/docs/core-concepts/capability.md
+    tags: [database, destructive, production]
 
   - name: azure.keyvault.secret.read
-    description: Read a production secret
+    displayName: Read Azure Key Vault Secret
+    description: Read a secret from an Azure Key Vault.
+    owner: Cloud Security
     risk: High
     category: Security
+    lifecycle: Active
+    documentationUrl: https://github.com/stevenhart235-dev/seneschal-core/blob/main/docs/core-concepts/capability.md
+    tags: [azure, key-vault, secret]
 
   - name: infrastructure.production.apply
-    description: Apply infrastructure changes to production
+    displayName: Apply Production Infrastructure
+    description: Apply reviewed infrastructure changes to production.
+    owner: Cloud Platform
     risk: Critical
     category: Infrastructure
+    lifecycle: Active
+    documentationUrl: https://github.com/stevenhart235-dev/seneschal-core/blob/main/integrations/terraform/README.md
+    tags: [terraform, opentofu, infrastructure, production]
 
   - name: infrastructure.production.destroy
-    description: Destroy production infrastructure resources
+    displayName: Destroy Production Infrastructure
+    description: Destroy infrastructure resources in a production environment.
+    owner: Cloud Platform
     risk: Critical
     category: Infrastructure
+    lifecycle: Restricted
+    documentationUrl: https://github.com/stevenhart235-dev/seneschal-core/blob/main/docs/core-concepts/capability.md
+    tags: [infrastructure, destructive, production]
 
   - name: production.deployment.execute
-    description: Execute a production application deployment
+    displayName: Execute Production Deployment
+    description: Execute an application deployment in production.
+    owner: Release Engineering
     risk: High
     category: Deployment
+    lifecycle: Active
+    documentationUrl: https://github.com/stevenhart235-dev/seneschal-core/blob/main/integrations/github-actions/README.md
+    tags: [deployment, cicd, production]
 
   - name: database.migration.execute
-    description: Execute a production database migration
+    displayName: Execute Database Migration
+    description: Execute a schema or data migration against a production database.
+    owner: Database Reliability Engineering
     risk: Critical
     category: Database
+    lifecycle: Active
+    documentationUrl: https://github.com/stevenhart235-dev/seneschal-core/blob/main/labs/multi-application-adoption/README.md
+    tags: [database, migration, production]
 
   - name: payments.refund.create
-    description: Create a merchant refund
+    displayName: Create Payment Refund
+    description: Create a refund for a merchant payment.
+    owner: Payments Platform
     risk: High
     category: Payments
+    lifecycle: Active
+    documentationUrl: https://github.com/stevenhart235-dev/seneschal-core/blob/main/labs/multi-application-adoption/README.md
+    tags: [payments, refund, merchant]
 
   - name: production.release.approve
-    description: Approve a production application release
+    displayName: Approve Production Release
+    description: Request approval for an application release to production.
+    owner: Release Engineering
     risk: High
     category: Deployment
+    lifecycle: Preview
+    documentationUrl: https://github.com/stevenhart235-dev/seneschal-core/blob/main/labs/multi-application-adoption/README.md
+    tags: [approval, release, production]

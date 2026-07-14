@@ -32,7 +32,7 @@
         </header>
 
         <form class="search-panel" method="get">
-            <label for="q">Search capabilities</label>
+            <label for="q">Search and filter capabilities</label>
             <div class="search-row">
                 <input
                     id="q"
@@ -40,6 +40,18 @@
                     value="@Model.Query"
                     placeholder="Search by id, name, description, or tag" />
                 <button type="submit">Search</button>
+            </div>
+            <div class="search-row capability-filter-row">
+                <input name="owner" value="@Model.Owner" placeholder="Owner" aria-label="Filter by owner" />
+                <select name="risk" aria-label="Filter by risk">
+                    <option value="">All risk levels</option>
+                    @foreach (var risk in Enum.GetNames<Seneschal.Core.Enums.RiskLevel>())
+                    {
+                        <option value="@risk" selected="@(string.Equals(Model.Risk, risk, StringComparison.OrdinalIgnoreCase))">@risk</option>
+                    }
+                </select>
+                <input name="category" value="@Model.Category" placeholder="Category" aria-label="Filter by category" />
+                <input name="lifecycle" value="@Model.Lifecycle" placeholder="Lifecycle" aria-label="Filter by lifecycle" />
             </div>
         </form>
 
@@ -71,8 +83,9 @@
                             var resultCapability = result.Capability;
                             <li>
                                 <a href="/capability-explorer?q=@Uri.EscapeDataString(Model.Query ?? string.Empty)&capabilityId=@Uri.EscapeDataString(resultCapability.Id)">
-                                    @resultCapability.Id
+                                    @resultCapability.DisplayName
                                 </a>
+                                <span class="code">@resultCapability.Id</span>
                                 <span>@resultCapability.Description</span>
                             </li>
                         }
@@ -103,7 +116,7 @@
                 <div class="capability-title-row">
                     <div>
                         <p class="muted capability-eyebrow">Capability Profile</p>
-                        <h2>@capability.Name</h2>
+                        <h2>@capability.DisplayName</h2>
                         <p class="code capability-id">@capability.Id</p>
                     </div>
                     <div class="badge-row">
@@ -111,6 +124,7 @@
                             @capability.RiskLevel risk
                         </span>
                         <span class="badge badge-category">@capability.Category</span>
+                        <span class="badge badge-provider">@capability.Lifecycle</span>
                         <span class="badge badge-provider">@capability.Provider</span>
                     </div>
                 </div>
@@ -119,30 +133,44 @@
                     @capability.Description
                 </p>
 
-                @if (!string.IsNullOrWhiteSpace(capability.Owner) ||
-                    !string.IsNullOrWhiteSpace(capability.Version) ||
-                    capability.Tags.Count > 0)
-                {
-                    <dl class="metadata-grid compact-metadata-grid">
-                        @if (!string.IsNullOrWhiteSpace(capability.Owner))
+                <dl class="metadata-grid compact-metadata-grid capability-catalog-metadata">
+                    <dt>Owner</dt>
+                    <dd>@(string.IsNullOrWhiteSpace(capability.Owner) ? "Not specified" : capability.Owner)</dd>
+                    <dt>Risk level</dt>
+                    <dd>@capability.RiskLevel</dd>
+                    <dt>Category</dt>
+                    <dd>@capability.Category</dd>
+                    <dt>Lifecycle status</dt>
+                    <dd>@capability.Lifecycle</dd>
+                    <dt>Tags</dt>
+                    <dd>
+                        @if (capability.Tags.Count == 0)
                         {
-                            <dt>Owner</dt>
-                            <dd>@capability.Owner</dd>
+                            <span>None</span>
                         }
-
-                        @if (!string.IsNullOrWhiteSpace(capability.Version))
+                        else
                         {
-                            <dt>Version</dt>
-                            <dd>@capability.Version</dd>
+                            <span class="badge-row">
+                                @foreach (var tag in capability.Tags)
+                                {
+                                    <span class="badge badge-provider">@tag</span>
+                                }
+                            </span>
                         }
-
-                        @if (capability.Tags.Count > 0)
+                    </dd>
+                    <dt>Documentation</dt>
+                    <dd>
+                        @if (Uri.TryCreate(capability.DocumentationUrl, UriKind.Absolute, out var documentationUri) &&
+                            (documentationUri.Scheme == Uri.UriSchemeHttps || documentationUri.Scheme == Uri.UriSchemeHttp))
                         {
-                            <dt>Tags</dt>
-                            <dd>@string.Join(", ", capability.Tags)</dd>
+                            <a href="@documentationUri" target="_blank" rel="noopener noreferrer">Open documentation</a>
                         }
-                    </dl>
-                }
+                        else
+                        {
+                            <span>Not specified</span>
+                        }
+                    </dd>
+                </dl>
             </section>
 
             <section class="panel capability-runtime-panel">

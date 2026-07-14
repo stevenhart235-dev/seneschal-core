@@ -26,6 +26,10 @@ public sealed class CapabilityExplorerModel : PageModel
 
     public string? Query { get; private set; }
     public string? CapabilityId { get; private set; }
+    public string? Owner { get; private set; }
+    public string? Risk { get; private set; }
+    public string? Category { get; private set; }
+    public string? Lifecycle { get; private set; }
     public IReadOnlyCollection<CapabilityCatalogEntry> SearchResults
         { get; private set; } = [];
     public CapabilityOverview? Overview { get; private set; }
@@ -38,11 +42,23 @@ public sealed class CapabilityExplorerModel : PageModel
     public async Task OnGetAsync(
         string? q,
         string? capabilityId,
+        string? owner,
+        string? risk,
+        string? category,
+        string? lifecycle,
         CancellationToken cancellationToken)
     {
         Query = q;
         CapabilityId = capabilityId;
-        SearchWasRequested = !string.IsNullOrWhiteSpace(q);
+        Owner = owner;
+        Risk = risk;
+        Category = category;
+        Lifecycle = lifecycle;
+        SearchWasRequested = !string.IsNullOrWhiteSpace(q) ||
+            !string.IsNullOrWhiteSpace(owner) ||
+            !string.IsNullOrWhiteSpace(risk) ||
+            !string.IsNullOrWhiteSpace(category) ||
+            !string.IsNullOrWhiteSpace(lifecycle);
         CapabilityWasRequested = !string.IsNullOrWhiteSpace(capabilityId);
 
         if (SearchWasRequested)
@@ -50,7 +66,16 @@ public sealed class CapabilityExplorerModel : PageModel
             SearchResults = await _capabilityCatalog.SearchAsync(
                 new CapabilityCatalogQuery
                 {
-                    SearchText = q
+                    SearchText = q,
+                    Owner = owner,
+                    RiskLevels = Enum.TryParse<RiskLevel>(
+                        risk,
+                        ignoreCase: true,
+                        out var riskLevel)
+                            ? [riskLevel]
+                            : [],
+                    Category = category,
+                    Lifecycle = lifecycle
                 },
                 cancellationToken);
         }

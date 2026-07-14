@@ -36,6 +36,12 @@ public sealed class CapabilityExplorerPageTests :
         Assert.Contains("Capabilities", html);
         Assert.Contains("class=\"active\"", html);
         Assert.Contains("DeployApplication", html);
+        Assert.Contains("Deploy Application", html);
+        Assert.Contains("Platform Engineering", html);
+        Assert.Contains("Lifecycle status", html);
+        Assert.Contains(">Active</", html);
+        Assert.Contains("legacy-sample", html);
+        Assert.Contains("Open documentation", html);
         Assert.Contains("Capability Profile", html);
         Assert.Contains("Runtime Summary", html);
         Assert.Contains("badge risk-badge risk-medium", html);
@@ -143,7 +149,25 @@ public sealed class CapabilityExplorerPageTests :
 
         Assert.Contains("Search Results", html);
         Assert.Contains("azure.keyvault.secret.read", html);
-        Assert.Contains("Read a production secret", html);
+        Assert.Contains("Read a secret from an Azure Key Vault", html);
+    }
+
+    [Theory]
+    [InlineData("owner=Release%20Engineering", "Execute Production Deployment")]
+    [InlineData("risk=Critical", "Apply Production Infrastructure")]
+    [InlineData("category=Payments", "Create Payment Refund")]
+    [InlineData("lifecycle=Preview", "Approve Production Release")]
+    public async Task CapabilityExplorer_FiltersCatalogMetadata(
+        string filter,
+        string expectedDisplayName)
+    {
+        using var response = await _client.GetAsync(
+            $"/capability-explorer?{filter}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(
+            expectedDisplayName,
+            await response.Content.ReadAsStringAsync());
     }
 
     [Fact]

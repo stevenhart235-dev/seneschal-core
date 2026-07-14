@@ -68,6 +68,22 @@ public sealed class InMemoryCapabilityCatalog : ICapabilityCatalog
                 query.RiskLevels.Contains(entry.Capability.RiskLevel));
         }
 
+        if (!string.IsNullOrWhiteSpace(query.Category))
+        {
+            matches = matches.Where(entry => string.Equals(
+                entry.Capability.Category,
+                query.Category,
+                StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Lifecycle))
+        {
+            matches = matches.Where(entry => string.Equals(
+                entry.Capability.Lifecycle,
+                query.Lifecycle,
+                StringComparison.OrdinalIgnoreCase));
+        }
+
         return Task.FromResult<IReadOnlyCollection<CapabilityCatalogEntry>>(
             matches.ToList());
     }
@@ -78,7 +94,11 @@ public sealed class InMemoryCapabilityCatalog : ICapabilityCatalog
     {
         return Contains(capability.Id, searchText) ||
             Contains(capability.Name, searchText) ||
+            Contains(capability.DisplayName, searchText) ||
             Contains(capability.Description, searchText) ||
+            Contains(capability.Owner, searchText) ||
+            Contains(capability.Category, searchText) ||
+            Contains(capability.Lifecycle, searchText) ||
             capability.Tags.Any(tag => Contains(tag, searchText));
     }
 

@@ -100,9 +100,14 @@ public sealed class ApiContractTests :
         AssertProperties(
             capability,
             "name",
+            "displayName",
             "description",
             "risk",
-            "category");
+            "category",
+            "owner",
+            "lifecycle",
+            "documentationUrl",
+            "tags");
     }
 
     [Fact]

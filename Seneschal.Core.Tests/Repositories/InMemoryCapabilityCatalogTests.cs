@@ -65,6 +65,24 @@ public sealed class InMemoryCapabilityCatalogTests
         Assert.Equal("terraform.apply", entry.Capability.Id);
     }
 
+    [Fact]
+    public async Task SearchAsync_FiltersByCategoryAndLifecycle()
+    {
+        var entries = await _catalog.SearchAsync(
+            new CapabilityCatalogQuery
+            {
+                Category = "INFRASTRUCTURE",
+                Lifecycle = "ACTIVE"
+            });
+
+        Assert.Equal(2, entries.Count);
+        Assert.All(entries, entry =>
+        {
+            Assert.Equal("infrastructure", entry.Capability.Category);
+            Assert.Equal("Active", entry.Capability.Lifecycle);
+        });
+    }
+
     [Theory]
     [InlineData("KEYVAULT", "azure.keyvault.secret.read")]
     [InlineData("Terraform Apply", "terraform.apply")]
@@ -124,10 +142,13 @@ public sealed class InMemoryCapabilityCatalogTests
             Id = id,
             Name = name,
             Provider = id.Split('.')[0],
-            Category = "test",
+            Category = id.StartsWith("terraform", StringComparison.Ordinal)
+                ? "infrastructure"
+                : "security",
             Description = description,
             RiskLevel = riskLevel,
             Owner = owner,
+            Lifecycle = "Active",
             Version = "1.0",
             Tags = tags
         };

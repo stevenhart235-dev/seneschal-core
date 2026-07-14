@@ -24,6 +24,7 @@ public sealed class CoreDecisionService
     private readonly IDecisionMetrics? _decisionMetrics;
     private readonly IGovernanceIncidentStore? _governanceIncidentStore;
     private readonly IGovernanceWindowStore? _governanceWindowStore;
+    private readonly IApprovalStore? _approvalStore;
 
     public CoreDecisionService(
         PolicyLoader policyLoader,
@@ -34,7 +35,8 @@ public sealed class CoreDecisionService
         IDecisionExporter? decisionExporter = null,
         IDecisionMetrics? decisionMetrics = null,
         IGovernanceIncidentStore? governanceIncidentStore = null,
-        IGovernanceWindowStore? governanceWindowStore = null)
+        IGovernanceWindowStore? governanceWindowStore = null,
+        IApprovalStore? approvalStore = null)
     {
         _policyLoader = policyLoader;
         _policyEvaluator = policyEvaluator;
@@ -45,6 +47,7 @@ public sealed class CoreDecisionService
         _decisionMetrics = decisionMetrics;
         _governanceIncidentStore = governanceIncidentStore;
         _governanceWindowStore = governanceWindowStore;
+        _approvalStore = approvalStore;
     }
 
     public ApiDecisionResult Evaluate(ApiDecisionRequest request)
@@ -74,6 +77,7 @@ public sealed class CoreDecisionService
             _governanceModeStore.GetMode());
         var policyDecision = coreResult.Decision;
         var policyReason = coreResult.Reason;
+        var approvalEvaluation = EvaluateApproval(coreRequest, ref coreResult);
         var windowEvaluation = EvaluateGovernanceWindow(
             coreRequest.Capability.Id,
             ref coreResult);
@@ -93,7 +97,8 @@ public sealed class CoreDecisionService
             coreResult,
             windowEvaluation,
             policyDecision,
-            policyReason);
+            policyReason,
+            approvalEvaluation);
 
         return DecisionResultMapper.ToApi(
             coreResult,
@@ -148,7 +153,8 @@ public sealed class CoreDecisionService
         DecisionResult result,
         GovernanceWindowEvaluation? windowEvaluation,
         DecisionType policyDecision,
-        string policyReason)
+        string policyReason,
+        ApprovalEvaluation? approvalEvaluation)
     {
         if (_auditSink is null &&
             _activityStore is null &&
@@ -181,6 +187,12 @@ public sealed class CoreDecisionService
             PolicyDecision = policyDecision,
             PolicyReason = policyReason,
             PolicyEvaluations = result.PolicyEvaluations
+            ,ApprovalId = approvalEvaluation?.Record.Id
+            ,ApprovalStatus = approvalEvaluation?.Record.Status.ToString()
+            ,ApprovalAction = approvalEvaluation?.Action
+            ,ApprovalRequestReason = approvalEvaluation?.Record.RequestReason
+            ,ApprovalResolvedAt = approvalEvaluation?.Record.ResolvedAt
+            ,ApprovalResolvedBy = approvalEvaluation?.Record.ResolvedBy
         };
 
         _auditSink?.WriteAsync(auditEvent).GetAwaiter().GetResult();
@@ -188,6 +200,47 @@ public sealed class CoreDecisionService
         TryExport(auditEvent);
         TryRecordMetrics(auditEvent);
         TryRecordIncident(auditEvent);
+    }
+
+    private ApprovalEvaluation? EvaluateApproval(
+        DecisionRequest request,
+        ref DecisionResult result)
+    {
+        if (_approvalStore is null || result.Decision != DecisionType.RequireApproval)
+            return null;
+
+        var reason = request.Context.GetValueOrDefault("reason", request.Intent.Reason);
+        var lookup = _approvalStore.GetOrCreate(
+            request.Identity.Id,
+            request.Capability.Id,
+            request.Resource.Environment ?? string.Empty,
+            request.Resource.Id,
+            reason,
+            request.Timestamp);
+
+        var record = lookup.Record;
+        if (record.Status == ApprovalStatus.Approved)
+        {
+            result = result with
+            {
+                Decision = DecisionType.Allow,
+                Reason = $"Approved through human approval {record.Id}."
+            };
+        }
+        else if (record.Status == ApprovalStatus.Rejected)
+        {
+            result = result with
+            {
+                Decision = DecisionType.Deny,
+                Reason = $"Rejected through human approval {record.Id}."
+            };
+        }
+
+        return new ApprovalEvaluation(
+            record,
+            record.Status == ApprovalStatus.Pending
+                ? lookup.Created ? "Requested" : "Reused"
+                : "Used");
     }
 
     private GovernanceWindowEvaluation? EvaluateGovernanceWindow(
@@ -303,3 +356,7 @@ internal sealed record GovernanceWindowEvaluation(
     GovernanceWindowMode Mode,
     string Message,
     string Reason);
+
+internal sealed record ApprovalEvaluation(
+    ApprovalRecord Record,
+    string Action);

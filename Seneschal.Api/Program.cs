@@ -26,6 +26,7 @@ builder.Services.AddSingleton(new RuntimeSettings
 });
 builder.Services.AddSingleton<IGovernanceModeStore, InMemoryGovernanceModeStore>();
 builder.Services.AddSingleton<IGovernanceWindowStore, InMemoryGovernanceWindowStore>();
+builder.Services.AddSingleton<IApprovalStore, InMemoryApprovalStore>();
 builder.Services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
 builder.Services.AddSingleton<IntegrationApiKeyLoader>();
 builder.Services.AddSingleton<IntegrationApiKeyAuthorizer>();

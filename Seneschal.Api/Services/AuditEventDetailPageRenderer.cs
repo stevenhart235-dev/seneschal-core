@@ -21,6 +21,10 @@ public static class AuditEventDetailPageRenderer
 
         AppendRequestContext(html, auditEvent);
         AppendPolicyEvaluation(html, auditEvent);
+        if (HasApproval(auditEvent))
+        {
+            AppendApproval(html, auditEvent);
+        }
         if (HasWindow(auditEvent))
         {
             AppendGovernanceWindow(html, auditEvent);
@@ -183,6 +187,24 @@ public static class AuditEventDetailPageRenderer
         html.AppendLine("            </section>");
     }
 
+    private static void AppendApproval(StringBuilder html, AuditEvent auditEvent)
+    {
+        var changed = !SameDecision(auditEvent.PolicyDecision, auditEvent.Decision) &&
+            !HasWindow(auditEvent);
+        html.AppendLine("            <section class=\"panel decision-trace-section trace-approval\">");
+        html.AppendLine("                <h2>Human Approval</h2><dl class=\"trace-context-grid\">");
+        AppendMetadata(html, "Approval ID", auditEvent.ApprovalId ?? string.Empty);
+        AppendMetadata(html, "Action", auditEvent.ApprovalAction ?? string.Empty);
+        AppendMetadata(html, "Resolution status", auditEvent.ApprovalStatus ?? string.Empty);
+        AppendMetadata(html, "Request reason", auditEvent.ApprovalRequestReason ?? string.Empty);
+        AppendMetadata(html, "Resolved at", auditEvent.ApprovalResolvedAt?.ToString("u") ?? string.Empty);
+        AppendMetadata(html, "Resolved by", auditEvent.ApprovalResolvedBy ?? string.Empty);
+        AppendMetadata(html, "Effect", changed
+            ? $"Changed Pending Approval to {DisplayDecision(auditEvent.Decision)}"
+            : "Approval remains pending");
+        html.AppendLine("                </dl></section>");
+    }
+
     private static void AppendDecisionResolution(StringBuilder html, AuditEvent auditEvent)
     {
         var effective = GetEffectiveResult(auditEvent);
@@ -200,6 +222,12 @@ public static class AuditEventDetailPageRenderer
             .AppendLine("</span><h2>Decision Resolution</h2>");
         html.AppendLine("                <ol class=\"resolution-flow\">");
         AppendResolutionStep(html, "Policy Decision", DisplayDecision(auditEvent.PolicyDecision), "trace-passed");
+        if (HasApproval(auditEvent))
+        {
+            AppendResolutionStep(html, "Human Approval",
+                $"{auditEvent.ApprovalStatus}: {DisplayDecision(auditEvent.Decision)}",
+                auditEvent.ApprovalStatus == "Pending" ? "trace-continued" : "trace-overridden");
+        }
         AppendResolutionStep(html, "Governance Window", windowText, changedDecision ? "trace-overridden" : "trace-continued");
         AppendResolutionStep(html, "Runtime Governance", auditEvent.EnforcementMode, "trace-mode");
         AppendResolutionStep(html, "Effective application result", effective.Text, effective.CssClass);
@@ -256,6 +284,10 @@ public static class AuditEventDetailPageRenderer
         AppendMetadata(html, "GovernanceWindowMode", auditEvent.GovernanceWindowMode ?? string.Empty);
         AppendMetadata(html, "GovernanceWindowMessage", auditEvent.GovernanceWindowMessage ?? string.Empty);
         AppendMetadata(html, "GovernanceWindowReason", auditEvent.GovernanceWindowReason ?? string.Empty);
+        AppendMetadata(html, "ApprovalId", auditEvent.ApprovalId ?? string.Empty);
+        AppendMetadata(html, "ApprovalStatus", auditEvent.ApprovalStatus ?? string.Empty);
+        AppendMetadata(html, "ApprovalAction", auditEvent.ApprovalAction ?? string.Empty);
+        AppendMetadata(html, "ApprovalResolvedBy", auditEvent.ApprovalResolvedBy ?? string.Empty);
         AppendMetadata(html, "EvaluationDurationMs", auditEvent.EvaluationDurationMs.ToString());
         html.AppendLine("                </dl>");
         html.AppendLine("            </details>");
@@ -323,6 +355,9 @@ public static class AuditEventDetailPageRenderer
 
     private static bool HasWindow(AuditEvent auditEvent) =>
         !string.IsNullOrWhiteSpace(auditEvent.GovernanceWindowName);
+
+    private static bool HasApproval(AuditEvent auditEvent) =>
+        !string.IsNullOrWhiteSpace(auditEvent.ApprovalId);
 
     private static bool IsPending(string decision) =>
         decision.Equals("requires_approval", StringComparison.OrdinalIgnoreCase) ||

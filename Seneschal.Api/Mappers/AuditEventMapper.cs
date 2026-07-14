@@ -33,6 +33,12 @@ public static class AuditEventMapper
             GovernanceWindowReason = auditEvent.GovernanceWindowReason,
             PolicyDecision = DecisionTypeMapper.ToApi(auditEvent.PolicyDecision),
             PolicyReason = auditEvent.PolicyReason,
+            ApprovalId = auditEvent.ApprovalId,
+            ApprovalStatus = auditEvent.ApprovalStatus,
+            ApprovalAction = auditEvent.ApprovalAction,
+            ApprovalRequestReason = auditEvent.ApprovalRequestReason,
+            ApprovalResolvedAt = auditEvent.ApprovalResolvedAt,
+            ApprovalResolvedBy = auditEvent.ApprovalResolvedBy,
             PolicyEvaluations = auditEvent.PolicyEvaluations.Select(policy =>
                 new AuditPolicyEvaluation
                 {

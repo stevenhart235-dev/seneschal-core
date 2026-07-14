@@ -7,6 +7,22 @@ namespace Seneschal.Api.Tests;
 public sealed class AuditDecisionExplanationTests
 {
     [Fact]
+    public void Render_ApprovalEvidenceIsHumanReadableAndEncoded()
+    {
+        var auditEvent = CreateEvent("allow", "Enforce", "requires_approval");
+        auditEvent.ApprovalId = "approval-1";
+        auditEvent.ApprovalStatus = "Approved";
+        auditEvent.ApprovalAction = "Used";
+        auditEvent.ApprovalRequestReason = "<request>";
+        auditEvent.ApprovalResolvedBy = "<reviewer>";
+        var html = AuditEventDetailPageRenderer.Render(auditEvent);
+        Assert.Contains("Human Approval", html);
+        Assert.Contains("Changed Pending Approval to Allow", html);
+        Assert.Contains("&lt;request&gt;", html);
+        Assert.Contains("&lt;reviewer&gt;", html);
+        Assert.DoesNotContain("<reviewer>", html);
+    }
+    [Fact]
     public void Render_PlainAllowShowsExecutedFlow()
     {
         var html = RenderEvent("allow", "Enforce", "allow");

@@ -171,7 +171,13 @@ public sealed class ApiContractTests :
             "governanceWindowReason",
             "policyDecision",
             "policyReason",
-            "policyEvaluations");
+            "policyEvaluations",
+            "approvalId",
+            "approvalStatus",
+            "approvalAction",
+            "approvalRequestReason",
+            "approvalResolvedAt",
+            "approvalResolvedBy");
     }
 
     private async Task<HttpResponseMessage> PostEvaluationAsync(

@@ -24,4 +24,10 @@ public sealed record AuditEvent
     public DecisionType PolicyDecision { get; init; }
     public string PolicyReason { get; init; } = string.Empty;
     public List<PolicyEvaluation> PolicyEvaluations { get; init; } = new();
+    public string? ApprovalId { get; init; }
+    public string? ApprovalStatus { get; init; }
+    public string? ApprovalAction { get; init; }
+    public string? ApprovalRequestReason { get; init; }
+    public DateTimeOffset? ApprovalResolvedAt { get; init; }
+    public string? ApprovalResolvedBy { get; init; }
 }

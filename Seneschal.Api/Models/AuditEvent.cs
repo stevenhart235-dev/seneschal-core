@@ -22,6 +22,12 @@ public class AuditEvent
     public string PolicyDecision { get; set; } = "";
     public string PolicyReason { get; set; } = "";
     public List<AuditPolicyEvaluation> PolicyEvaluations { get; set; } = new();
+    public string? ApprovalId { get; set; }
+    public string? ApprovalStatus { get; set; }
+    public string? ApprovalAction { get; set; }
+    public string? ApprovalRequestReason { get; set; }
+    public DateTimeOffset? ApprovalResolvedAt { get; set; }
+    public string? ApprovalResolvedBy { get; set; }
 }
 
 public class AuditPolicyEvaluation

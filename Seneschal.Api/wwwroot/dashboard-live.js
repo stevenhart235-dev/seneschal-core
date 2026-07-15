@@ -58,11 +58,11 @@
     function render(data) {
         const enforce = data.currentMode === "Enforce";
         const posture = document.querySelector("#governance-posture");
-        posture.className = `reference-kpi mode-kpi mode-posture-${data.currentMode.toLowerCase()}`;
+        posture.className = `dashboard-posture-panel mode-posture-${data.currentMode.toLowerCase()}`;
         document.querySelector("#governance-posture-title").textContent = enforce ? "Enforcing" : "Monitoring";
         document.querySelector("#governance-posture-description").textContent = enforce
-            ? "Deny and pending projected blocked"
-            : "Decisions recorded; operations continue";
+            ? "Seneschal is responding. Denied and pending operations are projected as blocked."
+            : "Seneschal is responding. Decisions are recorded and integrated operations continue.";
         document.querySelector("#governance-posture-mode").textContent = data.currentMode;
         document.querySelector("#live-identity-count").textContent = data.activeIdentityCount;
         document.querySelector("#live-capability-count").textContent = data.activeCapabilityCount;

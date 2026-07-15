@@ -46,9 +46,9 @@ public sealed class DashboardPageTests :
         Assert.Contains("/monitor", html);
         Assert.Contains("/resources", html);
         Assert.Contains("/graph-view", html);
-        Assert.Contains("Runtime posture", html);
+        Assert.Contains("Operational posture", html);
         Assert.Contains("Live Decision Activity", html);
-        Assert.Contains("Needs Attention", html);
+        Assert.Contains("Attention", html);
         Assert.Contains("Most Active Capabilities", html);
         Assert.Contains("Governance coverage", html);
         Assert.Contains("Capability Activity", html);
@@ -92,7 +92,7 @@ public sealed class DashboardPageTests :
         var html = await response.Content.ReadAsStringAsync();
 
         Assert.Contains("No evaluations have been recorded", html);
-        Assert.Contains("Runtime posture", html);
+        Assert.Contains("Operational posture", html);
         Assert.Contains("Governance coverage", html);
         Assert.DoesNotContain("First-Run Guide", html);
     }
@@ -164,7 +164,7 @@ public sealed class DashboardPageTests :
         var html = await response.Content.ReadAsStringAsync();
 
         Assert.DoesNotContain("First-Run Guide", html);
-        Assert.Contains("Runtime posture", html);
+        Assert.Contains("Operational posture", html);
         Assert.Contains("Live Decision Activity", html);
         Assert.Contains("Most Active Capabilities", html);
     }
@@ -197,8 +197,8 @@ public sealed class DashboardPageTests :
 
         var html = await _client.GetStringAsync("/dashboard");
 
-        Assert.Contains("Runtime posture", html);
-        Assert.Contains("Canonical mode:", html);
+        Assert.Contains("Operational posture", html);
+        Assert.Contains("Runtime Governance", html);
         Assert.Contains("LogOnly", html);
         Assert.Contains("Live Decision Activity", html);
         Assert.Contains(identity, html);

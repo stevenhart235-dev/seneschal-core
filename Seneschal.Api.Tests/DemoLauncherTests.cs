@@ -29,4 +29,22 @@ public sealed class DemoLauncherTests
         Assert.Contains("foreach ($processId in @($state.ProcessIds))", script);
         Assert.Contains("taskkill.exe /PID ([int]$processId) /T /F", script);
     }
+
+    [Fact]
+    public void ApprovalRunnerAttachesToDemoAndPollsExistingApprovalEvidence()
+    {
+        var script = File.ReadAllText(Path.Combine(RepositoryRoot, "demo-approval.ps1"));
+
+        Assert.Contains("artifacts/demo/state.json", script);
+        Assert.Contains("$baseUrl/ready", script);
+        Assert.Contains("$baseUrl/audit", script);
+        Assert.Contains("release-approval-worker", script);
+        Assert.Contains("production.release.approve", script);
+        Assert.Contains("approvalOperationId", script);
+        Assert.Contains("approvalAction -eq 'Consumed'", script);
+        Assert.Contains("approvalAction -eq 'Used'", script);
+        Assert.Contains("Start it with .\\demo.ps1", script);
+        Assert.DoesNotContain("& .\\demo.ps1", script);
+        Assert.DoesNotContain("Start-Process dotnet", script);
+    }
 }

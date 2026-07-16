@@ -20,6 +20,15 @@ cd seneschal-core
 
 The launcher packs the local client package, starts Seneschal and four package-based workers, waits for readiness, and opens the Dashboard automatically.
 
+To walk through the operation-scoped, single-use approval lifecycle against the running demo:
+
+```powershell
+.\demo.ps1
+.\demo-approval.ps1
+```
+
+The approval runner detects the current ApprovalWorker request and guides the presenter through approving or rejecting it in the portal.
+
 Run the guided Production Freeze story after the demo is ready:
 
 ```powershell
@@ -54,7 +63,7 @@ Process output is available under `artifacts/demo/logs/`.
 - **Terraform/OpenTofu governance gate** for pre-apply evaluation
 - **Local demo launcher** through `demo.ps1` and `stop-demo.ps1`
 
-`PendingApproval` is currently a decision state, not an approval-resolution workflow. Runtime mode, audit evidence, activity, metrics, and incidents reset when Seneschal restarts.
+`PendingApproval` has a temporary in-memory, single-use approval workflow. Runtime mode, approvals, audit evidence, activity, metrics, and incidents reset when Seneschal restarts.
 
 ## Integrations
 

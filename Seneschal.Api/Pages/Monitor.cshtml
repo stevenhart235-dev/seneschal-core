@@ -1,5 +1,6 @@
 @page "/monitor"
 @model Seneschal.Api.Pages.MonitorModel
+@using Seneschal.Core.Enums
 @{
     Layout = null;
 }
@@ -8,508 +9,101 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Seneschal Monitor Dashboard</title>
+    <title>Seneschal Monitor</title>
     <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-    <div class="app-shell">
-        @await Html.PartialAsync("Shared/_PortalSidebar", "monitor")
+<div class="app-shell">
+    @await Html.PartialAsync("Shared/_PortalSidebar", "monitor")
+    <main id="monitor-console" class="container explorer-page monitor-console" data-generated-at="@Model.GeneratedAtUtc.ToString("O")">
+        <header class="page-header monitor-page-header">
+            <div><div class="breadcrumb">Overview / Monitor</div><h1>Monitor</h1><p class="subtitle">Live operational state across the Seneschal runtime.</p></div>
+            <a class="table-link" href="/dashboard">Open Dashboard</a>
+        </header>
 
-        <main class="container explorer-page">
-            <header class="page-header">
-                <div class="breadcrumb">Overview / Monitor</div>
-                <h1>Monitor Dashboard</h1>
-                <p class="subtitle">
-                    Assess whether observed governance activity is ready for
-                    targeted enforcement.
-                </p>
-            </header>
+        <section class="monitor-posture @(Model.CanonicalRuntimeMode == "Enforce" ? "is-enforcing" : "is-monitoring")" aria-labelledby="monitor-posture-title">
+            <div class="monitor-posture-primary">
+                <span class="monitor-eyebrow">Operational status</span>
+                <div class="monitor-health-line"><span class="monitor-health-dot" aria-hidden="true"></span><strong id="monitor-posture-title">@(Model.SeneschalHealthy ? "Healthy" : "Configuration requires attention")</strong></div>
+                <div class="monitor-mode-line"><span>@(Model.CanonicalRuntimeMode == "Enforce" ? "Enforcement active" : "Monitoring active")</span><small>Canonical mode: <b>@Model.CanonicalRuntimeMode</b></small></div>
+                <p>@Model.OperationalSummary</p>
+            </div>
+            <dl class="monitor-posture-context">
+                <div><dt>Governance windows</dt><dd>@(Model.GovernanceWindow.Enabled ? $"{Model.GovernanceWindow.Name} · {Model.GovernanceWindow.Mode}" : "None active")</dd></div>
+                <div><dt>Last successful evaluation</dt><dd>@if (Model.LastEvaluationUtc is null) { <span>No evaluations observed</span> } else { <time data-relative-time datetime="@Model.LastEvaluationUtc.Value.ToString("O")">@Model.LastEvaluationUtc.Value.ToString("u")</time> }</dd></div>
+                <div><dt>Polling</dt><dd id="monitor-polling-status"><span class="live-indicator" aria-hidden="true"></span> Current · every 3 seconds</dd></div>
+                <div class="monitor-posture-links"><dt>Controls</dt><dd><a href="/governance">Runtime Governance</a><a href="/governance-windows">Governance Windows</a></dd></div>
+            </dl>
+        </section>
 
-            <section class="monitor-status-banner">
-                <div>
-                    <span class="badge monitor-mode-badge">
-                        Current Mode: @Model.CurrentMode
-                    </span>
-                    <p>
-                        @(Model.CurrentMode == "Monitor"
-                            ? "Policies are evaluated and audited, but runtime requests are not blocked."
-                            : "Policies are evaluated and audited; denied and pending approval requests are projected as blocked.")
-                    </p>
-                </div>
-            </section>
+        <section class="monitor-metrics" aria-label="Live runtime metrics">
+            <article><span>Evaluations · 5 min</span><strong>@Model.RecentEvaluationCount</strong></article>
+            <article><span>Allow</span><strong class="metric-allow">@Model.RecentAllowCount</strong></article>
+            <article><span>Deny</span><strong class="metric-deny">@Model.RecentDenyCount</strong></article>
+            <article><span>Pending approval</span><strong class="metric-pending">@Model.RecentPendingCount</strong></article>
+            <article><span>Average latency</span><strong>@Model.RecentAverageLatencyMs.ToString("0.##") <small>ms</small></strong></article>
+            <article><span>Active identities</span><strong>@Model.ActiveIdentityCount</strong></article>
+            <article><span>Active capabilities</span><strong>@Model.ActiveCapabilityCount</strong></article>
+        </section>
 
-            <section class="panel readiness-panel">
-                <div class="dashboard-section-header">
-                    <div>
-                        <h2>Governance Readiness</h2>
-                        <p class="muted">
-                            Deterministic score based on current configuration,
-                            audit history, and observed runtime activity.
-                        </p>
-                    </div>
-                    <div class="readiness-score">
-                        @Model.ReadinessScore%
-                    </div>
-                </div>
-
-                <p class="monitor-recommendation">
-                    @Model.ReadinessRecommendation
-                </p>
-
-                <div class="readiness-check-grid">
-                    <article class="readiness-check @(Model.PoliciesExist ? "ready" : "needs-observation")">
-                        <strong>Policies exist</strong>
-                        <span>@(Model.PoliciesExist ? "Yes" : "No")</span>
-                    </article>
-                    <article class="readiness-check @(Model.RuntimeDecisionsObserved ? "ready" : "needs-observation")">
-                        <strong>Runtime decisions observed</strong>
-                        <span>@(Model.RuntimeDecisionsObserved ? "Yes" : "No")</span>
-                    </article>
-                    <article class="readiness-check @(Model.AuditHistoryAvailable ? "ready" : "needs-observation")">
-                        <strong>Audit history available</strong>
-                        <span>@(Model.AuditHistoryAvailable ? "Yes" : "No")</span>
-                    </article>
-                    <article class="readiness-check @(Model.ActivityMetricsAvailable ? "ready" : "needs-observation")">
-                        <strong>Activity metrics available</strong>
-                        <span>@(Model.ActivityMetricsAvailable ? "Yes" : "No")</span>
-                    </article>
-                </div>
-            </section>
-
-            <section class="dashboard-columns">
-                <article class="panel">
-                    <h2>Would Have Been Blocked</h2>
-                    @if (!Model.HasWouldHaveBeenBlockedActivity)
-                    {
-                        <div class="empty-state">
-                            <p class="muted">
-                                No denied or pending approval decisions have
-                                been observed yet.
-                            </p>
-                            <p class="muted">
-                                This widget shows monitor-mode decisions that
-                                would block or require approval under
-                                enforcement.
-                            </p>
-                        </div>
-                    }
-                    else
-                    {
-                        <section class="dashboard-grid monitor-mini-grid">
-                            <article class="dashboard-card activity-card">
-                                <strong>@Model.TotalDeniedDecisions</strong>
-                                <span>Total Denied Decisions</span>
-                            </article>
-                            <article class="dashboard-card activity-card">
-                                <strong>@Model.PendingApprovalDecisions</strong>
-                                <span>Pending Approvals Observed</span>
-                            </article>
-                        </section>
-
-                        <h3 class="monitor-subheading">Top Denial Reasons</h3>
-                        @if (Model.TopDenialReasons.Count == 0)
-                        {
-                            <p class="muted">
-                                Denials have been observed, but no denial
-                                reasons are available.
-                            </p>
-                        }
-                        else
-                        {
-                            <ul class="compact-list activity-list">
-                                @foreach (var reason in Model.TopDenialReasons)
-                                {
-                                    <li>
-                                        <span>@reason.Reason</span>
-                                        <span>@reason.Count denied</span>
-                                    </li>
-                                }
-                            </ul>
-                        }
-                    }
-                </article>
-
-                <article class="panel">
-                    <h2>Most Active Policies</h2>
-                    @if (Model.MostActivePolicies.Count == 0)
-                    {
-                        <p class="muted empty-state">
-                            Policy activity appears after runtime evaluations
-                            match policies.
-                        </p>
-                    }
-                    else
-                    {
-                        <ul class="compact-list activity-list">
-                            @foreach (var policy in Model.MostActivePolicies)
-                            {
-                                <li>
-                                    <span>@policy.PolicyId</span>
-                                    <span>@policy.MatchCount matches</span>
-                                </li>
-                            }
-                        </ul>
-                    }
-                </article>
-            </section>
-
-            <section class="panel">
-                <h2>Capabilities Ready For Enforcement</h2>
-                @if (Model.CapabilityReadiness.Count == 0)
+        <div class="monitor-workspace">
+            <section class="panel monitor-stream" aria-labelledby="decision-stream-title">
+                <header class="monitor-section-header"><div><h2 id="decision-stream-title">Live decision stream</h2><p>Most recent runtime evaluations, newest first.</p></div><a href="/audit">Open Audit Trail</a></header>
+                @if (Model.RecentEvaluations.Count == 0)
                 {
-                    <div class="empty-state">
-                        <p class="muted">
-                            Capability readiness appears after runtime activity
-                            has been observed.
-                        </p>
-                        <p class="muted">
-                            Continue monitor-mode evaluations before enabling
-                            enforcement.
-                        </p>
-                    </div>
+                    <div class="empty-state"><strong>No runtime evaluations observed</strong><p>Decision activity appears here when an integrated application calls Seneschal.</p></div>
                 }
                 else
                 {
-                    <table class="activity-table">
-                        <thead>
-                            <tr>
-                                <th>Capability</th>
-                                <th>Requests</th>
-                                <th>Denied</th>
-                                <th>Pending Approval</th>
-                                <th>Readiness</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var capability in Model.CapabilityReadiness)
-                            {
-                                <tr>
-                                    <td>
-                                        <a class="table-link" href="/capability-activity?capabilityId=@Uri.EscapeDataString(capability.CapabilityId)">
-                                            @capability.CapabilityId
-                                        </a>
-                                    </td>
-                                    <td>@capability.TotalRequests</td>
-                                    <td>@capability.DeniedCount</td>
-                                    <td>@capability.PendingApprovalCount</td>
-                                    <td>
-                                        <span class="badge readiness-badge @(capability.Status == "Ready" ? "readiness-ready" : "readiness-needs-observation")">
-                                            @capability.Status
-                                        </span>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                    <ol class="monitor-event-list">
+                    @foreach (var item in Model.RecentEvaluations)
+                    {
+                        var decision = DecisionLabel(item.Decision);
+                        var effective = EffectiveResult(item.Decision, item.EnforcementMode);
+                        <li class="monitor-event-row">
+                            <time data-relative-time datetime="@item.TimestampUtc.ToString("O")">@item.TimestampUtc.ToString("u")</time>
+                            <div class="monitor-event-subject"><a href="/identity-activity?identityId=@Uri.EscapeDataString(item.IdentityId)">@item.IdentityId</a><a href="/capability-activity?capabilityId=@Uri.EscapeDataString(item.CapabilityId)">@item.CapabilityId</a></div>
+                            <div class="monitor-event-outcome"><span class="decision-badge decision-@DecisionClass(item.Decision)">@decision</span><span class="effective-result effective-@EffectiveClass(effective)">→ @effective</span></div>
+                            <div class="monitor-event-context">
+                                @if (!string.IsNullOrWhiteSpace(item.GovernanceWindowName)) { <span class="window-participation">Window: @item.GovernanceWindowName (@item.GovernanceWindowMode)</span> }
+                                @if (!string.IsNullOrWhiteSpace(item.ApprovalOperationId)) { <code title="Application operation ID">@item.ApprovalOperationId</code> }
+                            </div>
+                            <a class="monitor-trace-link" href="/audit/@Uri.EscapeDataString(item.Id)">View trace</a>
+                        </li>
+                    }
+                    </ol>
                 }
             </section>
 
-            <section class="panel enforcement-advisor">
-                <div class="dashboard-section-header">
-                    <div>
-                        <h2>Enforcement Readiness Advisor</h2>
-                        <p class="muted">
-                            Deterministic capability-level recommendations
-                            based on observed runtime activity.
-                        </p>
-                    </div>
-                </div>
+            <aside class="monitor-side-column">
+                <section class="panel monitor-attention" aria-labelledby="attention-title">
+                    <header class="monitor-section-header"><div><h2 id="attention-title">Attention</h2><p>Current signals worth reviewing.</p></div></header>
+                    <a class="monitor-attention-item @(Model.CurrentPendingApprovalCount > 0 ? "has-attention" : "")" href="/approvals"><span>Pending approvals</span><strong>@Model.CurrentPendingApprovalCount</strong><small>@(Model.CurrentPendingApprovalCount > 0 ? "Awaiting human resolution" : "No requests waiting")</small></a>
+                    <a class="monitor-attention-item @(Model.MostDeniedCapability is not null ? "has-critical" : "")" href="@(Model.MostDeniedCapability is null ? "/capability-activity" : $"/capability-activity?capabilityId={Uri.EscapeDataString(Model.MostDeniedCapability.CapabilityId)}")"><span>Most denied capability</span><strong>@(Model.MostDeniedCapability?.DeniedCount ?? 0)</strong><small>@(Model.MostDeniedCapability?.CapabilityId ?? "No denied capability observed")</small></a>
+                    <a class="monitor-attention-item" href="@(Model.MostActiveIdentity is null ? "/identity-activity" : $"/identity-activity?identityId={Uri.EscapeDataString(Model.MostActiveIdentity.IdentityId)}")"><span>Most active identity</span><strong>@(Model.MostActiveIdentity?.TotalRequests ?? 0)</strong><small>@(Model.MostActiveIdentity?.IdentityId ?? "No identity activity observed")</small></a>
+                    <a class="monitor-attention-item @(Model.GovernanceWindow.Enabled ? "has-attention" : "")" href="/governance-windows"><span>Active governance windows</span><strong>@(Model.GovernanceWindow.Enabled ? 1 : 0)</strong><small>@(Model.GovernanceWindow.Enabled ? $"{Model.GovernanceWindow.Name} · {Model.GovernanceWindow.Mode}" : "None active")</small></a>
+                    <div class="monitor-incidents"><div><span>Recent incidents</span><a href="/incidents">View all</a></div>@if (Model.RecentIncidents.Count == 0) { <p>No incidents recorded.</p> } else { <ul>@foreach (var incident in Model.RecentIncidents) { <li><a href="/incidents/@Uri.EscapeDataString(incident.Id)">@incident.Title</a><small>@incident.LastSeenUtc.ToString("u")</small></li> }</ul> }</div>
+                </section>
 
-                @if (Model.EnforcementReadinessAdvisor.Count == 0)
-                {
-                    <div class="empty-state">
-                        <p class="muted">
-                            No capability activity has been observed yet.
-                        </p>
-                        <p class="muted">
-                            Run monitor-mode evaluations before selecting
-                            capabilities for enforcement.
-                        </p>
-                    </div>
-                }
-                else
-                {
-                    <div class="advisor-list">
-                        @foreach (var advice in Model.EnforcementReadinessAdvisor)
-                        {
-                            <article class="advisor-card">
-                                <div class="advisor-card-header">
-                                    <div>
-                                        <h3>@advice.CapabilityId</h3>
-                                        <p class="muted">
-                                            @advice.Recommendation
-                                        </p>
-                                    </div>
-                                    <div class="advisor-score">
-                                        <strong>@advice.ReadinessScore%</strong>
-                                        <span class="badge readiness-badge @GetAdvisorStatusClass(advice.Status)">
-                                            @advice.Status
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <dl class="advisor-metrics">
-                                    <div>
-                                        <dt>Total requests</dt>
-                                        <dd>@advice.TotalRequests</dd>
-                                    </div>
-                                    <div>
-                                        <dt>Allowed</dt>
-                                        <dd>@advice.AllowedCount</dd>
-                                    </div>
-                                    <div>
-                                        <dt>Denied</dt>
-                                        <dd>@advice.DeniedCount</dd>
-                                    </div>
-                                    <div>
-                                        <dt>Pending approval</dt>
-                                        <dd>@advice.PendingApprovalCount</dd>
-                                    </div>
-                                    <div>
-                                        <dt>Average duration</dt>
-                                        <dd>@advice.AverageEvaluationDurationMs.ToString("0.##") ms</dd>
-                                    </div>
-                                </dl>
-
-                                <div class="advisor-reasons">
-                                    <strong>Evidence</strong>
-                                    <ul>
-                                        @foreach (var reason in advice.ExplanationReasons)
-                                        {
-                                            <li>@reason</li>
-                                        }
-                                    </ul>
-                                </div>
-                            </article>
-                        }
-                    </div>
-                }
-            </section>
-
-            <section class="panel governance-drift">
-                <div class="dashboard-section-header">
-                    <div>
-                        <h2>Governance Drift</h2>
-                        <p class="muted">
-                            Deterministic checks for configured governance
-                            objects that are stale, unused, or under-covered
-                            by observed runtime activity.
-                        </p>
-                    </div>
-                </div>
-
-                @if (!Model.HasGovernanceDrift)
-                {
-                    <div class="empty-state">
-                        <p class="muted">
-                            No governance drift detected from current
-                            in-memory activity.
-                        </p>
-                    </div>
-                }
-                else
-                {
-                    <div class="drift-grid">
-                        <article class="drift-card">
-                            <h3>Unused Capabilities</h3>
-                            @if (Model.UnusedCapabilities.Count == 0)
-                            {
-                                <p class="muted">
-                                    Every registered capability has observed
-                                    runtime activity.
-                                </p>
-                            }
-                            else
-                            {
-                                <ul class="compact-list activity-list">
-                                    @foreach (var capability in Model.UnusedCapabilities)
-                                    {
-                                        <li>
-                                            <span>
-                                                @capability.CapabilityId
-                                                @if (!string.IsNullOrWhiteSpace(capability.Name) &&
-                                                    capability.Name != capability.CapabilityId)
-                                                {
-                                                    <small>@capability.Name</small>
-                                                }
-                                            </span>
-                                            <span>
-                                                @FormatMetadata(capability.Risk, capability.Category)
-                                            </span>
-                                        </li>
-                                    }
-                                </ul>
-                            }
-                        </article>
-
-                        <article class="drift-card">
-                            <h3>Unused Identities</h3>
-                            @if (Model.UnusedIdentities.Count == 0)
-                            {
-                                <p class="muted">
-                                    Every registered identity has observed
-                                    runtime activity.
-                                </p>
-                            }
-                            else
-                            {
-                                <ul class="compact-list activity-list">
-                                    @foreach (var identity in Model.UnusedIdentities)
-                                    {
-                                        <li>
-                                            <span>@identity.IdentityId</span>
-                                            <span>
-                                                @FormatMetadata(identity.Type, identity.Source)
-                                            </span>
-                                        </li>
-                                    }
-                                </ul>
-                            }
-                        </article>
-
-                        <article class="drift-card">
-                            <h3>Unused Policies</h3>
-                            @if (Model.UnusedPolicies.Count == 0)
-                            {
-                                <p class="muted">
-                                    Every configured policy has matched at
-                                    least one runtime evaluation.
-                                </p>
-                            }
-                            else
-                            {
-                                <ul class="compact-list activity-list">
-                                    @foreach (var policy in Model.UnusedPolicies)
-                                    {
-                                        <li>
-                                            <span>@policy.PolicyId</span>
-                                            <span>
-                                                @FormatMetadata(policy.Effect, policy.Mode)
-                                            </span>
-                                        </li>
-                                    }
-                                </ul>
-                            }
-                        </article>
-
-                        <article class="drift-card">
-                            <h3>Runtime Activity Without Policy Match</h3>
-                            @if (Model.ActivityWithoutPolicyMatches.Count == 0)
-                            {
-                                <p class="muted">
-                                    No audited capability activity without a
-                                    recorded policy match was found. This check
-                                    only reports explicit audit evidence.
-                                </p>
-                            }
-                            else
-                            {
-                                <ul class="compact-list activity-list">
-                                    @foreach (var activity in Model.ActivityWithoutPolicyMatches)
-                                    {
-                                        <li>
-                                            <span>@activity.CapabilityId</span>
-                                            <span>@activity.EventCount events</span>
-                                        </li>
-                                    }
-                                </ul>
-                            }
-                        </article>
-                    </div>
-                }
-            </section>
-
-            <section class="panel governance-recommendations">
-                <div class="dashboard-section-header">
-                    <div>
-                        <h2>Governance Recommendations</h2>
-                        <p class="muted">
-                            Deterministic next steps from readiness, drift,
-                            audit, and activity signals.
-                        </p>
-                    </div>
-                </div>
-
-                @if (Model.GovernanceRecommendations.Count == 0)
-                {
-                    <div class="empty-state">
-                        <p class="muted">
-                            No governance recommendations available from
-                            current in-memory activity.
-                        </p>
-                    </div>
-                }
-                else
-                {
-                    <div class="recommendation-list">
-                        @foreach (var recommendation in Model.GovernanceRecommendations)
-                        {
-                            <article class="recommendation-card">
-                                <div class="recommendation-header">
-                                    <div>
-                                        <h3>@recommendation.Title</h3>
-                                        <p class="muted">
-                                            @recommendation.RecommendationText
-                                        </p>
-                                    </div>
-                                    <span class="badge recommendation-severity @GetRecommendationSeverityClass(recommendation.Severity)">
-                                        @recommendation.Severity
-                                    </span>
-                                </div>
-
-                                <ul class="recommendation-evidence">
-                                    @foreach (var evidence in recommendation.Evidence)
-                                    {
-                                        <li>@evidence</li>
-                                    }
-                                </ul>
-
-                                @if (!string.IsNullOrWhiteSpace(recommendation.LinkUrl) &&
-                                    !string.IsNullOrWhiteSpace(recommendation.LinkText))
-                                {
-                                    <a class="table-link" href="@recommendation.LinkUrl">
-                                        @recommendation.LinkText
-                                    </a>
-                                }
-                            </article>
-                        }
-                    </div>
-                }
-            </section>
-
-            <footer class="app-footer">Seneschal v0.2.1-alpha</footer>
-        </main>
-    </div>
+                <section class="panel monitor-runtime-health" aria-labelledby="runtime-health-title">
+                    <header class="monitor-section-header"><div><h2 id="runtime-health-title">Runtime health</h2><p>Observed runtime responsiveness.</p></div></header>
+                    <div class="runtime-health-state"><span class="monitor-health-dot" aria-hidden="true"></span><div><strong>@(Model.SeneschalHealthy ? "Seneschal is responding" : "Configuration requires attention")</strong><small>@(Model.EvaluationsFlowing ? "Evaluations are flowing" : Model.LastEvaluationUtc is null ? "Waiting for evaluation traffic" : "No evaluation in the last 20 seconds")</small></div></div>
+                    <dl><div><dt>Observed latency</dt><dd>@Model.RecentAverageLatencyMs.ToString("0.##") ms average</dd></div><div><dt>Current range</dt><dd>@Model.RecentMinimumLatencyMs–@Model.RecentMaximumLatencyMs ms</dd></div><div><dt>Polling evidence</dt><dd id="monitor-health-polling">Current</dd></div></dl>
+                    <a href="/diagnostics">Open Diagnostics</a>
+                </section>
+            </aside>
+        </div>
+        <noscript><p class="warning-panel">Live refresh requires JavaScript. Reload this page to update operational state.</p></noscript>
+        <footer class="app-footer">Seneschal v0.2.1-alpha</footer>
+    </main>
+</div>
+<script src="/monitor-live.js"></script>
 </body>
 </html>
 
 @functions {
-    private static string GetAdvisorStatusClass(string status)
-    {
-        return status switch
-        {
-            "Ready for Enforcement" => "readiness-ready",
-            "Nearly Ready" => "readiness-nearly-ready",
-            "Remain in Monitor" => "readiness-remain-monitor",
-            _ => "readiness-not-ready"
-        };
-    }
-
-    private static string FormatMetadata(params string[] values)
-    {
-        var metadata = values
-            .Where(value => !string.IsNullOrWhiteSpace(value));
-
-        return string.Join(" / ", metadata);
-    }
-
-    private static string GetRecommendationSeverityClass(string severity)
-    {
-        return severity switch
-        {
-            "Critical" => "recommendation-critical",
-            "Warning" => "recommendation-warning",
-            _ => "recommendation-info"
-        };
-    }
+    private static string DecisionLabel(DecisionType decision) => decision == DecisionType.RequireApproval ? "Pending Approval" : decision.ToString();
+    private static string DecisionClass(DecisionType decision) => decision == DecisionType.RequireApproval ? "pending" : decision.ToString().ToLowerInvariant();
+    private static string EffectiveResult(DecisionType decision, EnforcementMode mode) => decision switch { DecisionType.Allow => "Executed", DecisionType.RequireApproval when mode == EnforcementMode.Enforce => "Blocked pending approval", DecisionType.Deny when mode == EnforcementMode.Enforce => "Blocked", _ => "Executed and recorded" };
+    private static string EffectiveClass(string effective) => effective switch { "Executed" => "executed", "Executed and recorded" => "recorded", "Blocked pending approval" => "pending-blocked", _ => "blocked" };
 }

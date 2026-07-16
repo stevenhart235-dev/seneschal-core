@@ -14,6 +14,12 @@ public sealed class MonitorModel : PageModel
     private readonly IActivityStore _activityStore;
     private readonly CapabilityLoader _capabilityLoader;
     private readonly IdentityLoader _identityLoader;
+    private readonly IGovernanceWindowStore _governanceWindowStore;
+    private readonly IApprovalStore _approvalStore;
+    private readonly IGovernanceIncidentStore _incidentStore;
+
+    public static readonly TimeSpan RecentWindow = TimeSpan.FromMinutes(5);
+    public static readonly TimeSpan ActiveThreshold = TimeSpan.FromSeconds(20);
 
     public MonitorModel(
         PolicyLoader policyLoader,
@@ -21,7 +27,10 @@ public sealed class MonitorModel : PageModel
         IAuditEventStore auditEventStore,
         IActivityStore activityStore,
         CapabilityLoader capabilityLoader,
-        IdentityLoader identityLoader)
+        IdentityLoader identityLoader,
+        IGovernanceWindowStore governanceWindowStore,
+        IApprovalStore approvalStore,
+        IGovernanceIncidentStore incidentStore)
     {
         _policyLoader = policyLoader;
         _governanceModeStore = governanceModeStore;
@@ -29,11 +38,44 @@ public sealed class MonitorModel : PageModel
         _activityStore = activityStore;
         _capabilityLoader = capabilityLoader;
         _identityLoader = identityLoader;
+        _governanceWindowStore = governanceWindowStore;
+        _approvalStore = approvalStore;
+        _incidentStore = incidentStore;
     }
 
     public string CurrentMode => _governanceModeStore.GetMode() == EnforcementMode.LogOnly
         ? "Monitor"
         : "Enforce";
+
+    public string CanonicalRuntimeMode => _governanceModeStore.GetMode().ToString();
+    public GovernanceWindow GovernanceWindow { get; private set; } = null!;
+    public IReadOnlyCollection<AuditEvent> RecentEvaluations { get; private set; } = [];
+    public IReadOnlyCollection<GovernanceIncident> RecentIncidents { get; private set; } = [];
+    public DateTimeOffset GeneratedAtUtc { get; private set; }
+    public DateTimeOffset? LastEvaluationUtc { get; private set; }
+    public long RecentEvaluationCount { get; private set; }
+    public long RecentAllowCount { get; private set; }
+    public long RecentDenyCount { get; private set; }
+    public long RecentPendingCount { get; private set; }
+    public double RecentAverageLatencyMs { get; private set; }
+    public long RecentMinimumLatencyMs { get; private set; }
+    public long RecentMaximumLatencyMs { get; private set; }
+    public int ActiveIdentityCount { get; private set; }
+    public int ActiveCapabilityCount { get; private set; }
+    public int CurrentPendingApprovalCount { get; private set; }
+    public CapabilityActivity? MostDeniedCapability { get; private set; }
+    public IdentityActivity? MostActiveIdentity { get; private set; }
+    public bool EvaluationsFlowing => LastEvaluationUtc is not null &&
+        LastEvaluationUtc >= GeneratedAtUtc - ActiveThreshold;
+    public bool SeneschalHealthy => _capabilityLoader.GetCapabilities().Count > 0 &&
+        _identityLoader.GetIdentities().Count > 0 && _policyLoader.GetPolicies().Count > 0;
+    public string OperationalSummary => CanonicalRuntimeMode == "Enforce"
+        ? GovernanceWindow.Enabled
+            ? $"Runtime enforcement is active with {GovernanceWindow.Name}."
+            : "Runtime enforcement is active; denied and pending decisions may block callers."
+        : GovernanceWindow.Enabled
+            ? $"Monitoring is active with {GovernanceWindow.Name} participating in evaluations."
+            : "Monitoring is active; denied and pending decisions are recorded without blocking.";
 
     public ActivitySnapshot Activity { get; private set; } = new();
     public IReadOnlyCollection<AuditEvent> AuditEvents { get; private set; } = [];
@@ -75,9 +117,52 @@ public sealed class MonitorModel : PageModel
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
+        GeneratedAtUtc = DateTimeOffset.UtcNow;
+        GovernanceWindow = _governanceWindowStore.GetWindow();
         Activity = await _activityStore.GetSnapshotAsync(cancellationToken);
         AuditEvents = await _auditEventStore.GetRecentAsync(
             cancellationToken: cancellationToken);
+        var recent = AuditEvents
+            .Where(item => item.TimestampUtc >= GeneratedAtUtc - RecentWindow)
+            .OrderByDescending(item => item.TimestampUtc)
+            .ToList();
+        RecentEvaluations = recent.Take(20).ToList();
+        LastEvaluationUtc = AuditEvents
+            .OrderByDescending(item => item.TimestampUtc)
+            .FirstOrDefault()?.TimestampUtc;
+        RecentEvaluationCount = recent.Count;
+        RecentAllowCount = recent.LongCount(item => item.Decision == DecisionType.Allow);
+        RecentDenyCount = recent.LongCount(item => item.Decision == DecisionType.Deny);
+        RecentPendingCount = recent.LongCount(item => item.Decision == DecisionType.RequireApproval);
+        RecentAverageLatencyMs = recent.Count == 0
+            ? 0 : recent.Average(item => item.EvaluationDurationMs);
+        RecentMinimumLatencyMs = recent.Count == 0
+            ? 0 : recent.Min(item => item.EvaluationDurationMs);
+        RecentMaximumLatencyMs = recent.Count == 0
+            ? 0 : recent.Max(item => item.EvaluationDurationMs);
+        var activeAfter = GeneratedAtUtc - ActiveThreshold;
+        ActiveIdentityCount = recent
+            .Where(item => item.TimestampUtc >= activeAfter)
+            .Select(item => item.IdentityId)
+            .Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        ActiveCapabilityCount = recent
+            .Where(item => item.TimestampUtc >= activeAfter)
+            .Select(item => item.CapabilityId)
+            .Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        CurrentPendingApprovalCount = _approvalStore.GetAll()
+            .Count(item => item.Status == ApprovalStatus.Pending);
+        MostDeniedCapability = Activity.Capabilities
+            .Where(item => item.DeniedCount > 0)
+            .OrderByDescending(item => item.DeniedCount)
+            .ThenBy(item => item.CapabilityId)
+            .FirstOrDefault();
+        MostActiveIdentity = Activity.Identities
+            .OrderByDescending(item => item.TotalRequests)
+            .ThenBy(item => item.IdentityId)
+            .FirstOrDefault();
+        RecentIncidents = (await _incidentStore.GetAllAsync(cancellationToken))
+            .OrderByDescending(item => item.LastSeenUtc)
+            .Take(3).ToList();
 
         PoliciesExist = _policyLoader.GetPolicies().Count > 0;
         RuntimeDecisionsObserved = Activity.Capabilities.Any(capability =>

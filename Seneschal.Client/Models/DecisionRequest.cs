@@ -16,6 +16,12 @@ public sealed record DecisionRequest
     public required string Capability { get; init; }
 
     /// <summary>
+    /// Gets the caller-owned identifier kept stable across retries of one
+    /// business operation.
+    /// </summary>
+    public string? OperationId { get; init; }
+
+    /// <summary>
     /// Gets additional request context, such as resource or environment.
     /// </summary>
     public Dictionary<string, string> Context { get; init; } = new();

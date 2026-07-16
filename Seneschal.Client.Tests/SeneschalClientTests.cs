@@ -37,7 +37,14 @@ public sealed class SeneschalClientTests
                       "policyMatched": "policy-1",
                       "durationMs": 12,
                       "effectiveAction": "allow",
-                      "mode": "LogOnly"
+                      "mode": "LogOnly",
+                      "executionGuidance": "Proceed",
+                      "approvalId": "approval-1",
+                      "approvalStatus": "Pending",
+                      "operationId": "release-001",
+                      "approvalCorrelationMode": "Operation",
+                      "message": "caller message",
+                      "retryGuidance": "retry later"
                     }
                     """)
             });
@@ -50,6 +57,7 @@ public sealed class SeneschalClientTests
         {
             Identity = "payment-agent",
             Capability = "azure.keyvault.secret.read",
+            OperationId = "release-001",
             Context = new Dictionary<string, string>
             {
                 ["environment"] = "production"
@@ -62,6 +70,13 @@ public sealed class SeneschalClientTests
         Assert.Equal(12, result.DurationMs);
         Assert.Equal("allow", result.EffectiveAction);
         Assert.Equal("LogOnly", result.Mode);
+        Assert.Equal("Proceed", result.ExecutionGuidance);
+        Assert.Equal("approval-1", result.ApprovalId);
+        Assert.Equal("Pending", result.ApprovalStatus);
+        Assert.Equal("release-001", result.OperationId);
+        Assert.Equal("Operation", result.ApprovalCorrelationMode);
+        Assert.Equal("caller message", result.Message);
+        Assert.Equal("retry later", result.RetryGuidance);
 
         Assert.Equal(HttpMethod.Post, handler.Requests.Single().Method);
         Assert.Equal(
@@ -79,6 +94,9 @@ public sealed class SeneschalClientTests
         Assert.Equal(
             "azure.keyvault.secret.read",
             document.RootElement.GetProperty("capability").GetString());
+        Assert.Equal(
+            "release-001",
+            document.RootElement.GetProperty("operationId").GetString());
         Assert.Equal(
             "production",
             document.RootElement

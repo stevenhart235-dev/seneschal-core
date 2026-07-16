@@ -35,7 +35,14 @@ public sealed class ApiContractTests :
             "policyMatched",
             "durationMs",
             "effectiveAction",
-            "mode");
+            "mode",
+            "executionGuidance",
+            "approvalId",
+            "approvalStatus",
+            "operationId",
+            "approvalCorrelationMode",
+            "message",
+            "retryGuidance");
         Assert.Equal("deny", root.GetProperty("decision").GetString());
         Assert.Equal(
             "logged_only",
@@ -44,6 +51,7 @@ public sealed class ApiContractTests :
             "default-deny",
             root.GetProperty("policyMatched").GetString());
         Assert.Equal("LogOnly", root.GetProperty("mode").GetString());
+        Assert.Equal("ContinueLogOnly", root.GetProperty("executionGuidance").GetString());
     }
 
     [Fact]
@@ -65,6 +73,26 @@ public sealed class ApiContractTests :
         Assert.Equal(
             "logged_only",
             root.GetProperty("effectiveAction").GetString());
+        Assert.Equal("ContinueLogOnly", root.GetProperty("executionGuidance").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(root.GetProperty("approvalId").GetString()));
+        Assert.Equal("Pending", root.GetProperty("approvalStatus").GetString());
+        Assert.Equal("LegacyContext", root.GetProperty("approvalCorrelationMode").GetString());
+        Assert.Equal(JsonValueKind.Null, root.GetProperty("operationId").ValueKind);
+    }
+
+    [Fact]
+    public async Task Evaluate_RoundTripsCallerOwnedOperationIdForApproval()
+    {
+        using var response = await _client.PostAsJsonAsync("/evaluate", new
+        {
+            identity = "SupportAgent",
+            capability = "azure.keyvault.secret.read",
+            operationId = "release-001",
+            context = new { environment = "prod", resource = "vault" }
+        });
+        using var document = await ReadJsonAsync(response);
+        Assert.Equal("release-001", document.RootElement.GetProperty("operationId").GetString());
+        Assert.Equal("Operation", document.RootElement.GetProperty("approvalCorrelationMode").GetString());
     }
 
     [Fact]
@@ -177,7 +205,14 @@ public sealed class ApiContractTests :
             "approvalAction",
             "approvalRequestReason",
             "approvalResolvedAt",
-            "approvalResolvedBy");
+            "approvalResolvedBy",
+            "approvalConsumedAt",
+            "approvalConsumedByDecisionId",
+            "approvalOperationId",
+            "approvalCorrelationMode",
+            "executionGuidance",
+            "callerMessage",
+            "retryGuidance");
     }
 
     private async Task<HttpResponseMessage> PostEvaluationAsync(

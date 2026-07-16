@@ -39,6 +39,13 @@ public static class AuditEventMapper
             ApprovalRequestReason = auditEvent.ApprovalRequestReason,
             ApprovalResolvedAt = auditEvent.ApprovalResolvedAt,
             ApprovalResolvedBy = auditEvent.ApprovalResolvedBy,
+            ApprovalConsumedAt = auditEvent.ApprovalConsumedAt,
+            ApprovalConsumedByDecisionId = auditEvent.ApprovalConsumedByDecisionId,
+            ExecutionGuidance = auditEvent.ExecutionGuidance,
+            CallerMessage = auditEvent.CallerMessage,
+            RetryGuidance = auditEvent.RetryGuidance,
+            ApprovalOperationId = auditEvent.ApprovalOperationId,
+            ApprovalCorrelationMode = auditEvent.ApprovalCorrelationMode,
             PolicyEvaluations = auditEvent.PolicyEvaluations.Select(policy =>
                 new AuditPolicyEvaluation
                 {

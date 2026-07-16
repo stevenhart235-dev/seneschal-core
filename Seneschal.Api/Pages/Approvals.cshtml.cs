@@ -30,7 +30,8 @@ public sealed class ApprovalsModel : PageModel
         string approvalId, string resolution, string resolvedBy)
     {
         if (!Enum.TryParse<ApprovalStatus>(resolution, true, out var status) ||
-            status == ApprovalStatus.Pending || string.IsNullOrWhiteSpace(resolvedBy))
+            status is not (ApprovalStatus.Approved or ApprovalStatus.Rejected) ||
+            string.IsNullOrWhiteSpace(resolvedBy))
             return BadRequest();
 
         var record = _store.Resolve(
@@ -58,12 +59,21 @@ public sealed class ApprovalsModel : PageModel
             ApprovalRequestReason = record.RequestReason,
             ApprovalResolvedAt = record.ResolvedAt,
             ApprovalResolvedBy = record.ResolvedBy
+            ,ApprovalOperationId = record.OperationId
+            ,ApprovalCorrelationMode = record.CorrelationMode.ToString()
         });
         return RedirectToPage();
     }
 
     private void Load() => Approvals = _store.GetAll()
-        .OrderBy(record => record.Status == ApprovalStatus.Pending ? 0 : 1)
+        .OrderBy(record => record.Status switch
+        {
+            ApprovalStatus.Pending => 0,
+            ApprovalStatus.Approved => 1,
+            ApprovalStatus.Rejected => 2,
+            ApprovalStatus.Consumed => 3,
+            _ => 4
+        })
         .ThenByDescending(record => record.RequestedAt)
         .ToList();
 }

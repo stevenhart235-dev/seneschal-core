@@ -6,7 +6,8 @@ param(
     [Parameter(Mandatory)][string] $Capability,
     [Parameter(Mandatory)][string] $Environment,
     [Parameter(Mandatory)][string] $Resource,
-    [string] $PlanFile
+    [string] $PlanFile,
+    [string] $OperationId
 )
 
 $ErrorActionPreference = 'Stop'
@@ -29,5 +30,6 @@ $sharedGate = Join-Path $PSScriptRoot '../github-actions/invoke-seneschal-gate.p
     -Identity $Identity `
     -Capability $Capability `
     -Environment $Environment `
-    -Resource $Resource
+    -Resource $Resource `
+    -OperationId $OperationId
 exit $LASTEXITCODE

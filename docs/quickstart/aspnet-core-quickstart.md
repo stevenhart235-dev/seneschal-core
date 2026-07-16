@@ -119,6 +119,20 @@ HTTP/1.1 403 Forbidden
 
 ## Troubleshooting
 
+## Handling Pending Approval
+
+`PendingApproval` with `ExecutionGuidance: Pause` means the application should
+stop the current operation. A synchronous API can return `202 Accepted` with
+the approval ID and an application-owned status URL, then re-evaluate after a
+human resolves the approval.
+
+Always provide a stable caller-owned `operationId` for production approvals and
+reuse it when retrying that same business operation. Omitting it uses temporary
+legacy context matching.
+
+Seneschal does not retain the original request payload or automatically pause,
+queue, resume, or retry application work.
+
 ### Startup validation failure
 
 - `BaseUrl is required`: add `Seneschal:BaseUrl`.

@@ -28,6 +28,13 @@ public class AuditEvent
     public string? ApprovalRequestReason { get; set; }
     public DateTimeOffset? ApprovalResolvedAt { get; set; }
     public string? ApprovalResolvedBy { get; set; }
+    public DateTimeOffset? ApprovalConsumedAt { get; set; }
+    public string? ApprovalConsumedByDecisionId { get; set; }
+    public string ExecutionGuidance { get; set; } = "";
+    public string? CallerMessage { get; set; }
+    public string? RetryGuidance { get; set; }
+    public string? ApprovalOperationId { get; set; }
+    public string? ApprovalCorrelationMode { get; set; }
 }
 
 public class AuditPolicyEvaluation

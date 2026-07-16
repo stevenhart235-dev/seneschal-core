@@ -30,4 +30,11 @@ public sealed record AuditEvent
     public string? ApprovalRequestReason { get; init; }
     public DateTimeOffset? ApprovalResolvedAt { get; init; }
     public string? ApprovalResolvedBy { get; init; }
+    public DateTimeOffset? ApprovalConsumedAt { get; init; }
+    public string? ApprovalConsumedByDecisionId { get; init; }
+    public string ExecutionGuidance { get; init; } = string.Empty;
+    public string? CallerMessage { get; init; }
+    public string? RetryGuidance { get; init; }
+    public string? ApprovalOperationId { get; init; }
+    public string? ApprovalCorrelationMode { get; init; }
 }

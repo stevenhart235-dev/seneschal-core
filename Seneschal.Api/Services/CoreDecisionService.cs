@@ -81,6 +81,11 @@ public sealed class CoreDecisionService
         var windowEvaluation = EvaluateGovernanceWindow(
             coreRequest.Capability.Id,
             ref coreResult);
+        coreResult = coreResult with
+        {
+            ExecutionGuidance = ResolveExecutionGuidance(
+                coreResult.Decision, coreResult.Mode)
+        };
         stopwatch.Stop();
 
         coreResult = coreResult with
@@ -193,6 +198,13 @@ public sealed class CoreDecisionService
             ,ApprovalRequestReason = approvalEvaluation?.Record.RequestReason
             ,ApprovalResolvedAt = approvalEvaluation?.Record.ResolvedAt
             ,ApprovalResolvedBy = approvalEvaluation?.Record.ResolvedBy
+            ,ApprovalConsumedAt = approvalEvaluation?.Record.ConsumedAt
+            ,ApprovalConsumedByDecisionId = approvalEvaluation?.Record.ConsumedByDecisionId
+            ,ExecutionGuidance = result.ExecutionGuidance.ToString()
+            ,CallerMessage = result.CallerMessage
+            ,RetryGuidance = result.RetryGuidance
+            ,ApprovalOperationId = approvalEvaluation?.Record.OperationId
+            ,ApprovalCorrelationMode = approvalEvaluation?.Record.CorrelationMode.ToString()
         };
 
         _auditSink?.WriteAsync(auditEvent).GetAwaiter().GetResult();
@@ -216,16 +228,40 @@ public sealed class CoreDecisionService
             request.Resource.Environment ?? string.Empty,
             request.Resource.Id,
             reason,
-            request.Timestamp);
+            request.Timestamp,
+            request.OperationId);
 
         var record = lookup.Record;
+        var action = record.Status == ApprovalStatus.Pending
+            ? lookup.Created ? "Requested" : "Reused"
+            : "Used";
         if (record.Status == ApprovalStatus.Approved)
         {
-            result = result with
+            var consumed = _approvalStore.Consume(
+                record.Id, result.DecisionId, result.Timestamp);
+            if (consumed is not null)
             {
-                Decision = DecisionType.Allow,
-                Reason = $"Approved through human approval {record.Id}."
-            };
+                record = consumed;
+                action = "Consumed";
+                result = result with
+                {
+                    Decision = DecisionType.Allow,
+                    Reason = $"Approved through single-use human approval {record.Id}."
+                };
+            }
+            else
+            {
+                lookup = _approvalStore.GetOrCreate(
+                    request.Identity.Id,
+                    request.Capability.Id,
+                    request.Resource.Environment ?? string.Empty,
+                    request.Resource.Id,
+                    reason,
+                    request.Timestamp,
+                    request.OperationId);
+                record = lookup.Record;
+                action = lookup.Created ? "Requested" : "Reused";
+            }
         }
         else if (record.Status == ApprovalStatus.Rejected)
         {
@@ -236,12 +272,38 @@ public sealed class CoreDecisionService
             };
         }
 
-        return new ApprovalEvaluation(
-            record,
-            record.Status == ApprovalStatus.Pending
-                ? lookup.Created ? "Requested" : "Reused"
-                : "Used");
+        result = result with
+        {
+            ApprovalId = record.Id,
+            ApprovalStatus = record.Status.ToString(),
+            OperationId = record.OperationId,
+            ApprovalCorrelationMode = record.CorrelationMode.ToString(),
+            CallerMessage = result.Decision == DecisionType.RequireApproval
+                ? result.Mode == EnforcementMode.LogOnly
+                    ? "Approval is required by policy; LogOnly records the decision and allows the operation to continue."
+                    : "Approval is required before this operation can continue. Retry with the same operationId after approval."
+                : null,
+            RetryGuidance = result.Decision == DecisionType.RequireApproval
+                ? record.CorrelationMode == ApprovalCorrelationMode.Operation
+                    ? $"Retry after approval using operationId '{record.OperationId}'."
+                    : "Retry after approval with the same legacy identity, capability, environment, and resource context. Production callers should provide operationId."
+                : null
+        };
+
+        return new ApprovalEvaluation(record, action);
     }
+
+    internal static ExecutionGuidance ResolveExecutionGuidance(
+        DecisionType decision,
+        EnforcementMode mode) => (decision, mode) switch
+    {
+        (DecisionType.Allow, _) => ExecutionGuidance.Proceed,
+        (DecisionType.Deny, EnforcementMode.LogOnly) => ExecutionGuidance.ContinueLogOnly,
+        (DecisionType.Deny, _) => ExecutionGuidance.Block,
+        (DecisionType.RequireApproval, EnforcementMode.LogOnly) => ExecutionGuidance.ContinueLogOnly,
+        (DecisionType.RequireApproval, _) => ExecutionGuidance.Pause,
+        _ => ExecutionGuidance.Block
+    };
 
     private GovernanceWindowEvaluation? EvaluateGovernanceWindow(
         string capabilityId,

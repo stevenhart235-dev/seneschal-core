@@ -4,6 +4,7 @@ public sealed record DecisionRequest
 {
     public required string RequestId { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
+    public string? OperationId { get; init; }
 
     public required Identity Identity { get; init; }
     public required Capability Capability { get; init; }

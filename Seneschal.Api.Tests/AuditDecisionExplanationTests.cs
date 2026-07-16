@@ -11,16 +11,42 @@ public sealed class AuditDecisionExplanationTests
     {
         var auditEvent = CreateEvent("allow", "Enforce", "requires_approval");
         auditEvent.ApprovalId = "approval-1";
-        auditEvent.ApprovalStatus = "Approved";
-        auditEvent.ApprovalAction = "Used";
+        auditEvent.ApprovalStatus = "Consumed";
+        auditEvent.ApprovalAction = "Consumed";
         auditEvent.ApprovalRequestReason = "<request>";
         auditEvent.ApprovalResolvedBy = "<reviewer>";
+        auditEvent.ApprovalConsumedAt = DateTimeOffset.UtcNow;
+        auditEvent.ApprovalConsumedByDecisionId = "decision-1";
+        auditEvent.ApprovalOperationId = "<release-001>";
+        auditEvent.ApprovalCorrelationMode = "Operation";
         var html = AuditEventDetailPageRenderer.Render(auditEvent);
         Assert.Contains("Human Approval", html);
         Assert.Contains("Changed Pending Approval to Allow", html);
+        Assert.Contains("Consumed by this operation", html);
+        Assert.Contains("decision-1", html);
+        Assert.Contains("Exact operation", html);
+        Assert.Contains("&lt;release-001&gt;", html);
         Assert.Contains("&lt;request&gt;", html);
         Assert.Contains("&lt;reviewer&gt;", html);
         Assert.DoesNotContain("<reviewer>", html);
+    }
+
+    [Fact]
+    public void Render_ShowsEncodedExecutionGuidanceNearOutcome()
+    {
+        var auditEvent = CreateEvent(
+            "requires_approval", "Enforce", "requires_approval");
+        auditEvent.ExecutionGuidance = "Pause";
+        auditEvent.CallerMessage = "<stop current work>";
+        auditEvent.RetryGuidance = "Retry after approval";
+
+        var html = AuditEventDetailPageRenderer.Render(auditEvent);
+
+        Assert.Contains("Execution guidance", html);
+        Assert.Contains("Pause", html);
+        Assert.Contains("Blocked pending approval", html);
+        Assert.Contains("&lt;stop current work&gt;", html);
+        Assert.DoesNotContain("<stop current work>", html);
     }
     [Fact]
     public void Render_PlainAllowShowsExecutedFlow()

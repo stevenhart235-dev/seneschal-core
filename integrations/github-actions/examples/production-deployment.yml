@@ -25,7 +25,8 @@ jobs:
             -Identity github-actions-production `
             -Capability production.deployment.execute `
             -Environment production `
-            -Resource checkout-api
+            -Resource checkout-api `
+            -OperationId "github-run-$env:GITHUB_RUN_ID"
 
       - name: Deploy checkout-api
         shell: pwsh

@@ -25,6 +25,7 @@ powershell -File integrations/terraform/invoke-seneschal-gate.ps1 `
   -Capability infrastructure.production.apply `
   -Environment production `
   -Resource prod-subscription `
+  -OperationId terraform-apply-001 `
   -PlanFile integrations/terraform/examples/production-apply/tfplan
 
 if ($LASTEXITCODE -eq 0) {
@@ -53,6 +54,10 @@ Expected behavior:
 When `-PlanFile` is supplied, the wrapper verifies that the file exists and prints only its filename and byte size. It does not parse or upload the plan.
 
 ## Current limitations
+
+Pending Approval under Enforce exits non-zero before apply. Terraform and
+OpenTofu are not paused or resumed by Seneschal; rerun the gate and apply flow
+after the approval is resolved.
 
 - Seneschal evaluates the supplied identity, capability, environment, and resource; it does not understand Terraform plan semantics.
 - Plan contents and sensitive values are not inspected.

@@ -165,9 +165,10 @@ public static class AuditEventDetailPageRenderer
 
     private static void AppendGovernanceWindow(StringBuilder html, AuditEvent auditEvent)
     {
-        var changedDecision = !SameDecision(auditEvent.PolicyDecision, auditEvent.Decision);
+        var resultBeforeWindow = ResultBeforeWindow(auditEvent);
+        var changedDecision = !SameDecision(resultBeforeWindow, auditEvent.Decision);
         var effect = changedDecision
-            ? $"Changed {DisplayDecision(auditEvent.PolicyDecision)} to {DisplayDecision(auditEvent.Decision)}"
+            ? $"Changed {DisplayDecision(resultBeforeWindow)} to {DisplayDecision(auditEvent.Decision)}"
             : "Matched; policy result unchanged";
 
         html.AppendLine("            <section class=\"panel decision-trace-section trace-window\">");
@@ -180,7 +181,7 @@ public static class AuditEventDetailPageRenderer
         AppendMetadata(html, "Window reason", auditEvent.GovernanceWindowReason ?? auditEvent.GovernanceWindowMessage ?? string.Empty);
         html.AppendLine("                </dl>");
         html.AppendLine("                <div class=\"window-result-flow\">");
-        AppendFlowValue(html, "Policy result", DisplayDecision(auditEvent.PolicyDecision), "trace-passed");
+        AppendFlowValue(html, "Policy result before window", DisplayDecision(resultBeforeWindow), "trace-passed");
         AppendFlowValue(html, auditEvent.GovernanceWindowName ?? "Governance Window", auditEvent.GovernanceWindowMode ?? "Matched", changedDecision ? "trace-overridden" : "trace-continued");
         AppendFlowValue(html, "Window result", DisplayDecision(auditEvent.Decision), changedDecision ? "trace-overridden" : "trace-passed");
         html.AppendLine("                </div>");
@@ -189,31 +190,46 @@ public static class AuditEventDetailPageRenderer
 
     private static void AppendApproval(StringBuilder html, AuditEvent auditEvent)
     {
-        var changed = !SameDecision(auditEvent.PolicyDecision, auditEvent.Decision) &&
-            !HasWindow(auditEvent);
+        var effect = auditEvent.ApprovalStatus switch
+        {
+            "Consumed" => "Changed Pending Approval to Allow",
+            "Rejected" => "Changed Pending Approval to Deny",
+            _ => "Approval remains pending"
+        };
         html.AppendLine("            <section class=\"panel decision-trace-section trace-approval\">");
         html.AppendLine("                <h2>Human Approval</h2><dl class=\"trace-context-grid\">");
         AppendMetadata(html, "Approval ID", auditEvent.ApprovalId ?? string.Empty);
+        AppendMetadata(html, "Application operation", auditEvent.ApprovalOperationId ?? "Not provided");
+        AppendMetadata(html, "Approval scope",
+            auditEvent.ApprovalCorrelationMode == "Operation" ? "Exact operation" : "Legacy context matching");
         AppendMetadata(html, "Action", auditEvent.ApprovalAction ?? string.Empty);
-        AppendMetadata(html, "Resolution status", auditEvent.ApprovalStatus ?? string.Empty);
+        AppendMetadata(html, "Human approval",
+            auditEvent.ApprovalStatus == "Consumed" ? "Approved" : auditEvent.ApprovalStatus ?? string.Empty);
+        AppendMetadata(html, "Approval usage",
+            auditEvent.ApprovalStatus == "Consumed"
+                ? auditEvent.ApprovalCorrelationMode == "Operation"
+                    ? "Consumed by this operation"
+                    : "Consumed by this legacy-context evaluation"
+                : auditEvent.ApprovalAction ?? string.Empty);
         AppendMetadata(html, "Request reason", auditEvent.ApprovalRequestReason ?? string.Empty);
         AppendMetadata(html, "Resolved at", auditEvent.ApprovalResolvedAt?.ToString("u") ?? string.Empty);
         AppendMetadata(html, "Resolved by", auditEvent.ApprovalResolvedBy ?? string.Empty);
-        AppendMetadata(html, "Effect", changed
-            ? $"Changed Pending Approval to {DisplayDecision(auditEvent.Decision)}"
-            : "Approval remains pending");
+        AppendMetadata(html, "Consumed at", auditEvent.ApprovalConsumedAt?.ToString("u") ?? string.Empty);
+        AppendMetadata(html, "Consuming decision ID", auditEvent.ApprovalConsumedByDecisionId ?? string.Empty);
+        AppendMetadata(html, "Effect", effect);
         html.AppendLine("                </dl></section>");
     }
 
     private static void AppendDecisionResolution(StringBuilder html, AuditEvent auditEvent)
     {
         var effective = GetEffectiveResult(auditEvent);
+        var resultBeforeWindow = ResultBeforeWindow(auditEvent);
         var changedDecision = HasWindow(auditEvent) &&
-            !SameDecision(auditEvent.PolicyDecision, auditEvent.Decision);
+            !SameDecision(resultBeforeWindow, auditEvent.Decision);
         var windowText = !HasWindow(auditEvent)
             ? "No window override"
             : changedDecision
-                ? $"{auditEvent.GovernanceWindowName} changed result to {DisplayDecision(auditEvent.Decision)}"
+                ? $"{auditEvent.GovernanceWindowName} changed result to {DisplayDecision(auditEvent.Decision)} (from {DisplayDecision(resultBeforeWindow)})"
                 : $"{auditEvent.GovernanceWindowName} matched; no decision change";
 
         html.AppendLine("            <section class=\"panel decision-trace-section\">");
@@ -225,11 +241,20 @@ public static class AuditEventDetailPageRenderer
         if (HasApproval(auditEvent))
         {
             AppendResolutionStep(html, "Human Approval",
-                $"{auditEvent.ApprovalStatus}: {DisplayDecision(auditEvent.Decision)}",
+                auditEvent.ApprovalStatus == "Consumed" ? "Approved" : auditEvent.ApprovalStatus ?? "Pending",
                 auditEvent.ApprovalStatus == "Pending" ? "trace-continued" : "trace-overridden");
+            if (auditEvent.ApprovalStatus == "Consumed")
+            {
+                AppendResolutionStep(html, "Approval usage",
+                    auditEvent.ApprovalCorrelationMode == "Operation"
+                        ? "Consumed by this operation"
+                        : "Consumed by this legacy-context evaluation",
+                    "trace-overridden");
+            }
         }
         AppendResolutionStep(html, "Governance Window", windowText, changedDecision ? "trace-overridden" : "trace-continued");
         AppendResolutionStep(html, "Runtime Governance", auditEvent.EnforcementMode, "trace-mode");
+        AppendResolutionStep(html, "Execution guidance", GetExecutionGuidance(auditEvent), "trace-mode");
         AppendResolutionStep(html, "Effective application result", effective.Text, effective.CssClass);
         html.AppendLine("                </ol>");
         html.AppendLine("            </section>");
@@ -252,6 +277,11 @@ public static class AuditEventDetailPageRenderer
         html.AppendLine("                <dl class=\"trace-context-grid\">");
         AppendMetadata(html, "Final reason", auditEvent.Reason);
         AppendMetadata(html, "Runtime mode", auditEvent.EnforcementMode);
+        AppendMetadata(html, "Execution guidance", GetExecutionGuidance(auditEvent));
+        if (!string.IsNullOrWhiteSpace(auditEvent.CallerMessage))
+            AppendMetadata(html, "Caller message", auditEvent.CallerMessage);
+        if (!string.IsNullOrWhiteSpace(auditEvent.RetryGuidance))
+            AppendMetadata(html, "Retry guidance", auditEvent.RetryGuidance);
         AppendMetadata(html, "Evaluation latency", $"{auditEvent.EvaluationDurationMs} ms");
         if (auditEvent.Obligations.Count > 0)
         {
@@ -288,6 +318,13 @@ public static class AuditEventDetailPageRenderer
         AppendMetadata(html, "ApprovalStatus", auditEvent.ApprovalStatus ?? string.Empty);
         AppendMetadata(html, "ApprovalAction", auditEvent.ApprovalAction ?? string.Empty);
         AppendMetadata(html, "ApprovalResolvedBy", auditEvent.ApprovalResolvedBy ?? string.Empty);
+        AppendMetadata(html, "ApprovalConsumedAt", auditEvent.ApprovalConsumedAt?.ToString("u") ?? string.Empty);
+        AppendMetadata(html, "ApprovalConsumedByDecisionId", auditEvent.ApprovalConsumedByDecisionId ?? string.Empty);
+        AppendMetadata(html, "ApprovalOperationId", auditEvent.ApprovalOperationId ?? string.Empty);
+        AppendMetadata(html, "ApprovalCorrelationMode", auditEvent.ApprovalCorrelationMode ?? string.Empty);
+        AppendMetadata(html, "ExecutionGuidance", auditEvent.ExecutionGuidance);
+        AppendMetadata(html, "CallerMessage", auditEvent.CallerMessage ?? string.Empty);
+        AppendMetadata(html, "RetryGuidance", auditEvent.RetryGuidance ?? string.Empty);
         AppendMetadata(html, "EvaluationDurationMs", auditEvent.EvaluationDurationMs.ToString());
         html.AppendLine("                </dl>");
         html.AppendLine("            </details>");
@@ -358,6 +395,24 @@ public static class AuditEventDetailPageRenderer
 
     private static bool HasApproval(AuditEvent auditEvent) =>
         !string.IsNullOrWhiteSpace(auditEvent.ApprovalId);
+
+    private static string ResultBeforeWindow(AuditEvent auditEvent) =>
+        auditEvent.ApprovalStatus switch
+        {
+            "Consumed" => "allow",
+            "Rejected" => "deny",
+            _ => auditEvent.PolicyDecision
+        };
+
+    private static string GetExecutionGuidance(AuditEvent auditEvent)
+    {
+        if (!string.IsNullOrWhiteSpace(auditEvent.ExecutionGuidance))
+            return auditEvent.ExecutionGuidance;
+        if (SameDecision(auditEvent.Decision, "allow")) return "Proceed";
+        if (auditEvent.EnforcementMode.Equals("LogOnly", StringComparison.OrdinalIgnoreCase))
+            return "ContinueLogOnly";
+        return IsPending(auditEvent.Decision) ? "Pause" : "Block";
+    }
 
     private static bool IsPending(string decision) =>
         decision.Equals("requires_approval", StringComparison.OrdinalIgnoreCase) ||

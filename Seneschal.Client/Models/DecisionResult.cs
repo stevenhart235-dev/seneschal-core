@@ -36,6 +36,29 @@ public sealed record DecisionResult
     public string Mode { get; init; } = "";
 
     /// <summary>
+    /// Gets the caller-oriented guidance. Seneschal does not execute it.
+    /// </summary>
+    public string ExecutionGuidance { get; init; } = "";
+
+    /// <summary>Gets the related approval identifier, when applicable.</summary>
+    public string? ApprovalId { get; init; }
+
+    /// <summary>Gets the approval lifecycle status, when applicable.</summary>
+    public string? ApprovalStatus { get; init; }
+
+    /// <summary>Gets the caller-owned operation identifier.</summary>
+    public string? OperationId { get; init; }
+
+    /// <summary>Gets whether approval correlation used Operation or LegacyContext.</summary>
+    public string? ApprovalCorrelationMode { get; init; }
+
+    /// <summary>Gets a human-readable caller message, when applicable.</summary>
+    public string? Message { get; init; }
+
+    /// <summary>Gets descriptive retry guidance, when applicable.</summary>
+    public string? RetryGuidance { get; init; }
+
+    /// <summary>
     /// Gets matched policies when returned by a runtime endpoint.
     /// </summary>
     public List<string> MatchedPolicies { get; init; } = new();

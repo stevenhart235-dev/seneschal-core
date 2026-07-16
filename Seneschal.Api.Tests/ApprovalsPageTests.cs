@@ -19,6 +19,10 @@ public sealed class ApprovalsPageTests : IClassFixture<ApiApplicationFactory>
         Assert.Contains("<h1>Approvals</h1>", html);
         Assert.Contains("Temporary runtime state", html);
         Assert.Contains("aria-current=\"page\"><span>Approvals", html);
+        Assert.Contains("Pending approvals", html);
+        Assert.Contains("Approval history", html);
+        Assert.Contains("Operation ID", html);
+        Assert.DoesNotContain("table-scroll", html);
     }
 
     [Theory]
@@ -39,5 +43,30 @@ public sealed class ApprovalsPageTests : IClassFixture<ApiApplicationFactory>
         var evidence = Assert.Single(await audit.GetRecentAsync());
         Assert.Equal(resolution, evidence.ApprovalAction);
         Assert.Equal("<reviewer>", evidence.ApprovalResolvedBy);
+    }
+
+    [Fact]
+    public void PageOrdersPendingApprovedRejectedThenConsumed()
+    {
+        var store = new InMemoryApprovalStore();
+        var now = DateTimeOffset.UtcNow;
+        var pending = store.GetOrCreate("pending", "cap", "prod", "one", "reason", now).Record;
+        var approved = store.GetOrCreate("approved", "cap", "prod", "two", "reason", now).Record;
+        var rejected = store.GetOrCreate("rejected", "cap", "prod", "three", "reason", now).Record;
+        var consumed = store.GetOrCreate("consumed", "cap", "prod", "four", "reason", now).Record;
+        store.Resolve(approved.Id, ApprovalStatus.Approved, "operator", now);
+        store.Resolve(rejected.Id, ApprovalStatus.Rejected, "operator", now);
+        store.Resolve(consumed.Id, ApprovalStatus.Approved, "operator", now);
+        store.Consume(consumed.Id, "decision", now);
+        var page = new ApprovalsModel(store, new InMemoryAuditEventStore(),
+            new InMemoryGovernanceModeStore(new RuntimeSettings()));
+
+        page.OnGet();
+
+        Assert.Equal(
+            [ApprovalStatus.Pending, ApprovalStatus.Approved,
+             ApprovalStatus.Rejected, ApprovalStatus.Consumed],
+            page.Approvals.Select(item => item.Status));
+        Assert.Equal(pending.Id, page.Approvals.First().Id);
     }
 }

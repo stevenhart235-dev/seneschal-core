@@ -20,4 +20,11 @@ public sealed record DecisionResult
     public PolicyMatch? WinningPolicy { get; init; }
     public List<PolicyMatch> MatchedPolicyDetails { get; init; } = new();
     public List<PolicyEvaluation> PolicyEvaluations { get; init; } = new();
+    public ExecutionGuidance ExecutionGuidance { get; init; }
+    public string? ApprovalId { get; init; }
+    public string? ApprovalStatus { get; init; }
+    public string? OperationId { get; init; }
+    public string? ApprovalCorrelationMode { get; init; }
+    public string? CallerMessage { get; init; }
+    public string? RetryGuidance { get; init; }
 }

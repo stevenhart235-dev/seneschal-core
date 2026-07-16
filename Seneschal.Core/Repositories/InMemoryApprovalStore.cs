@@ -12,12 +12,20 @@ public sealed class InMemoryApprovalStore : IApprovalStore
 
     public ApprovalLookupResult GetOrCreate(
         string identityId, string capabilityId, string environment,
-        string resourceId, string requestReason, DateTimeOffset requestedAt)
+        string resourceId, string requestReason, DateTimeOffset requestedAt,
+        string? operationId = null)
     {
-        var key = ScopeKey(identityId, capabilityId, environment, resourceId);
+        operationId = NormalizeOperationId(operationId);
+        var scope = ScopeKey(identityId, capabilityId, environment, resourceId, operationId);
         lock (_gate)
         {
-            if (_records.TryGetValue(key, out var existing))
+            var existing = _records.Values
+                .Where(record => ScopeKey(record.IdentityId, record.CapabilityId,
+                    record.Environment, record.ResourceId, record.OperationId).Equals(scope, StringComparison.OrdinalIgnoreCase) &&
+                    record.Status != ApprovalStatus.Consumed)
+                .OrderByDescending(record => record.RequestedAt)
+                .FirstOrDefault();
+            if (existing is not null)
                 return new ApprovalLookupResult(existing, false);
 
             var record = new ApprovalRecord
@@ -27,22 +35,32 @@ public sealed class InMemoryApprovalStore : IApprovalStore
                 CapabilityId = capabilityId,
                 Environment = environment,
                 ResourceId = resourceId,
+                OperationId = operationId,
+                CorrelationMode = operationId is null
+                    ? ApprovalCorrelationMode.LegacyContext
+                    : ApprovalCorrelationMode.Operation,
                 RequestReason = requestReason,
                 RequestedAt = requestedAt
             };
-            _records[key] = record;
+            _records[record.Id] = record;
             return new ApprovalLookupResult(record, true);
         }
     }
 
     public ApprovalRecord? Find(
         string identityId, string capabilityId, string environment,
-        string resourceId)
+        string resourceId, string? operationId = null)
     {
         lock (_gate)
         {
-            return _records.GetValueOrDefault(
-                ScopeKey(identityId, capabilityId, environment, resourceId));
+            operationId = NormalizeOperationId(operationId);
+            var scope = ScopeKey(identityId, capabilityId, environment, resourceId, operationId);
+            return _records.Values
+                .Where(record => ScopeKey(record.IdentityId, record.CapabilityId,
+                    record.Environment, record.ResourceId, record.OperationId).Equals(scope, StringComparison.OrdinalIgnoreCase) &&
+                    record.Status != ApprovalStatus.Consumed)
+                .OrderByDescending(record => record.RequestedAt)
+                .FirstOrDefault();
         }
     }
 
@@ -50,22 +68,43 @@ public sealed class InMemoryApprovalStore : IApprovalStore
         string approvalId, ApprovalStatus status, string resolvedBy,
         DateTimeOffset resolvedAt)
     {
-        if (status == ApprovalStatus.Pending || string.IsNullOrWhiteSpace(resolvedBy))
+        if (status is not (ApprovalStatus.Approved or ApprovalStatus.Rejected) ||
+            string.IsNullOrWhiteSpace(resolvedBy))
             return null;
         lock (_gate)
         {
-            var pair = _records.FirstOrDefault(item =>
-                item.Value.Id.Equals(approvalId, StringComparison.OrdinalIgnoreCase));
-            if (pair.Value is null || pair.Value.Status != ApprovalStatus.Pending)
+            if (!_records.TryGetValue(approvalId, out var record) ||
+                record.Status != ApprovalStatus.Pending)
                 return null;
-            var resolved = pair.Value with
+            var resolved = record with
             {
                 Status = status,
                 ResolvedAt = resolvedAt,
                 ResolvedBy = resolvedBy.Trim()
             };
-            _records[pair.Key] = resolved;
+            _records[approvalId] = resolved;
             return resolved;
+        }
+    }
+
+    public ApprovalRecord? Consume(
+        string approvalId, string decisionId, DateTimeOffset consumedAt)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(decisionId);
+        lock (_gate)
+        {
+            if (!_records.TryGetValue(approvalId, out var record) ||
+                record.Status != ApprovalStatus.Approved)
+                return null;
+
+            var consumed = record with
+            {
+                Status = ApprovalStatus.Consumed,
+                ConsumedAt = consumedAt,
+                ConsumedByDecisionId = decisionId
+            };
+            _records[approvalId] = consumed;
+            return consumed;
         }
     }
 
@@ -75,6 +114,10 @@ public sealed class InMemoryApprovalStore : IApprovalStore
     }
 
     private static string ScopeKey(string identity, string capability,
-        string environment, string resource) =>
-        string.Join('\u001f', identity, capability, environment, resource);
+        string environment, string resource, string? operationId) =>
+        string.Join('\u001f', identity, capability, environment, resource,
+            operationId is null ? "legacy-context" : $"operation:{operationId}");
+
+    private static string? NormalizeOperationId(string? operationId) =>
+        string.IsNullOrWhiteSpace(operationId) ? null : operationId.Trim();
 }

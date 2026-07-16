@@ -5,19 +5,22 @@ param(
     [Parameter(Mandatory)][string] $Identity,
     [Parameter(Mandatory)][string] $Capability,
     [Parameter(Mandatory)][string] $Environment,
-    [Parameter(Mandatory)][string] $Resource
+    [Parameter(Mandatory)][string] $Resource,
+    [string] $OperationId
 )
 
 $ErrorActionPreference = 'Stop'
 
-$requestBody = @{
+$requestBodyObject = @{
     identity = $Identity
     capability = $Capability
     context = @{
         environment = $Environment
         resource = $Resource
     }
-} | ConvertTo-Json -Depth 3
+}
+if ($OperationId) { $requestBodyObject.operationId = $OperationId }
+$requestBody = $requestBodyObject | ConvertTo-Json -Depth 3
 
 try {
     $response = Invoke-RestMethod `
@@ -38,12 +41,18 @@ $mode = [string]$response.mode
 $effectiveAction = [string]$response.effectiveAction
 $matchedPolicy = [string]$response.policyMatched
 $reason = [string]$response.reason
+$guidance = [string]$response.executionGuidance
+$approvalId = [string]$response.approvalId
+$message = [string]$response.message
 
 Write-Host "Decision: $decision"
 Write-Host "Enforcement mode: $mode"
 Write-Host "Effective action: $effectiveAction"
 Write-Host "Matched policy: $matchedPolicy"
 Write-Host "Reason: $reason"
+Write-Host "Execution guidance: $guidance"
+if ($approvalId) { Write-Host "Approval ID: $approvalId" }
+if ($message) { Write-Host "Message: $message" }
 
 $shouldProceed = $decision -eq 'allow' -or $mode -eq 'LogOnly'
 if ($shouldProceed) {
@@ -56,5 +65,10 @@ if ($shouldProceed) {
     exit 0
 }
 
-[Console]::Error.WriteLine('Governance gate: blocked')
+if ($decision -eq 'requires_approval' -or $decision -eq 'PendingApproval') {
+    [Console]::Error.WriteLine('Governance gate: approval is required before retry; hosted runners are not paused automatically.')
+}
+else {
+    [Console]::Error.WriteLine('Governance gate: blocked')
+}
 exit 1

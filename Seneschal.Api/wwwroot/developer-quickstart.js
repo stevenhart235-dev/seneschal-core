@@ -125,7 +125,7 @@
             return {
                 install: 'dotnet add package Seneschal.AspNetCore --version 0.1.0-alpha.1',
                 configuration: `builder.Services.AddSeneschal(options =>\n{\n    options.BaseUrl = new Uri("http://localhost:5000");\n    options.ApiKey = builder.Configuration["Seneschal:ApiKey"]!;\n    options.IdentityResolver = _ => "${safeIdentity}";\n    options.DefaultEnvironment = "${environment}";\n});\n\napp.UseSeneschal();`,
-                example: `app.MapPost("/governed-operation", () =>\n        Results.Ok(new { executed = true }))\n    .RequireCapability("${capability}");`
+                example: `app.MapPost("/governed-operation/{operationId}", async (string operationId, ISeneschalClient client, CancellationToken ct) =>\n{\n    var result = await client.EvaluateAsync(new DecisionRequest\n    {\n        Identity = "${safeIdentity}", Capability = "${capability}", OperationId = operationId,\n        Context = new() { ["environment"] = "${environment}", ["resource"] = "${safeResource}" }\n    }, ct);\n    if (result.ExecutionGuidance == "Pause")\n    {\n        // /operations is an application-owned status endpoint.\n        return Results.Accepted($"/operations/{operationId}", new\n        {\n            approvalId = result.ApprovalId, operationId = result.OperationId,\n            approvalStatus = result.ApprovalStatus, message = result.Message\n        });\n    }\n\n    return result.ShouldProceed\n        ? Results.Ok(new { executed = true })\n        : Results.StatusCode(StatusCodes.Status403Forbidden);\n});`
             };
         }
 
@@ -133,7 +133,7 @@
             return {
                 install: 'dotnet add package Seneschal.Client --version 0.1.0-alpha.1',
                 configuration: `builder.Services.Configure<SeneschalClientOptions>(options =>\n{\n    options.BaseUrl = new Uri("http://localhost:5000");\n    options.ApiKey = builder.Configuration["Seneschal:ApiKey"];\n});\nbuilder.Services.AddHttpClient<ISeneschalClient, SeneschalClient>();`,
-                example: `var result = await client.EvaluateAsync(new DecisionRequest\n{\n    Identity = "${safeIdentity}",\n    Capability = "${capability}",\n    Context = new()\n    {\n        ["environment"] = "${environment}",\n        ["resource"] = "${safeResource}"\n    }\n}, cancellationToken);\n\nif (result.ShouldProceed)\n{\n    await ExecuteAsync(cancellationToken);\n}`
+                example: `var operationId = existingBusinessOperation.Id; // stable across retries\nvar result = await client.EvaluateAsync(new DecisionRequest\n{\n    Identity = "${safeIdentity}",\n    Capability = "${capability}",\n    OperationId = operationId,\n    Context = new()\n    {\n        ["environment"] = "${environment}",\n        ["resource"] = "${safeResource}"\n    }\n}, cancellationToken);\n\nswitch (result.ExecutionGuidance)\n{\n    case "Proceed":\n    case "ContinueLogOnly":\n        await ExecuteAsync(cancellationToken);\n        break;\n    case "Pause":\n    case "Queue":\n        await SaveLocalCheckpointAsync(result.ApprovalId, operationId, cancellationToken);\n        break;\n    default:\n        throw new InvalidOperationException(result.Message ?? result.Reason);\n}`
             };
         }
 
@@ -141,14 +141,14 @@
             return {
                 install: 'Copy integrations/github-actions/invoke-seneschal-gate.ps1 into the workflow workspace.',
                 configuration: `Repository secrets:\nSENESCHAL_URL=http://localhost:5000\nSENESCHAL_API_KEY=<scoped secret>`,
-                example: `powershell -File integrations/github-actions/invoke-seneschal-gate.ps1 \`\n${commonArguments}`
+                example: `powershell -File integrations/github-actions/invoke-seneschal-gate.ps1 \`\n${commonArguments}\n# Pending Approval exits non-zero in Enforce. Retry the job after approval.`
             };
         }
 
         return {
             install: 'terraform -chdir=integrations/terraform/examples/production-apply init\n# Or replace terraform with tofu.',
             configuration: `terraform -chdir=integrations/terraform/examples/production-apply plan -out=tfplan\n$env:SENESCHAL_API_KEY = '<scoped secret>'`,
-            example: `powershell -File integrations/terraform/invoke-seneschal-gate.ps1 \`\n${commonArguments} \`\n  -PlanFile integrations/terraform/examples/production-apply/tfplan\n\nif ($LASTEXITCODE -eq 0) {\n  terraform -chdir=integrations/terraform/examples/production-apply apply tfplan\n}`
+            example: `powershell -File integrations/terraform/invoke-seneschal-gate.ps1 \`\n${commonArguments} \`\n  -PlanFile integrations/terraform/examples/production-apply/tfplan\n\nif ($LASTEXITCODE -eq 0) {\n  terraform -chdir=integrations/terraform/examples/production-apply apply tfplan\n}\n# Pending Approval exits non-zero in Enforce. Re-run the gate after approval.`
         };
     }
 

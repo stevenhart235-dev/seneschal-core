@@ -27,6 +27,13 @@ public static class DecisionResultMapper
                     ? "logged_only"
                     : decision,
             Mode = EnforcementModeMapper.ToApi(result.Mode)
+            ,ExecutionGuidance = result.ExecutionGuidance.ToString()
+            ,ApprovalId = result.ApprovalId
+            ,ApprovalStatus = result.ApprovalStatus
+            ,OperationId = result.OperationId
+            ,ApprovalCorrelationMode = result.ApprovalCorrelationMode
+            ,Message = result.CallerMessage
+            ,RetryGuidance = result.RetryGuidance
         };
     }
 }

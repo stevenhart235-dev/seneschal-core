@@ -25,6 +25,7 @@ public sealed class DtoMapperTests
         {
             Identity = "SupportAgent",
             Capability = "azure.keyvault.secret.read",
+            OperationId = "release-001",
             Context = new Dictionary<string, string>
             {
                 ["environment"] = "prod",
@@ -40,6 +41,7 @@ public sealed class DtoMapperTests
 
         Assert.Equal("request-1", result.RequestId);
         Assert.Equal(timestamp, result.Timestamp);
+        Assert.Equal("release-001", result.OperationId);
         Assert.Equal("SupportAgent", result.Identity.Id);
         Assert.Equal(IdentityType.Agent, result.Identity.Type);
         Assert.Equal("prod", result.Identity.Environment);

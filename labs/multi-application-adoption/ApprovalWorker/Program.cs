@@ -17,6 +17,8 @@ var client = SeneschalClient.Create(httpClient, new Uri(baseUrl), apiKey);
 Console.WriteLine(
     $"ApprovalWorker started; interval={intervalSeconds}s; Seneschal={baseUrl}");
 
+var operationSequence = 1;
+var operationId = OperationId(operationSequence);
 for (var iteration = 1; iteration <= maxIterations; iteration++)
 {
     var timestamp = DateTimeOffset.Now;
@@ -27,6 +29,7 @@ for (var iteration = 1; iteration <= maxIterations; iteration++)
         {
             Identity = identity,
             Capability = capability,
+            OperationId = operationId,
             Context = new Dictionary<string, string>
             {
                 ["environment"] = environment,
@@ -41,7 +44,11 @@ for (var iteration = 1; iteration <= maxIterations; iteration++)
             result.Mode,
             "Enforce",
             StringComparison.OrdinalIgnoreCase);
-        var blocked = enforce && pendingApproval;
+        var allowed = string.Equals(
+            result.Decision,
+            "allow",
+            StringComparison.OrdinalIgnoreCase);
+        var blocked = enforce && !allowed;
         var projectedAction = blocked
             ? "blocked_pending_approval"
             : pendingApproval
@@ -50,11 +57,18 @@ for (var iteration = 1; iteration <= maxIterations; iteration++)
 
         Console.WriteLine(
             $"[{timestamp:O}] identity={identity} capability={capability} " +
-            $"decision=PendingApproval mode={result.Mode} " +
+            $"operationId={operationId} decision={result.Decision} mode={result.Mode} " +
             $"projectedAction={projectedAction} " +
             $"policy={Display(result.PolicyMatched)} " +
             $"reason=\"{result.Reason}\" " +
             $"operation={(blocked ? "BLOCKED" : "EXECUTED")}");
+
+        if (allowed)
+        {
+            operationSequence++;
+            operationId = OperationId(operationSequence);
+            Console.WriteLine($"Next distinct demo operation: {operationId}");
+        }
     }
     catch (SeneschalClientException exception)
     {
@@ -72,6 +86,8 @@ for (var iteration = 1; iteration <= maxIterations; iteration++)
 
 static string Display(string value) =>
     string.IsNullOrWhiteSpace(value) ? "n/a" : value;
+
+static string OperationId(int sequence) => $"release-demo-{sequence:D4}";
 
 static int ReadPositiveInteger(string name, int defaultValue) =>
     int.TryParse(Environment.GetEnvironmentVariable(name), out var value) &&

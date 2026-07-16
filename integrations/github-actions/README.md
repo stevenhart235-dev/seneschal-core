@@ -11,6 +11,10 @@ See [`examples/production-deployment.yml`](examples/production-deployment.yml) f
 
 ## Local validation
 
+Pass a stable caller-owned `-OperationId` for approval-capable operations. A
+workflow retry must reuse the same value; a distinct deployment must use a new
+value. The sample workflow derives it from `GITHUB_RUN_ID`.
+
 Start Seneschal with `./demo.ps1`, then run the allow scenario from the repository root:
 
 ```powershell
@@ -46,6 +50,10 @@ Expected behavior:
 Switch modes at `http://localhost:5000/governance`. The script never writes the API key to output.
 
 ## Current limitations
+
+Pending Approval under Enforce exits non-zero and reports that approval is
+required before retry. GitHub-hosted runners are not paused or resumed by this
+script; rerun the job after the approval is resolved.
 
 - This is a repository script and workflow example, not a Marketplace action.
 - The sample uses a checked-in development key; production key management is not implemented.

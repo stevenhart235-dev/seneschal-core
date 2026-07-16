@@ -14,6 +14,10 @@ operation.
 | RefundWorker | 10 seconds | Allow |
 | ApprovalWorker | 8 seconds | PendingApproval |
 
+ApprovalWorker keeps one caller-owned `operationId` stable while approval is
+pending. It creates the next operation ID only after the current operation is
+allowed and completed.
+
 In `LogOnly`, all four operations execute while migration displays its deny
 and approval displays PendingApproval. In `Enforce`, deployment and refund
 continue while migration and approval are blocked.

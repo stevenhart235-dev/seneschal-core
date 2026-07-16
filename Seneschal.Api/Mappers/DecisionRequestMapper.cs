@@ -26,6 +26,7 @@ public static class DecisionRequestMapper
         {
             RequestId = requestId,
             Timestamp = timestamp,
+            OperationId = request.OperationId,
             Identity = new Identity
             {
                 Id = request.Identity,

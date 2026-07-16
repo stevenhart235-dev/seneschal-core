@@ -6,6 +6,7 @@ $ErrorActionPreference = 'Stop'
 $repositoryRoot = $PSScriptRoot
 $demoDirectory = Join-Path $repositoryRoot 'artifacts/demo'
 $logDirectory = Join-Path $demoDirectory 'logs'
+$packageCacheDirectory = Join-Path $demoDirectory 'packages'
 $statePath = Join-Path $demoDirectory 'state.json'
 $dashboardUrl = 'http://localhost:5000/dashboard'
 $readinessUrl = 'http://localhost:5000/ready'
@@ -34,13 +35,20 @@ function Start-DemoProcess {
 
     $stdoutPath = Join-Path $logDirectory "$Name.stdout.log"
     $stderrPath = Join-Path $logDirectory "$Name.stderr.log"
-    $process = Start-Process dotnet `
-        -ArgumentList $Arguments `
-        -WorkingDirectory $repositoryRoot `
-        -WindowStyle Hidden `
-        -RedirectStandardOutput $stdoutPath `
-        -RedirectStandardError $stderrPath `
-        -PassThru
+    $previousPackageCache = $env:NUGET_PACKAGES
+    try {
+        $env:NUGET_PACKAGES = $packageCacheDirectory
+        $process = Start-Process dotnet `
+            -ArgumentList $Arguments `
+            -WorkingDirectory $repositoryRoot `
+            -WindowStyle Hidden `
+            -RedirectStandardOutput $stdoutPath `
+            -RedirectStandardError $stderrPath `
+            -PassThru
+    }
+    finally {
+        $env:NUGET_PACKAGES = $previousPackageCache
+    }
     $startedProcessIds.Add($process.Id)
     Save-DemoState
 }
@@ -67,7 +75,9 @@ if (Test-Path -LiteralPath $statePath) {
     }
 }
 
+Remove-Item -LiteralPath $packageCacheDirectory -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
+New-Item -ItemType Directory -Path $packageCacheDirectory -Force | Out-Null
 Remove-Item -Path (Join-Path $logDirectory '*.log') -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $statePath -Force -ErrorAction SilentlyContinue
 
@@ -76,6 +86,26 @@ try {
     & dotnet pack 'Seneschal.Client/Seneschal.Client.csproj' -c Release --nologo --verbosity quiet
     if ($LASTEXITCODE -ne 0) {
         throw "Packing Seneschal.Client failed with exit code $LASTEXITCODE."
+    }
+
+    $workerProjects = @(
+        'labs/multi-application-adoption/DeploymentWorker/DeploymentWorker.csproj',
+        'labs/multi-application-adoption/DatabaseMigrationWorker/DatabaseMigrationWorker.csproj',
+        'labs/multi-application-adoption/RefundWorker/RefundWorker.csproj',
+        'labs/multi-application-adoption/ApprovalWorker/ApprovalWorker.csproj'
+    )
+    $previousPackageCache = $env:NUGET_PACKAGES
+    try {
+        $env:NUGET_PACKAGES = $packageCacheDirectory
+        foreach ($workerProject in $workerProjects) {
+            & dotnet restore $workerProject --force --no-cache --nologo --verbosity quiet
+            if ($LASTEXITCODE -ne 0) {
+                throw "Restoring $workerProject against the freshly packed client failed with exit code $LASTEXITCODE."
+            }
+        }
+    }
+    finally {
+        $env:NUGET_PACKAGES = $previousPackageCache
     }
 
     Start-DemoProcess -Name 'api' -Arguments @(
@@ -101,13 +131,13 @@ try {
     }
 
     Start-DemoProcess -Name 'deployment-worker' -Arguments @(
-        'run', '--project', 'labs/multi-application-adoption/DeploymentWorker/DeploymentWorker.csproj')
+        'run', '--no-restore', '--project', 'labs/multi-application-adoption/DeploymentWorker/DeploymentWorker.csproj')
     Start-DemoProcess -Name 'database-migration-worker' -Arguments @(
-        'run', '--project', 'labs/multi-application-adoption/DatabaseMigrationWorker/DatabaseMigrationWorker.csproj')
+        'run', '--no-restore', '--project', 'labs/multi-application-adoption/DatabaseMigrationWorker/DatabaseMigrationWorker.csproj')
     Start-DemoProcess -Name 'refund-worker' -Arguments @(
-        'run', '--project', 'labs/multi-application-adoption/RefundWorker/RefundWorker.csproj')
+        'run', '--no-restore', '--project', 'labs/multi-application-adoption/RefundWorker/RefundWorker.csproj')
     Start-DemoProcess -Name 'approval-worker' -Arguments @(
-        'run', '--project', 'labs/multi-application-adoption/ApprovalWorker/ApprovalWorker.csproj')
+        'run', '--no-restore', '--project', 'labs/multi-application-adoption/ApprovalWorker/ApprovalWorker.csproj')
 
     Start-Process $dashboardUrl
     Write-Host "Seneschal local demo is running. Logs: artifacts/demo/logs/"

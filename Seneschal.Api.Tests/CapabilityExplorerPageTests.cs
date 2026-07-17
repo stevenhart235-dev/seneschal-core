@@ -1,16 +1,16 @@
 using System.Net;
-using System.Net.Http.Json;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Seneschal.Core.Enums;
 using Seneschal.Core.Interfaces;
+using Seneschal.Core.Models;
 using Seneschal.Core.Repositories;
 using Xunit;
 
 namespace Seneschal.Api.Tests;
 
-public sealed class CapabilityExplorerPageTests :
-    IClassFixture<ApiApplicationFactory>
+public sealed class CapabilityExplorerPageTests : IClassFixture<ApiApplicationFactory>
 {
     private readonly ApiApplicationFactory _factory;
     private readonly HttpClient _client;
@@ -22,134 +22,125 @@ public sealed class CapabilityExplorerPageTests :
     }
 
     [Fact]
-    public async Task CapabilityExplorer_RendersKnownCapabilityOverview()
+    public async Task KnownCapabilityRendersOperationalIdentityAndGovernanceSummary()
     {
-        using var response = await _client.GetAsync(
-            "/capability-explorer?capabilityId=DeployApplication");
+        var html = await Get("/capability-explorer?capabilityId=DeployApplication");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var html = await response.Content.ReadAsStringAsync();
-
-        Assert.Contains("Seneschal Capability Explorer", html);
-        Assert.Contains("Dashboard", html);
-        Assert.Contains("Capabilities", html);
-        Assert.Contains("class=\"active\"", html);
-        Assert.Contains("DeployApplication", html);
+        Assert.Contains("Capability profile", html);
         Assert.Contains("Deploy Application", html);
+        Assert.Contains("DeployApplication", html);
         Assert.Contains("Platform Engineering", html);
-        Assert.Contains("Lifecycle status", html);
-        Assert.Contains(">Active</", html);
-        Assert.Contains("legacy-sample", html);
+        Assert.Contains("Medium risk", html);
+        Assert.Contains("mode-logonly", html);
+        Assert.Contains("Governance summary", html);
+        Assert.Contains("owned by Platform Engineering", html);
+        Assert.Contains("currently operating in LogOnly mode", html);
         Assert.Contains("Open documentation", html);
-        Assert.Contains("Capability Profile", html);
-        Assert.Contains("Runtime Summary", html);
-        Assert.Contains("badge risk-badge risk-medium", html);
-        Assert.Contains("Governance Relationships", html);
-        Assert.Contains("Governance Summary", html);
-        Assert.Contains("Assigned Identities", html);
-        Assert.Contains("Governing Policies", html);
-        Assert.Contains("relationship-compact-grid", html);
-        Assert.Contains("relationship-compact-group", html);
-        Assert.Contains("relationship-chip", html);
-        Assert.Contains(">Developer</span>", html);
-        Assert.Contains(">Developers can deploy to dev</span>", html);
-        Assert.Contains("PolicyProjection", html);
-        Assert.Contains("Declared · PolicyProjection", html);
-        Assert.DoesNotContain("Origin:", html);
-        Assert.DoesNotContain("Source:", html);
-        Assert.Contains("Graph View", html);
-        Assert.Contains("aria-label=\"Capability ego graph\"", html);
-        Assert.Contains("graph-node graph-node-capability", html);
-        Assert.Contains("Related Identities", html);
-        Assert.Contains("Related Policies", html);
-        Assert.Contains("Recent Decisions", html);
-        Assert.Contains("/audit?capabilityId=DeployApplication", html);
-        Assert.Contains("Recommendations", html);
-        Assert.Contains("/monitor", html);
-        Assert.Contains("Seneschal v0.2.1-alpha", html);
+        Assert.Contains("Open Interactive Graph", html);
+        Assert.Contains("aria-current=\"page\"><span>Capabilities", html);
     }
 
     [Fact]
-    public async Task CapabilityExplorer_RendersRuntimeEmptyState()
+    public async Task RelationshipGroupsAndImpactUseExistingRelationships()
     {
-        using var client = _factory
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureTestServices(services =>
-                {
-                    services.RemoveAll<IActivityStore>();
-                    services.RemoveAll<IAuditEventStore>();
-                    services.RemoveAll<IAuditSink>();
-                    services.AddSingleton<IActivityStore, InMemoryActivityStore>();
-                    services.AddSingleton<IAuditEventStore, InMemoryAuditEventStore>();
-                    services.AddSingleton<IAuditSink>(
-                        services => services.GetRequiredService<IAuditEventStore>());
-                });
-            })
-            .CreateClient();
+        var html = await Get("/capability-explorer?capabilityId=DeployApplication");
 
-        using var response = await client.GetAsync(
-            "/capability-explorer?capabilityId=DeployApplication");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var html = await response.Content.ReadAsStringAsync();
-
-        Assert.Contains("No runtime activity has been observed", html);
-        Assert.Contains("Observe runtime activity before enforcing", html);
-    }
-
-    [Fact]
-    public async Task CapabilityExplorer_RendersRuntimeSummaryAndRecentDecisions()
-    {
-        using (var evaluationResponse = await _client.PostAsJsonAsync(
-            "/evaluate",
-            new
-            {
-                identity = "Developer",
-                capability = "DeployApplication",
-                context = new
-                {
-                    environment = "dev",
-                    resource = "capability-profile-test-resource"
-                }
-            }))
-        {
-            Assert.Equal(HttpStatusCode.OK, evaluationResponse.StatusCode);
-        }
-
-        using var response = await _client.GetAsync(
-            "/capability-explorer?capabilityId=DeployApplication");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var html = await response.Content.ReadAsStringAsync();
-
-        Assert.Contains("Runtime Summary", html);
-        Assert.Contains("Total requests", html);
-        Assert.Contains("Allowed", html);
-        Assert.Contains("Last used", html);
-        Assert.Contains("Avg duration ms", html);
-        Assert.Contains("Recent Decisions", html);
+        Assert.Contains("Governance relationships", html);
+        Assert.Contains(">Identities<", html);
+        Assert.Contains(">Policies<", html);
+        Assert.Contains(">Resources<", html);
+        Assert.Contains("Governance windows", html);
         Assert.Contains("Developer", html);
-        Assert.Contains("Allow", html);
-        Assert.Contains("Review enforcement readiness", html);
+        Assert.Contains("Developers can deploy to dev", html);
+        Assert.Contains("Relationship impact", html);
+        Assert.Contains("Changes to this capability may affect", html);
+        Assert.Contains("/identity-activity?identityId=Developer", html);
+        Assert.Contains("/policies?policyId=Developers%20can%20deploy%20to%20dev", html);
     }
 
     [Fact]
-    public async Task CapabilityExplorer_SearchRendersMatchingCapabilities()
+    public async Task EmptyRuntimeAndRelationshipStatesAreIntentional()
     {
-        using var response = await _client.GetAsync(
-            "/capability-explorer?q=secret");
+        using var client = CreateClientWithRuntime();
+        var html = await Get(client,
+            "/capability-explorer?capabilityId=payments.refund.create");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("Evaluations</span><strong>0", html);
+        Assert.Contains("No recent activity", html);
+        Assert.Contains("No active governance window applies", html);
+        Assert.True(
+            html.Contains("No related resources", StringComparison.Ordinal) ||
+            html.Contains("Related resources", StringComparison.Ordinal));
+    }
 
-        var html = await response.Content.ReadAsStringAsync();
+    [Fact]
+    public async Task RecentActivityRendersAllOperationalFieldsAndTraceLink()
+    {
+        var auditEvent = new AuditEvent
+        {
+            Id = "trace-123",
+            RequestId = "request-123",
+            TimestampUtc = DateTimeOffset.UtcNow,
+            IdentityId = "Developer",
+            CapabilityId = "DeployApplication",
+            Environment = "dev",
+            ResourceId = "checkout-api",
+            Decision = DecisionType.Deny,
+            PolicyDecision = DecisionType.Deny,
+            EnforcementMode = EnforcementMode.Enforce,
+            Reason = "Denied for test",
+            ApprovalOperationId = "deployment-007",
+            EvaluationDurationMs = 7,
+            MatchedPolicies = ["Developers can deploy to dev"]
+        };
+        using var client = CreateClientWithRuntime([auditEvent]);
+        var html = await Get(client,
+            "/capability-explorer?capabilityId=DeployApplication");
 
-        Assert.Contains("Search Results", html);
+        Assert.Contains("Recent activity", html);
+        Assert.Contains("Developer", html);
+        Assert.Contains("checkout-api", html);
+        Assert.Contains("dev", html);
+        Assert.Contains("Deny", html);
+        Assert.Contains("Enforce", html);
+        Assert.Contains("deployment-007", html);
+        Assert.Contains("href=\"/audit/trace-123\"", html);
+        Assert.Contains("Evaluations</span><strong>1", html);
+        Assert.Contains("Denies</span><strong class=\"metric-deny\">1", html);
+        Assert.Contains("Recent activity includes denied decisions", html);
+    }
+
+    [Fact]
+    public async Task ActiveGovernanceWindowAppearsOnlyWhenItApplies()
+    {
+        var window = new InMemoryGovernanceWindowStore();
+        window.SetState(true, GovernanceWindowMode.Enforce);
+        using var client = CreateClientWithRuntime(window: window);
+        var html = await Get(client,
+            "/capability-explorer?capabilityId=production.deployment.execute");
+
+        Assert.Contains("Production Freeze", html);
+        Assert.Contains("The active Production Freeze window participates", html);
+        Assert.Contains("Weekend production freeze", html);
+        Assert.Contains("href=\"/governance-windows\"", html);
+    }
+
+    [Fact]
+    public async Task NoSelectionPromptsForCatalogSearch()
+    {
+        var html = await Get("/capability-explorer");
+        Assert.Contains("No capability selected", html);
+        Assert.Contains("Search the configured catalog", html);
+    }
+
+    [Fact]
+    public async Task SearchAndSelectionNavigationRemainAvailable()
+    {
+        var html = await Get("/capability-explorer?q=secret");
+        Assert.Contains("Search results", html);
         Assert.Contains("azure.keyvault.secret.read", html);
         Assert.Contains("Read a secret from an Azure Key Vault", html);
+        Assert.Contains("capabilityId=azure.keyvault.secret.read", html);
     }
 
     [Theory]
@@ -157,66 +148,54 @@ public sealed class CapabilityExplorerPageTests :
     [InlineData("risk=Critical", "Apply Production Infrastructure")]
     [InlineData("category=Payments", "Create Payment Refund")]
     [InlineData("lifecycle=Preview", "Approve Production Release")]
-    public async Task CapabilityExplorer_FiltersCatalogMetadata(
-        string filter,
-        string expectedDisplayName)
+    public async Task CatalogFiltersRemainAvailable(string filter, string expected)
     {
-        using var response = await _client.GetAsync(
-            $"/capability-explorer?{filter}");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains(
-            expectedDisplayName,
-            await response.Content.ReadAsStringAsync());
+        Assert.Contains(expected, await Get($"/capability-explorer?{filter}"));
     }
 
     [Fact]
-    public async Task CapabilityExplorer_SearchMissExplainsCatalogSearch()
+    public async Task SearchAndUnknownCapabilityEmptyStatesRender()
     {
-        using var response = await _client.GetAsync(
-            "/capability-explorer?q=missing-capability");
+        var miss = await Get("/capability-explorer?q=missing-capability");
+        Assert.Contains("No capabilities matched", miss);
+        Assert.Contains("configured capability catalog", miss);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var html = await response.Content.ReadAsStringAsync();
-
-        Assert.Contains("No capabilities matched", html);
-        Assert.Contains(
-            "The Capability Explorer searches the configured",
-            html);
-        Assert.Contains("azure.keyvault.secret.read", html);
-    }
-
-    [Fact]
-    public async Task CapabilityExplorer_SelectingSearchResultRendersOverview()
-    {
-        using var response = await _client.GetAsync(
-            "/capability-explorer?q=secret&capabilityId=azure.keyvault.secret.read");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var html = await response.Content.ReadAsStringAsync();
-
-        Assert.Contains("Search Results", html);
-        Assert.Contains("Capability Profile", html);
-        Assert.Contains("azure.keyvault.secret.read", html);
-        Assert.Contains("Support secret reads require approval", html);
-    }
-
-    [Fact]
-    public async Task CapabilityExplorer_UnknownCapabilityExplainsCatalogSource()
-    {
-        using var response = await _client.GetAsync(
+        var unknown = await Get(
             "/capability-explorer?capabilityId=unknown-capability");
+        Assert.Contains("Capability not found", unknown);
+        Assert.Contains("profiles are created from catalog entries", unknown);
+    }
 
+    private HttpClient CreateClientWithRuntime(
+        IReadOnlyCollection<AuditEvent>? events = null,
+        InMemoryGovernanceWindowStore? window = null)
+    {
+        var audit = new InMemoryAuditEventStore();
+        var activity = new InMemoryActivityStore();
+        foreach (var item in events ?? [])
+        {
+            audit.WriteAsync(item).GetAwaiter().GetResult();
+            activity.RecordAsync(item).GetAwaiter().GetResult();
+        }
+        return _factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<IAuditEventStore>();
+            services.RemoveAll<IAuditSink>();
+            services.RemoveAll<IActivityStore>();
+            services.RemoveAll<IGovernanceWindowStore>();
+            services.AddSingleton<IAuditEventStore>(audit);
+            services.AddSingleton<IAuditSink>(audit);
+            services.AddSingleton<IActivityStore>(activity);
+            services.AddSingleton<IGovernanceWindowStore>(
+                window ?? new InMemoryGovernanceWindowStore());
+        })).CreateClient();
+    }
+
+    private async Task<string> Get(string path) => await Get(_client, path);
+    private static async Task<string> Get(HttpClient client, string path)
+    {
+        using var response = await client.GetAsync(path);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var html = await response.Content.ReadAsStringAsync();
-
-        Assert.Contains("Capability not found", html);
-        Assert.Contains(
-            "Capability pages are created from catalog entries",
-            html);
-        Assert.Contains("azure.keyvault.secret.read", html);
+        return await response.Content.ReadAsStringAsync();
     }
 }

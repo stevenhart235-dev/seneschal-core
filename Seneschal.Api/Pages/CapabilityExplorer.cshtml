@@ -1,410 +1,59 @@
 @page "/capability-explorer"
 @model Seneschal.Api.Pages.CapabilityExplorerModel
+@using Seneschal.Core.Enums
 @{
     Layout = null;
     var capability = Model.Overview?.CatalogEntry.Capability;
 }
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Seneschal Capability Explorer</title>
-    <link rel="stylesheet" href="/styles.css" />
-</head>
-<body>
-    <div class="app-shell">
-        @await Html.PartialAsync("Shared/_PortalSidebar", "capabilities")
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Seneschal Capability Explorer</title><link rel="stylesheet" href="/styles.css" /></head>
+<body><div class="app-shell">
+@await Html.PartialAsync("Shared/_PortalSidebar", "capabilities")
+<main class="container explorer-page capability-operational-profile">
+    <header class="page-header capability-explorer-page-header"><div><div class="breadcrumb">Governance / Capabilities</div><h1>Capability Explorer</h1><p class="subtitle">Operational governance profiles for configured capabilities.</p></div><a class="button-link" href="/graph-view">Open Interactive Graph</a></header>
 
-    <main class="container explorer-page">
-        <header class="page-header">
-            <div class="breadcrumb">Governance / Capabilities</div>
-            <h1>Seneschal Capability Explorer</h1>
-            <p class="subtitle">
-                Search for a capability to inspect its catalog metadata,
-                governance summary, and projected relationships.
-            </p>
-            <p>
-                <a class="button-link" href="/graph-view">
-                    Open Interactive Graph
-                </a>
-            </p>
-        </header>
+    @if (Model.Overview is not null && capability is not null)
+    {
+        <section class="capability-identity-hero risk-edge-@capability.RiskLevel.ToString().ToLowerInvariant()" aria-labelledby="capability-profile-title">
+            <div class="capability-identity-primary"><span class="capability-profile-eyebrow">Capability profile</span><h2 id="capability-profile-title">@capability.DisplayName</h2><code>@capability.Id</code><p>@capability.Description</p><div class="capability-profile-badges"><span class="badge risk-badge risk-@capability.RiskLevel.ToString().ToLowerInvariant()">@capability.RiskLevel risk</span><span class="badge badge-category">@capability.Category</span><span class="badge badge-provider">@capability.Lifecycle</span><span class="badge mode-badge mode-@Model.RuntimeMode.ToLowerInvariant()">@Model.RuntimeMode</span></div></div>
+            <dl class="capability-identity-context"><div><dt>Owner</dt><dd>@(string.IsNullOrWhiteSpace(capability.Owner) ? "Not specified" : capability.Owner)</dd></div><div><dt>Provider</dt><dd>@(string.IsNullOrWhiteSpace(capability.Provider) ? "Not specified" : capability.Provider)</dd></div><div><dt>Observed environment</dt><dd>@(Model.RecentDecisions.FirstOrDefault()?.Environment ?? "No recent context")</dd></div><div><dt>Governance window</dt><dd>@(Model.GovernanceWindowApplies ? $"{Model.GovernanceWindow.Name} · {Model.GovernanceWindow.Mode}" : "None active for this capability")</dd></div><div><dt>Documentation</dt><dd>@if (Uri.TryCreate(capability.DocumentationUrl, UriKind.Absolute, out var documentationUri) && (documentationUri.Scheme == "https" || documentationUri.Scheme == "http")) { <a href="@documentationUri" target="_blank" rel="noopener noreferrer">Open documentation</a> } else { <span>Not specified</span> }</dd></div></dl>
+        </section>
 
-        <form class="search-panel" method="get">
-            <label for="q">Search and filter capabilities</label>
-            <div class="search-row">
-                <input
-                    id="q"
-                    name="q"
-                    value="@Model.Query"
-                    placeholder="Search by id, name, description, or tag" />
-                <button type="submit">Search</button>
-            </div>
-            <div class="search-row capability-filter-row">
-                <input name="owner" value="@Model.Owner" placeholder="Owner" aria-label="Filter by owner" />
-                <select name="risk" aria-label="Filter by risk">
-                    <option value="">All risk levels</option>
-                    @foreach (var risk in Enum.GetNames<Seneschal.Core.Enums.RiskLevel>())
-                    {
-                        <option value="@risk" selected="@(string.Equals(Model.Risk, risk, StringComparison.OrdinalIgnoreCase))">@risk</option>
-                    }
-                </select>
-                <input name="category" value="@Model.Category" placeholder="Category" aria-label="Filter by category" />
-                <input name="lifecycle" value="@Model.Lifecycle" placeholder="Lifecycle" aria-label="Filter by lifecycle" />
-            </div>
-        </form>
+        <section class="capability-governance-summary" aria-labelledby="governance-summary-title"><span id="governance-summary-title">Governance summary</span><p>@Model.GetGovernanceSummary()</p></section>
 
-        @if (Model.SearchWasRequested)
-        {
-            <section class="panel">
-                <h2>Search Results</h2>
+        var runtime = Model.RuntimeActivity;
+        <section class="capability-profile-metrics" aria-label="Capability operational metrics">
+            <article><span>Evaluations</span><strong>@(runtime?.TotalRequests ?? 0)</strong></article><article><span>Allows</span><strong class="metric-allow">@(runtime?.AllowedCount ?? 0)</strong></article><article><span>Denies</span><strong class="metric-deny">@(runtime?.DeniedCount ?? 0)</strong></article><article><span>Pending approvals</span><strong class="metric-pending">@(runtime?.PendingApprovalCount ?? 0)</strong></article><article><span>Related identities</span><strong>@Model.RelatedIdentities.Count</strong></article><article><span>Governing policies</span><strong>@Model.RelatedPolicies.Count</strong></article><article><span>Related resources</span><strong>@Model.RelatedResources.Count</strong></article>
+        </section>
 
-                @if (Model.SearchResults.Count == 0)
-                {
-                    <div class="empty-state">
-                        <p class="muted">
-                            No capabilities matched
-                            <span class="code">@Model.Query</span>.
-                        </p>
-                        <p class="muted">
-                            The Capability Explorer searches the configured
-                            capability catalog. Try a provider, tag, or full
-                            capability id such as
-                            <span class="code">azure.keyvault.secret.read</span>.
-                        </p>
-                    </div>
-                }
-                else
-                {
-                    <ul class="search-results">
-                        @foreach (var result in Model.SearchResults)
-                        {
-                            var resultCapability = result.Capability;
-                            <li>
-                                <a href="/capability-explorer?q=@Uri.EscapeDataString(Model.Query ?? string.Empty)&capabilityId=@Uri.EscapeDataString(resultCapability.Id)">
-                                    @resultCapability.DisplayName
-                                </a>
-                                <span class="code">@resultCapability.Id</span>
-                                <span>@resultCapability.Description</span>
-                            </li>
-                        }
-                    </ul>
-                }
-            </section>
-        }
-
-        @if (Model.CapabilityWasRequested && Model.Overview is null)
-        {
-            <section class="notice">
-                <h2>Capability not found</h2>
-                <p class="muted">
-                    No capability was found for
-                    <span class="code">@Model.CapabilityId</span>.
-                    Capability pages are created from catalog entries, so this
-                    may be empty until the capability is configured.
-                </p>
-                <p class="muted">
-                    Try searching the catalog, or use a known id such as
-                    <span class="code">azure.keyvault.secret.read</span>.
-                </p>
-            </section>
-        }
-        else if (Model.Overview is not null && capability is not null)
-        {
-            <section class="panel capability-profile-header">
-                <div class="capability-title-row">
-                    <div>
-                        <p class="muted capability-eyebrow">Capability Profile</p>
-                        <h2>@capability.DisplayName</h2>
-                        <p class="code capability-id">@capability.Id</p>
-                    </div>
-                    <div class="badge-row">
-                        <span class="badge risk-badge risk-@capability.RiskLevel.ToString().ToLowerInvariant()">
-                            @capability.RiskLevel risk
-                        </span>
-                        <span class="badge badge-category">@capability.Category</span>
-                        <span class="badge badge-provider">@capability.Lifecycle</span>
-                        <span class="badge badge-provider">@capability.Provider</span>
-                    </div>
+        <div class="capability-profile-workspace">
+            <section class="panel capability-relationships-panel" aria-labelledby="relationships-title"><header class="capability-section-header"><div><h2 id="relationships-title">Governance relationships</h2><p>Configured and observed relationships for this capability.</p></div></header>
+                <div class="capability-relationship-groups">
+                    <section><header><h3>Identities</h3><span>@Model.RelatedIdentities.Count</span></header>@if (Model.RelatedIdentities.Count == 0) { <p class="relationship-empty">No related identities.</p> } else { <ul>@foreach (var identity in Model.RelatedIdentities) { <li><div><a href="/identity-activity?identityId=@Uri.EscapeDataString(identity.Id)">@identity.Id</a><small>@identity.Type@if (!string.IsNullOrWhiteSpace(identity.Description)) { <text> · @identity.Description</text> }</small></div>@if (!string.IsNullOrWhiteSpace(identity.RecentDecision)) { <span class="decision-badge decision-@DecisionClass(identity.RecentDecision)">@identity.RecentDecision</span> }</li> }</ul> }</section>
+                    <section><header><h3>Policies</h3><span>@Model.RelatedPolicies.Count</span></header>@if (Model.RelatedPolicies.Count == 0) { <p class="relationship-empty">No governing policies.</p> } else { <ul>@foreach (var policy in Model.RelatedPolicies) { <li><div><a href="/policies?policyId=@Uri.EscapeDataString(policy.Id)">@policy.Id</a><small>@policy.Effect@(string.IsNullOrWhiteSpace(policy.Environment) ? "" : $" · {policy.Environment}")</small>@if (!string.IsNullOrWhiteSpace(policy.Reason)) { <p>@policy.Reason</p> }</div></li> }</ul> }</section>
+                    <section><header><h3>Resources</h3><span>@Model.RelatedResources.Count</span></header>@if (Model.RelatedResources.Count == 0) { <p class="relationship-empty">No related resources.</p> } else { <ul>@foreach (var resource in Model.RelatedResources) { <li><div><a href="/capability-activity?capabilityId=@Uri.EscapeDataString(capability.Id)&resourceId=@Uri.EscapeDataString(resource.Id)">@resource.Id</a><small>Environment or scope: @resource.Environment</small></div></li> }</ul> }</section>
+                    <section><header><h3>Governance windows</h3><span>@(Model.GovernanceWindowApplies ? 1 : 0)</span></header>@if (!Model.GovernanceWindowApplies) { <p class="relationship-empty">No active governance window applies.</p> } else { <ul><li><div><a href="/governance-windows">@Model.GovernanceWindow.Name</a><small>@Model.GovernanceWindow.Mode · Active</small><p>@Model.GovernanceWindow.Reason</p></div></li></ul> }</section>
                 </div>
-
-                <p class="capability-description">
-                    @capability.Description
-                </p>
-
-                <dl class="metadata-grid compact-metadata-grid capability-catalog-metadata">
-                    <dt>Owner</dt>
-                    <dd>@(string.IsNullOrWhiteSpace(capability.Owner) ? "Not specified" : capability.Owner)</dd>
-                    <dt>Risk level</dt>
-                    <dd>@capability.RiskLevel</dd>
-                    <dt>Category</dt>
-                    <dd>@capability.Category</dd>
-                    <dt>Lifecycle status</dt>
-                    <dd>@capability.Lifecycle</dd>
-                    <dt>Tags</dt>
-                    <dd>
-                        @if (capability.Tags.Count == 0)
-                        {
-                            <span>None</span>
-                        }
-                        else
-                        {
-                            <span class="badge-row">
-                                @foreach (var tag in capability.Tags)
-                                {
-                                    <span class="badge badge-provider">@tag</span>
-                                }
-                            </span>
-                        }
-                    </dd>
-                    <dt>Documentation</dt>
-                    <dd>
-                        @if (Uri.TryCreate(capability.DocumentationUrl, UriKind.Absolute, out var documentationUri) &&
-                            (documentationUri.Scheme == Uri.UriSchemeHttps || documentationUri.Scheme == Uri.UriSchemeHttp))
-                        {
-                            <a href="@documentationUri" target="_blank" rel="noopener noreferrer">Open documentation</a>
-                        }
-                        else
-                        {
-                            <span>Not specified</span>
-                        }
-                    </dd>
-                </dl>
             </section>
 
-            <section class="panel capability-runtime-panel">
-                <div class="dashboard-section-header">
-                    <div>
-                        <h2>Runtime Summary</h2>
-                        <p class="muted">
-                            Observed decisions for this capability from the
-                            in-memory activity store.
-                        </p>
-                    </div>
-                    <a class="button-link" href="/audit?capabilityId=@Uri.EscapeDataString(capability.Id)">
-                        View Audit Trail
-                    </a>
-                </div>
+            <aside class="capability-impact-panel"><section class="panel"><span>Relationship impact</span><strong>@(Model.RelatedIdentities.Count + Model.RelatedPolicies.Count + Model.RelatedResources.Count + (Model.GovernanceWindowApplies ? 1 : 0))</strong><p>@Model.GetImpactSummary()</p><dl><div><dt>Identities</dt><dd>@Model.RelatedIdentities.Count</dd></div><div><dt>Policies</dt><dd>@Model.RelatedPolicies.Count</dd></div><div><dt>Resources</dt><dd>@Model.RelatedResources.Count</dd></div><div><dt>Active windows</dt><dd>@(Model.GovernanceWindowApplies ? 1 : 0)</dd></div></dl></section><section class="panel capability-tags"><h2>Catalog context</h2><dl><div><dt>Lifecycle</dt><dd>@capability.Lifecycle</dd></div><div><dt>Category</dt><dd>@capability.Category</dd></div></dl><div>@if (capability.Tags.Count == 0) { <span class="muted">No tags configured.</span> } else { @foreach (var tag in capability.Tags) { <span class="badge badge-provider">@tag</span> } }</div></section></aside>
+        </div>
 
-                @if (!Model.HasRuntimeActivity)
-                {
-                    <div class="empty-state runtime-empty-state">
-                        <p class="muted">
-                            No runtime activity has been observed for this
-                            capability yet.
-                        </p>
-                        <p class="muted">
-                            Runtime summary appears after applications or users
-                            evaluate this capability through Seneschal.
-                        </p>
-                    </div>
-                }
-                else
-                {
-                    var runtime = Model.RuntimeActivity!;
-                    <section class="dashboard-grid capability-runtime-grid">
-                        <article class="dashboard-card activity-card">
-                            <strong>@runtime.TotalRequests</strong>
-                            <span>Total requests</span>
-                        </article>
-                        <article class="dashboard-card activity-card">
-                            <strong>@runtime.AllowedCount</strong>
-                            <span>Allowed</span>
-                        </article>
-                        <article class="dashboard-card activity-card">
-                            <strong>@runtime.DeniedCount</strong>
-                            <span>Denied</span>
-                        </article>
-                        <article class="dashboard-card activity-card">
-                            <strong>@runtime.PendingApprovalCount</strong>
-                            <span>Pending approval</span>
-                        </article>
-                        <article class="dashboard-card activity-card">
-                            <strong>@(runtime.LastUsedUtc?.ToString("u") ?? "n/a")</strong>
-                            <span>Last used</span>
-                        </article>
-                        <article class="dashboard-card activity-card">
-                            <strong>@runtime.AverageEvaluationDurationMs.ToString("0.##")</strong>
-                            <span>Avg duration ms</span>
-                        </article>
-                    </section>
-                }
-            </section>
+        <section class="panel capability-recent-activity" aria-labelledby="recent-activity-title"><header class="capability-section-header"><div><h2 id="recent-activity-title">Recent activity</h2><p>Most recent evaluations retained in the current in-memory audit history.</p></div><a href="/audit?capabilityId=@Uri.EscapeDataString(capability.Id)">Open filtered Audit Trail</a></header>
+            @if (Model.RecentDecisions.Count == 0) { <div class="empty-state"><strong>No recent activity</strong><p>Evaluations appear here after an integrated caller requests this capability.</p></div> } else { <div class="capability-activity-table-wrap"><table class="activity-table capability-activity-table"><thead><tr><th>Time</th><th>Identity</th><th>Environment / resource</th><th>Decision</th><th>Mode</th><th>Operation ID</th><th></th></tr></thead><tbody>@foreach (var decision in Model.RecentDecisions) { <tr><td><time datetime="@decision.TimestampUtc.ToString("O")">@decision.TimestampUtc.ToString("u")</time></td><td><a href="/identity-activity?identityId=@Uri.EscapeDataString(decision.IdentityId)">@decision.IdentityId</a></td><td><span>@decision.Environment</span><code>@decision.ResourceId</code></td><td><span class="decision-badge decision-@DecisionClass(DecisionLabel(decision.Decision))">@DecisionLabel(decision.Decision)</span></td><td>@decision.EnforcementMode</td><td><code>@(decision.ApprovalOperationId ?? "—")</code></td><td><a href="/audit/@Uri.EscapeDataString(decision.Id)">View trace</a></td></tr> }</tbody></table></div> }
+        </section>
+    }
 
-            <section class="panel">
-                <h2>Governance Relationships</h2>
-                <h3 class="monitor-subheading">Governance Summary</h3>
-                <div class="summary-grid capability-summary-grid">
-                    <div class="summary-card">
-                        <strong>@Model.Overview.Summary.AssignedIdentityCount</strong>
-                        <span>Assigned Identities</span>
-                    </div>
-                    <div class="summary-card">
-                        <strong>@Model.Overview.Summary.ObservedIdentityCount</strong>
-                        <span>Observed Identities</span>
-                    </div>
-                    <div class="summary-card">
-                        <strong>@Model.Overview.Summary.ResourceCount</strong>
-                        <span>Resources</span>
-                    </div>
-                    <div class="summary-card">
-                        <strong>@Model.Overview.Summary.GoverningPolicyCount</strong>
-                        <span>Governing Policies</span>
-                    </div>
-                </div>
-                <p class="muted relationship-origin-summary">
-                    Origins:
-                    @string.Join(", ", Model.Overview.Summary.Origins)
-                </p>
+    <section class="capability-discovery-panel @(Model.Overview is null ? "is-primary" : "is-secondary")"><form class="search-panel" method="get"><label for="q">Find a capability</label><div class="search-row"><input id="q" name="q" value="@Model.Query" placeholder="Search by ID, name, description, or tag" /><button type="submit">Search</button></div><div class="search-row capability-filter-row"><input name="owner" value="@Model.Owner" placeholder="Owner" aria-label="Filter by owner" /><select name="risk" aria-label="Filter by risk"><option value="">All risk levels</option>@foreach (var risk in Enum.GetNames<RiskLevel>()) { <option value="@risk" selected="@(string.Equals(Model.Risk, risk, StringComparison.OrdinalIgnoreCase))">@risk</option> }</select><input name="category" value="@Model.Category" placeholder="Category" aria-label="Filter by category" /><input name="lifecycle" value="@Model.Lifecycle" placeholder="Lifecycle" aria-label="Filter by lifecycle" /></div></form>
+        @if (Model.SearchWasRequested) { <section class="panel capability-search-results"><h2>Search results</h2>@if (Model.SearchResults.Count == 0) { <div class="empty-state"><strong>No capabilities matched</strong><p>The Capability Explorer searches the configured capability catalog. Try a provider, tag, or complete capability ID.</p></div> } else { <ul class="search-results">@foreach (var result in Model.SearchResults) { <li><a href="/capability-explorer?q=@Uri.EscapeDataString(Model.Query ?? string.Empty)&capabilityId=@Uri.EscapeDataString(result.Capability.Id)">@result.Capability.DisplayName</a><code>@result.Capability.Id</code><span>@result.Capability.Description</span></li> }</ul> }</section> }
+        else if (!Model.CapabilityWasRequested) { <div class="panel empty-state capability-no-selection"><strong>No capability selected</strong><p>Search the configured catalog to open an operational capability profile.</p></div> }
+        else if (Model.Overview is null) { <div class="notice"><h2>Capability not found</h2><p>No configured capability was found for <code>@Model.CapabilityId</code>. Capability profiles are created from catalog entries.</p></div> }
+    </section>
+    <footer class="app-footer">Seneschal v0.2.1-alpha</footer>
+</main></div></body></html>
 
-                @{
-                    var groups = Model.GetRelationshipGroups();
-                }
-
-                @if (groups.Count == 0)
-                {
-                    <div class="empty-state">
-                        <p class="muted">
-                            No relationships found for this capability yet.
-                        </p>
-                        <p class="muted">
-                            Relationships are projected from sources such as
-                            policies and observations. They appear when a policy
-                            targets this capability or when usage is observed.
-                        </p>
-                    </div>
-                }
-                else
-                {
-                    <div class="relationship-compact-grid">
-                        @foreach (var group in groups)
-                        {
-                            <section class="relationship-group relationship-compact-group">
-                                <h3>@group.Label</h3>
-                                <ul class="relationship-compact-list">
-                                    @foreach (var item in group.Items)
-                                    {
-                                        <li>
-                                            <span class="relationship-chip">@item.Label</span>
-                                            <small>@item.Origin · @item.SourceSystem</small>
-                                        </li>
-                                    }
-                                </ul>
-                            </section>
-                        }
-                    </div>
-                }
-            </section>
-
-            <section class="dashboard-columns capability-profile-columns">
-                <article class="panel compact-panel">
-                    <h2>Recent Decisions</h2>
-                    <p>
-                        <a class="table-link" href="/audit?capabilityId=@Uri.EscapeDataString(capability.Id)">
-                            View filtered audit trail
-                        </a>
-                    </p>
-
-                    @if (Model.RecentDecisions.Count == 0)
-                    {
-                        <div class="empty-state">
-                            <p class="muted">
-                                No recent audit events were found for this
-                                capability.
-                            </p>
-                        </div>
-                    }
-                    else
-                    {
-                        <ul class="compact-list activity-list">
-                            @foreach (var decision in Model.RecentDecisions)
-                            {
-                                <li>
-                                    <span>
-                                        @decision.TimestampUtc.ToString("u") ·
-                                        @decision.IdentityId
-                                    </span>
-                                    <span>
-                                        @decision.Decision · @decision.Reason
-                                    </span>
-                                </li>
-                            }
-                        </ul>
-                    }
-                </article>
-
-                <article class="panel compact-panel">
-                    <h2>Recommendations</h2>
-                    <p class="monitor-recommendation">
-                        @Model.GetRecommendation()
-                    </p>
-                    <p class="muted">
-                        Use the Monitor Dashboard to review readiness, drift,
-                        and enforcement recommendations before changing runtime
-                        posture.
-                    </p>
-                    <a class="button-link" href="/monitor">
-                        Open Monitor Dashboard
-                    </a>
-                </article>
-            </section>
-
-            <section class="panel">
-                <h2>Graph View</h2>
-                @{
-                    var graphGroups = Model.GetGraphNodeGroups();
-                }
-
-                @if (graphGroups.Count == 0)
-                {
-                    <div class="empty-state">
-                        <p class="muted">
-                            No connected graph nodes are available for this
-                            capability yet.
-                        </p>
-                        <p class="muted">
-                            The graph is drawn from relationship data. It will
-                            populate after policies, identities, resources, or
-                            observed usage connect to this capability.
-                        </p>
-                    </div>
-                }
-                else
-                {
-                    <div class="ego-graph" aria-label="Capability ego graph">
-                        <div class="graph-center">
-                            <span class="graph-node graph-node-capability">
-                                @capability.Id
-                            </span>
-                        </div>
-
-                        <div class="graph-spokes">
-                            @foreach (var graphGroup in graphGroups)
-                            {
-                                <section class="graph-node-group">
-                                    <h3>@graphGroup.Label</h3>
-                                    <ul>
-                                        @foreach (var node in graphGroup.Nodes)
-                                        {
-                                            <li>
-                                                <span class="graph-connector" aria-hidden="true"></span>
-                                                <span class="graph-node graph-node-@node.Type.ToLowerInvariant()">
-                                                    @node.Label
-                                                </span>
-                                            </li>
-                                        }
-                                    </ul>
-                                </section>
-                            }
-                        </div>
-                    </div>
-                }
-            </section>
-        }
-
-        <footer class="app-footer">Seneschal v0.2.1-alpha</footer>
-    </main>
-    </div>
-</body>
-</html>
+@functions {
+    private static string DecisionLabel(DecisionType decision) => decision == DecisionType.RequireApproval ? "Pending Approval" : decision.ToString();
+    private static string DecisionClass(string? decision) => (decision ?? "unknown").Replace(" ", "").ToLowerInvariant();
+}

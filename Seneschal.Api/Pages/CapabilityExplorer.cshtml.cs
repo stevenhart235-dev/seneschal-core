@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Seneschal.Api.Services;
 using Seneschal.Core.Enums;
 using Seneschal.Core.Interfaces;
 using Seneschal.Core.Models;
@@ -11,17 +12,29 @@ public sealed class CapabilityExplorerModel : PageModel
     private readonly ICapabilityExplorer _capabilityExplorer;
     private readonly IActivityStore _activityStore;
     private readonly IAuditEventStore _auditEventStore;
+    private readonly IdentityLoader _identityLoader;
+    private readonly PolicyLoader _policyLoader;
+    private readonly IGovernanceModeStore _governanceModeStore;
+    private readonly IGovernanceWindowStore _governanceWindowStore;
 
     public CapabilityExplorerModel(
         ICapabilityCatalog capabilityCatalog,
         ICapabilityExplorer capabilityExplorer,
         IActivityStore activityStore,
-        IAuditEventStore auditEventStore)
+        IAuditEventStore auditEventStore,
+        IdentityLoader identityLoader,
+        PolicyLoader policyLoader,
+        IGovernanceModeStore governanceModeStore,
+        IGovernanceWindowStore governanceWindowStore)
     {
         _capabilityCatalog = capabilityCatalog;
         _capabilityExplorer = capabilityExplorer;
         _activityStore = activityStore;
         _auditEventStore = auditEventStore;
+        _identityLoader = identityLoader;
+        _policyLoader = policyLoader;
+        _governanceModeStore = governanceModeStore;
+        _governanceWindowStore = governanceWindowStore;
     }
 
     public string? Query { get; private set; }
@@ -38,6 +51,16 @@ public sealed class CapabilityExplorerModel : PageModel
     public bool SearchWasRequested { get; private set; }
     public bool CapabilityWasRequested { get; private set; }
     public bool HasRuntimeActivity => RuntimeActivity?.TotalRequests > 0;
+    public string RuntimeMode { get; private set; } = "LogOnly";
+    public GovernanceWindow GovernanceWindow { get; private set; } = null!;
+    public IReadOnlyCollection<CapabilityIdentityProfile> RelatedIdentities { get; private set; } = [];
+    public IReadOnlyCollection<CapabilityPolicyProfile> RelatedPolicies { get; private set; } = [];
+    public IReadOnlyCollection<CapabilityResourceProfile> RelatedResources { get; private set; } = [];
+    public bool GovernanceWindowApplies => Overview is not null &&
+        GovernanceWindow.Enabled && GovernanceWindow.AffectedCapabilities.Contains(
+            Overview.CatalogEntry.Capability.Id, StringComparer.OrdinalIgnoreCase);
+    public int ApprovalPolicyCount => RelatedPolicies.Count(policy =>
+        string.Equals(policy.Effect, "RequireApproval", StringComparison.OrdinalIgnoreCase));
 
     public async Task OnGetAsync(
         string? q,
@@ -54,6 +77,8 @@ public sealed class CapabilityExplorerModel : PageModel
         Risk = risk;
         Category = category;
         Lifecycle = lifecycle;
+        RuntimeMode = _governanceModeStore.GetMode().ToString();
+        GovernanceWindow = _governanceWindowStore.GetWindow();
         SearchWasRequested = !string.IsNullOrWhiteSpace(q) ||
             !string.IsNullOrWhiteSpace(owner) ||
             !string.IsNullOrWhiteSpace(risk) ||
@@ -111,9 +136,84 @@ public sealed class CapabilityExplorerModel : PageModel
                 capabilityId,
                 StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(auditEvent => auditEvent.TimestampUtc)
-            .Take(5)
+            .Take(10)
+            .ToList();
+
+        BuildRelationshipProfiles();
+    }
+
+    public string GetGovernanceSummary()
+    {
+        if (Overview is null) return string.Empty;
+        var capability = Overview.CatalogEntry.Capability;
+        var owner = string.IsNullOrWhiteSpace(capability.Owner)
+            ? "an unspecified owner" : capability.Owner;
+        var scope = RecentDecisions.Select(item => item.Environment)
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+        var text = $"This is a {capability.RiskLevel.ToString().ToLowerInvariant()}-risk" +
+            (string.IsNullOrWhiteSpace(scope) ? string.Empty : $" {scope}") +
+            $" capability owned by {owner}. It is governed by {RelatedPolicies.Count} " +
+            $"{Plural(RelatedPolicies.Count, "policy", "policies")}, used by " +
+            $"{RelatedIdentities.Count} {Plural(RelatedIdentities.Count, "identity", "identities")}, " +
+            $"and currently operating in {RuntimeMode} mode.";
+        if (ApprovalPolicyCount > 0) text += $" {ApprovalPolicyCount} governing {Plural(ApprovalPolicyCount, "policy requires", "policies require")} approval.";
+        if (GovernanceWindowApplies) text += $" The active {GovernanceWindow.Name} window participates in evaluations.";
+        if (RecentDecisions.Any(item => item.Decision == DecisionType.Deny)) text += " Recent activity includes denied decisions.";
+        if (RecentDecisions.Any(item => item.Decision == DecisionType.RequireApproval)) text += " Recent activity includes pending approval decisions.";
+        return text;
+    }
+
+    public string GetImpactSummary() => RelatedResources.Count > 0
+        ? $"Changes to this capability may affect {RelatedIdentities.Count} " +
+          $"{Plural(RelatedIdentities.Count, "identity", "identities")} across " +
+          $"{RelatedResources.Count} governed {Plural(RelatedResources.Count, "resource", "resources")}."
+        : $"Changes to this capability may affect {RelatedIdentities.Count} " +
+          $"{Plural(RelatedIdentities.Count, "identity", "identities")} and " +
+          $"{RelatedPolicies.Count} governing {Plural(RelatedPolicies.Count, "policy", "policies")}; no related resources are currently projected.";
+
+    private void BuildRelationshipProfiles()
+    {
+        if (Overview is null) return;
+        var relationships = Overview.Relationships;
+        var identities = _identityLoader.GetIdentities().ToDictionary(
+            item => item.Name, StringComparer.OrdinalIgnoreCase);
+        var policies = _policyLoader.GetPolicies().ToDictionary(
+            item => item.Name, StringComparer.OrdinalIgnoreCase);
+
+        RelatedIdentities = RelatedEntities(relationships, GovernanceEntityType.Identity)
+            .Select(entity =>
+            {
+                identities.TryGetValue(entity.Id, out var definition);
+                var recent = RecentDecisions.FirstOrDefault(item => string.Equals(
+                    item.IdentityId, entity.Id, StringComparison.OrdinalIgnoreCase));
+                return new CapabilityIdentityProfile(entity.Id,
+                    definition?.Type ?? "Unknown", definition?.Description ?? string.Empty,
+                    recent is null ? null : DecisionLabel(recent.Decision));
+            }).ToList();
+        RelatedPolicies = RelatedEntities(relationships, GovernanceEntityType.Policy)
+            .Select(entity =>
+            {
+                policies.TryGetValue(entity.Id, out var policy);
+                return new CapabilityPolicyProfile(entity.Id,
+                    policy?.Decision ?? "Unknown", policy?.Environment ?? string.Empty,
+                    policy?.Reason ?? string.Empty);
+            }).ToList();
+        RelatedResources = RelatedEntities(relationships, GovernanceEntityType.Resource)
+            .Select(entity => new CapabilityResourceProfile(entity.Id,
+                string.IsNullOrWhiteSpace(entity.Scope) ? "Not specified" : entity.Scope))
             .ToList();
     }
+
+    private static IReadOnlyCollection<GovernanceEntityReference> RelatedEntities(
+        IEnumerable<GovernanceRelationship> relationships, GovernanceEntityType type) =>
+        relationships.SelectMany(item => new[] { item.From, item.To })
+            .Where(item => item.Type == type)
+            .DistinctBy(item => item.Id, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item.Id, StringComparer.OrdinalIgnoreCase).ToList();
+
+    private static string DecisionLabel(DecisionType decision) =>
+        decision == DecisionType.RequireApproval ? "Pending Approval" : decision.ToString();
+    private static string Plural(int count, string singular, string plural) => count == 1 ? singular : plural;
 
     public string GetRecommendation()
     {
@@ -303,3 +403,11 @@ public sealed record GraphNodeGroup(
 public sealed record GraphNode(
     string Type,
     string Label);
+
+public sealed record CapabilityIdentityProfile(
+    string Id, string Type, string Description, string? RecentDecision);
+
+public sealed record CapabilityPolicyProfile(
+    string Id, string Effect, string Environment, string Reason);
+
+public sealed record CapabilityResourceProfile(string Id, string Environment);

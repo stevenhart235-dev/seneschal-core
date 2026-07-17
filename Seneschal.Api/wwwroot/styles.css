@@ -3429,6 +3429,92 @@ button:hover,
 .governance-window-form fieldset span { display: grid; gap: 3px; }
 .governance-window-form small { color: var(--portal-muted); }
 .governance-window-definition select { background: var(--portal-surface-raised); color: var(--portal-text); margin-top: var(--portal-space-2); min-height: 190px; padding: var(--portal-space-2); width: 100%; }
+
+/* Capability Explorer operational profile */
+.capability-operational-profile { max-width: 1680px; }
+.capability-explorer-page-header { align-items: end; display: flex; justify-content: space-between; }
+.capability-identity-hero { background: #111a26; border: 1px solid var(--portal-border); border-left: 4px solid var(--portal-accent); border-radius: 14px; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(330px, .7fr); margin-bottom: 14px; overflow: hidden; }
+.capability-identity-hero.risk-edge-high, .capability-identity-hero.risk-edge-critical { border-left-color: var(--portal-deny); }
+.capability-identity-hero.risk-edge-medium { border-left-color: var(--portal-pending); }
+.capability-identity-primary { padding: 28px 30px; }
+.capability-profile-eyebrow { color: var(--portal-muted); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+.capability-identity-primary h2 { font-size: clamp(28px, 3vw, 40px); font-weight: 620; letter-spacing: -.03em; margin: 8px 0 2px; }
+.capability-identity-primary > code { color: #a8bad0; font-size: 13px; }
+.capability-identity-primary > p { color: var(--portal-muted); font-size: 15px; line-height: 1.55; margin: 18px 0; max-width: 780px; }
+.capability-profile-badges { display: flex; flex-wrap: wrap; gap: 7px; }
+.capability-identity-context { align-content: center; background: #0d1621; border-left: 1px solid var(--portal-border); display: grid; margin: 0; padding: 20px 25px; }
+.capability-identity-context > div { border-bottom: 1px solid rgba(145,163,184,.13); padding: 9px 0; }
+.capability-identity-context > div:last-child { border-bottom: 0; }
+.capability-identity-context dt { color: var(--portal-muted); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; }
+.capability-identity-context dd { color: var(--portal-text); font-size: 13px; margin: 3px 0 0; }
+.capability-identity-context a { color: var(--portal-accent); }
+.capability-governance-summary { align-items: start; background: rgba(77,112,157,.1); border: 1px solid rgba(107,159,232,.24); border-radius: 10px; display: grid; gap: 16px; grid-template-columns: 145px 1fr; margin-bottom: 14px; padding: 16px 20px; }
+.capability-governance-summary > span { color: #a9c8ef; font-size: 11px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; }
+.capability-governance-summary p { color: #d5dfec; line-height: 1.55; margin: 0; }
+.capability-profile-metrics { display: grid; gap: 9px; grid-template-columns: repeat(7,minmax(0,1fr)); margin-bottom: 16px; }
+.capability-profile-metrics article { background: var(--portal-surface); border: 1px solid rgba(145,163,184,.15); border-radius: 10px; min-height: 84px; padding: 14px; }
+.capability-profile-metrics span { color: var(--portal-muted); display: block; font-size: 11px; min-height: 29px; }
+.capability-profile-metrics strong { display: block; font-size: 24px; font-weight: 610; }
+.capability-profile-metrics .metric-allow { color: var(--portal-allow); }
+.capability-profile-metrics .metric-deny { color: var(--portal-deny); }
+.capability-profile-metrics .metric-pending { color: var(--portal-pending); }
+.capability-profile-workspace { align-items: start; display: grid; gap: 16px; grid-template-columns: minmax(0,2fr) minmax(280px,.65fr); margin-bottom: 16px; }
+.capability-profile-workspace .panel, .capability-recent-activity { border-color: rgba(145,163,184,.16); border-radius: 12px; margin: 0; }
+.capability-section-header { align-items: start; border-bottom: 1px solid rgba(145,163,184,.13); display: flex; justify-content: space-between; margin-bottom: 4px; padding-bottom: 14px; }
+.capability-section-header h2 { font-size: 16px; font-weight: 600; margin: 0 0 3px; }
+.capability-section-header p { color: var(--portal-muted); font-size: 12px; margin: 0; }
+.capability-section-header a { color: var(--portal-accent); font-size: 12px; }
+.capability-relationship-groups { display: grid; grid-template-columns: 1fr 1fr; }
+.capability-relationship-groups > section { min-width: 0; padding: 18px; }
+.capability-relationship-groups > section:nth-child(odd) { border-right: 1px solid rgba(145,163,184,.12); }
+.capability-relationship-groups > section:nth-child(-n+2) { border-bottom: 1px solid rgba(145,163,184,.12); }
+.capability-relationship-groups header { align-items: center; display: flex; justify-content: space-between; }
+.capability-relationship-groups h3 { font-size: 13px; font-weight: 600; margin: 0; }
+.capability-relationship-groups header > span { color: var(--portal-muted); font-variant-numeric: tabular-nums; }
+.capability-relationship-groups ul { list-style: none; margin: 10px 0 0; padding: 0; }
+.capability-relationship-groups li { align-items: start; border-top: 1px solid rgba(145,163,184,.09); display: flex; gap: 12px; justify-content: space-between; padding: 10px 0; }
+.capability-relationship-groups li:first-child { border-top: 0; }
+.capability-relationship-groups li div { min-width: 0; }
+.capability-relationship-groups li a { color: var(--portal-text); display: block; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.capability-relationship-groups li small { color: var(--portal-muted); display: block; font-size: 10px; margin-top: 3px; }
+.capability-relationship-groups li p { color: var(--portal-muted); font-size: 11px; line-height: 1.4; margin: 5px 0 0; }
+.relationship-empty { color: var(--portal-muted); font-size: 11px; margin: 14px 0 4px; }
+.capability-impact-panel { display: grid; gap: 16px; }
+.capability-impact-panel .panel > span { color: var(--portal-muted); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; }
+.capability-impact-panel .panel > strong { display: block; font-size: 34px; font-weight: 620; margin: 8px 0; }
+.capability-impact-panel .panel > p { color: var(--portal-muted); font-size: 12px; line-height: 1.5; }
+.capability-impact-panel dl { margin: 15px 0 0; }
+.capability-impact-panel dl > div, .capability-tags dl > div { border-top: 1px solid rgba(145,163,184,.11); display: flex; justify-content: space-between; padding: 8px 0; }
+.capability-impact-panel dt, .capability-tags dt { color: var(--portal-muted); font-size: 11px; }
+.capability-impact-panel dd, .capability-tags dd { font-size: 11px; margin: 0; }
+.capability-tags h2 { font-size: 14px; margin-top: 0; }
+.capability-tags .badge { margin: 3px 3px 0 0; }
+.capability-recent-activity { margin-bottom: 16px; }
+.capability-activity-table-wrap { overflow-x: auto; }
+.capability-activity-table { min-width: 850px; }
+.capability-activity-table td { font-size: 11px; }
+.capability-activity-table td span, .capability-activity-table td code { display: block; }
+.capability-activity-table td code { color: var(--portal-muted); margin-top: 3px; }
+.capability-activity-table a { color: var(--portal-accent); }
+.capability-discovery-panel.is-secondary { border-top: 1px solid var(--portal-border); margin-top: 24px; padding-top: 20px; }
+.capability-discovery-panel.is-secondary .search-panel { margin-bottom: 12px; }
+.capability-no-selection { margin-top: 16px; }
+@media (max-width:1280px) {
+  .capability-profile-metrics { grid-template-columns: repeat(4,minmax(0,1fr)); }
+  .capability-profile-workspace { grid-template-columns: minmax(0,1.6fr) minmax(260px,.7fr); }
+}
+@media (max-width:1050px) {
+  .capability-identity-hero { grid-template-columns: 1fr; }
+  .capability-identity-context { border-left: 0; border-top: 1px solid var(--portal-border); grid-template-columns: 1fr 1fr; column-gap: 24px; }
+  .capability-profile-workspace { grid-template-columns: 1fr; }
+  .capability-impact-panel { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width:760px) {
+  .capability-explorer-page-header { align-items: start; flex-direction: column; gap: 14px; }
+  .capability-governance-summary, .capability-identity-context, .capability-impact-panel { grid-template-columns: 1fr; }
+  .capability-profile-metrics, .capability-relationship-groups { grid-template-columns: 1fr 1fr; }
+  .capability-relationship-groups > section { border: 0 !important; border-bottom: 1px solid rgba(145,163,184,.12) !important; }
+}
 .governance-window-consequences { margin-top: var(--portal-space-5); }
 @media (max-width: 900px) {
     .governance-window-grid { grid-template-columns: 1fr; }

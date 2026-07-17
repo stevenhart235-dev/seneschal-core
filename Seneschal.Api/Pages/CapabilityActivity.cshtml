@@ -1,166 +1,47 @@
 @page "/capability-activity"
 @model Seneschal.Api.Pages.CapabilityActivityModel
+@using Seneschal.Core.Models
 @{
     Layout = null;
+    string BadgeClass(string value) => value.Replace(" ", "-").ToLowerInvariant();
 }
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Seneschal Capability Activity</title>
-    <link rel="stylesheet" href="/styles.css" />
-</head>
-<body>
-    <div class="app-shell">
-        @await Html.PartialAsync("Shared/_PortalSidebar", "capability-activity")
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Seneschal Capability Activity</title><link rel="stylesheet" href="/styles.css" /></head>
+<body><div class="app-shell">
+@await Html.PartialAsync("Shared/_PortalSidebar", "capability-activity")
+<main class="container explorer-page capability-investigation-page">
+<header class="page-header graph-page-header"><div><div class="breadcrumb">Operations / Capability Activity</div><h1>Capability Activity</h1><p class="subtitle">Investigate the chronological sequence of evaluations and approval outcomes for one capability.</p></div><a class="button-link" href="/dashboard">Back to Dashboard</a></header>
 
-        <main class="container explorer-page">
-            <header class="page-header graph-page-header">
-                <div>
-                    <div class="breadcrumb">Operations / Capability Activity</div>
-                    <h1>Capability Activity</h1>
-                    <p class="subtitle">
-                        Understand which capabilities are being exercised and
-                        where denials or pending approvals are happening.
-                    </p>
-                </div>
-                <a class="button-link" href="/dashboard">Back to Dashboard</a>
-            </header>
+@if (!Model.HasActivity) {
+<section class="panel"><h2>No Runtime Activity Yet</h2><div class="empty-state"><p class="muted">Capability activity appears automatically after runtime evaluations are recorded.</p><p class="muted">Applications create activity by calling <span class="code">/evaluate</span>.</p></div></section>
+} else {
+@if (!Model.CapabilityWasRequested) {
+<section class="panel capability-inventory"><div class="capability-section-header"><div><h2>Capabilities by Runtime Activity</h2><p>Select a capability to open its investigation timeline.</p></div></div><div class="table-scroll" tabindex="0" role="region" aria-label="Capability runtime activity"><table class="activity-table"><thead><tr><th>Capability</th><th>Total Requests</th><th class="outcome-allow">Allowed</th><th class="outcome-deny">Denied</th><th class="outcome-pending">Pending Approval</th><th>Governed</th><th>Last Used</th><th>Avg Duration ms</th></tr></thead><tbody>
+@foreach (var capability in Model.Capabilities) { <tr><td><a class="table-link" href="/capability-activity?capabilityId=@Uri.EscapeDataString(capability.CapabilityId)">@capability.CapabilityId</a></td><td>@capability.TotalRequests</td><td class="outcome-allow">@capability.AllowedCount</td><td class="outcome-deny">@capability.DeniedCount</td><td class="outcome-pending">@capability.PendingApprovalCount</td><td>@if (capability.GovernedEvaluationCount > 0) { <span class="status-badge status-warning">@capability.GovernedEvaluationCount window</span> } else { <span class="muted">0</span> }</td><td class="activity-timestamp">@(capability.LastUsedUtc?.ToString("u") ?? "n/a")</td><td class="activity-duration">@capability.AverageEvaluationDurationMs.ToString("0.##")</td></tr> }
+</tbody></table></div></section>
+}
 
-            @if (!Model.HasActivity)
-            {
-                <section class="panel">
-                    <h2>No Runtime Activity Yet</h2>
-                    <div class="empty-state">
-                        <p class="muted">
-                            Capability activity appears automatically after
-                            runtime evaluations are recorded.
-                        </p>
-                        <p class="muted">
-                            Applications, middleware, the sample API, and users
-                            create activity by calling
-                            <span class="code">/evaluate</span>.
-                        </p>
-                    </div>
-                </section>
-            }
-            else
-            {
-                <section class="panel">
-                    <h2>Capabilities by Runtime Activity</h2>
-                    <div class="table-scroll" tabindex="0" role="region" aria-label="Capability runtime activity">
-                    <table class="activity-table">
-                        <thead>
-                            <tr>
-                                <th>Capability</th>
-                                <th>Total Requests</th>
-                                <th class="outcome-allow">Allowed</th>
-                                <th class="outcome-deny">Denied</th>
-                                <th class="outcome-pending">Pending Approval</th>
-                                <th>Governed</th>
-                                <th>Last Used</th>
-                                <th>Avg Duration ms</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var capability in Model.Capabilities)
-                            {
-                                <tr>
-                                    <td>
-                                        <a class="table-link" href="/capability-activity?capabilityId=@Uri.EscapeDataString(capability.CapabilityId)">
-                                            @capability.CapabilityId
-                                        </a>
-                                    </td>
-                                    <td>@capability.TotalRequests</td>
-                                    <td class="outcome-allow">@capability.AllowedCount</td>
-                                    <td class="outcome-deny">@capability.DeniedCount</td>
-                                    <td class="outcome-pending">@capability.PendingApprovalCount</td>
-                                    <td>
-                                        @if (capability.GovernedEvaluationCount > 0)
-                                        {
-                                            <span class="status-badge status-warning">@capability.GovernedEvaluationCount window</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="muted">0</span>
-                                        }
-                                    </td>
-                                    <td class="activity-timestamp">@(capability.LastUsedUtc?.ToString("u") ?? "n/a")</td>
-                                    <td class="activity-duration">@capability.AverageEvaluationDurationMs.ToString("0.##")</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                    </div>
-                </section>
+@if (Model.CapabilityWasRequested && Model.SelectedCapability is null) {
+<section class="notice"><h2>Capability not found</h2><p class="muted">No runtime activity was found for <span class="code">@Model.CapabilityId</span>.</p></section>
+} else if (Model.SelectedCapability is not null) {
+var summary = Model.Summary;
+<section class="capability-investigation-header"><div><span>Selected capability</span><h2>@Model.SelectedCapability.CapabilityId</h2><p>@Model.GetInvestigationSummaryText() @if (summary.MostRecentActivityUtc is not null) { <text>The most recent decision occurred <time datetime="@summary.MostRecentActivityUtc.Value.ToString("O")" data-relative-time="@summary.MostRecentActivityUtc.Value.ToString("O")">@summary.MostRecentActivityUtc.Value.ToString("u")</time>.</text> }</p></div><nav><a href="/capability-activity">All capability activity</a><a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(Model.SelectedCapability.CapabilityId)">Capability profile</a><a href="/audit?capabilityId=@Uri.EscapeDataString(Model.SelectedCapability.CapabilityId)">All audit events</a></nav></section>
 
-                @if (Model.CapabilityWasRequested && Model.SelectedCapability is null)
-                {
-                    <section class="notice">
-                        <h2>Capability not found</h2>
-                        <p class="muted">
-                            No runtime activity was found for
-                            <span class="code">@Model.CapabilityId</span>.
-                        </p>
-                    </section>
-                }
-                else if (Model.SelectedCapability is not null)
-                {
-                    var capability = Model.SelectedCapability;
-                    <section class="panel identity-detail-panel">
-                        <div class="dashboard-section-header">
-                            <div>
-                                <h2>@capability.CapabilityId</h2>
-                                <p class="muted">
-                                    Runtime activity summary for the selected
-                                    capability.
-                                </p>
-                            </div>
-                            <a class="button-link" href="/audit?capabilityId=@Uri.EscapeDataString(capability.CapabilityId)">
-                                View Audit Events
-                            </a>
-                        </div>
+<section class="capability-investigation-summary" aria-label="Investigation summary"><article><span>@(summary.TotalEvaluations == 1 ? "Evaluation attempt" : "Evaluation attempts")</span><strong>@summary.TotalEvaluations</strong></article><article><span>@(summary.AllowCount == 1 ? "Allow decision" : "Allow decisions")</span><strong class="metric-allow">@summary.AllowCount</strong></article><article><span>@(summary.DenyCount == 1 ? "Denied evaluation" : "Denied evaluations")</span><strong class="metric-deny">@summary.DenyCount</strong></article><article><span>@(summary.PendingApprovalCount == 1 ? "Pending approval" : "Pending approvals")</span><strong class="metric-pending">@summary.PendingApprovalCount</strong></article><article><span>@(summary.DistinctOperations == 1 ? "Distinct operation" : "Distinct operations")</span><strong>@summary.DistinctOperations</strong></article><article><span>Most recent activity</span><strong class="metric-time">@(summary.MostRecentActivityUtc?.ToString("u") ?? "None")</strong></article></section>
 
-                        <section class="dashboard-grid activity-metric-grid">
-                            <article class="dashboard-card activity-card">
-                                <strong>@capability.TotalRequests</strong>
-                                <span>Total Requests</span>
-                            </article>
-                            <article class="dashboard-card activity-card">
-                                <strong>@capability.AllowedCount</strong>
-                                <span>Allowed Count</span>
-                            </article>
-                            <article class="dashboard-card activity-card">
-                                <strong>@capability.DeniedCount</strong>
-                                <span>Denied Count</span>
-                            </article>
-                            <article class="dashboard-card activity-card">
-                                <strong>@capability.PendingApprovalCount</strong>
-                                <span>Pending Approval Count</span>
-                            </article>
-                            <article class="dashboard-card activity-card">
-                                <strong>@capability.GovernedEvaluationCount</strong>
-                                <span>Governance Window Evaluations</span>
-                            </article>
-                        </section>
+<section class="panel capability-timeline-filters"><form method="get" action="/capability-activity"><input type="hidden" name="capabilityId" value="@Model.SelectedCapability.CapabilityId" /><label>Decision<select name="decision"><option value="">All decisions</option>@foreach (var value in new[] { "Allow", "Deny", "PendingApproval", "Approved", "Rejected", "Consumed" }) { <option value="@value" selected="@(string.Equals(Model.DecisionFilter, value, StringComparison.OrdinalIgnoreCase))">@(value == "PendingApproval" ? "Pending Approval" : value)</option> }</select></label><label>Identity<select name="identity"><option value="">All identities</option>@foreach (var value in Model.AvailableIdentities) { <option value="@value" selected="@(string.Equals(Model.IdentityFilter, value, StringComparison.OrdinalIgnoreCase))">@value</option> }</select></label><label>Environment<select name="environment"><option value="">All environments</option>@foreach (var value in Model.AvailableEnvironments) { <option value="@value" selected="@(string.Equals(Model.EnvironmentFilter, value, StringComparison.OrdinalIgnoreCase))">@value</option> }</select></label><label>Operation ID<select name="operationId"><option value="">All operations</option>@foreach (var value in Model.AvailableOperations) { <option value="@value" selected="@(string.Equals(Model.OperationIdFilter, value, StringComparison.OrdinalIgnoreCase))">@value</option> }</select></label><label>Runtime mode<select name="runtimeMode"><option value="">All modes</option>@foreach (var value in new[] { "LogOnly", "Enforce" }) { <option value="@value" selected="@(string.Equals(Model.RuntimeModeFilter, value, StringComparison.OrdinalIgnoreCase))">@value</option> }</select></label><button type="submit" class="button-secondary">Apply filters</button>@if (Model.FiltersApplied) { <a href="/capability-activity?capabilityId=@Uri.EscapeDataString(Model.SelectedCapability.CapabilityId)">Clear</a> }</form></section>
 
-                        <section class="dashboard-grid activity-metric-grid">
-                            <article class="dashboard-card activity-card">
-                                <strong>@(capability.LastUsedUtc?.ToString("u") ?? "n/a")</strong>
-                                <span>Last Used</span>
-                            </article>
-                            <article class="dashboard-card activity-card">
-                                <strong>@capability.AverageEvaluationDurationMs.ToString("0.##")</strong>
-                                <span>Average Evaluation Duration ms</span>
-                            </article>
-                        </section>
-                    </section>
-                }
-            }
-
-            <footer class="app-footer">Seneschal v0.2.1-alpha</footer>
-        </main>
-    </div>
-</body>
-</html>
+<section class="capability-timeline" aria-labelledby="timelineTitle"><div class="capability-section-header"><div><h2 id="timelineTitle">Investigation timeline</h2><p>Newest activity first. Events sharing a caller-owned operation ID are grouped.</p></div></div>
+@if (!Model.HasTimeline) { <div class="panel empty-state"><strong>@(Model.FiltersApplied ? "No activity matches these filters" : "No recent activity")</strong><p>@(Model.FiltersApplied ? "Clear or change the filters while preserving this capability." : "Evaluations will appear here after this capability is requested.")</p></div> }
+@foreach (var group in Model.OperationGroups) {
+<article class="operation-timeline-group"><header><div><span>Application operation</span><code>@group.OperationId</code></div><span class="approval-status approval-status-@BadgeClass(group.State)">@group.State</span></header><ol>
+@foreach (var item in group.Events) { <li class="timeline-event event-@BadgeClass(item.Decision)"><div class="timeline-marker" aria-hidden="true"></div><article><header><div class="timeline-event-outcome"><span class="decision-badge decision-@BadgeClass(item.Decision)">@item.Decision</span>@if (!string.IsNullOrWhiteSpace(item.LifecycleEvent)) { <span class="approval-status approval-status-@BadgeClass(item.LifecycleEvent)">@item.LifecycleEvent</span> }<strong>→ @item.EffectiveAction</strong></div><time datetime="@item.TimestampUtc.ToString("O")">@item.TimestampUtc.ToString("u")</time></header><div class="timeline-event-context"><a href="/identity-activity?identityId=@Uri.EscapeDataString(item.IdentityId)">@item.IdentityId</a><span>@(string.IsNullOrWhiteSpace(item.Environment) ? "Environment not provided" : item.Environment)</span><span>@(string.IsNullOrWhiteSpace(item.ResourceId) ? "Resource not provided" : item.ResourceId)</span><span>@item.RuntimeMode</span></div><p>@item.Reason</p><details><summary>Evaluation details</summary><dl><div><dt>Capability</dt><dd>@item.CapabilityId</dd></div><div><dt>Operation ID</dt><dd>@item.OperationId</dd></div><div><dt>Matched policy</dt><dd>@(item.MatchedPolicy ?? "No matched policy recorded")</dd></div><div><dt>Approval status</dt><dd>@(item.ApprovalStatus ?? "Not applicable")</dd></div><div><dt>Execution guidance</dt><dd>@(string.IsNullOrWhiteSpace(item.ExecutionGuidance) ? "Not recorded" : item.ExecutionGuidance)</dd></div></dl></details><a class="timeline-trace-link" href="/audit/@Uri.EscapeDataString(item.DecisionId)">View Decision Trace</a></article></li> }
+</ol></article> }
+@if (Model.LegacyEvents.Count > 0) { <section class="legacy-timeline"><header><h3>Legacy context evaluations</h3><p>These evaluations did not include an Operation ID and remain independent events.</p></header><ol>
+@foreach (var item in Model.LegacyEvents) { <li class="timeline-event event-@BadgeClass(item.Decision)"><div class="timeline-marker" aria-hidden="true"></div><article><header><div class="timeline-event-outcome"><span class="decision-badge decision-@BadgeClass(item.Decision)">@item.Decision</span>@if (!string.IsNullOrWhiteSpace(item.LifecycleEvent)) { <span class="approval-status approval-status-@BadgeClass(item.LifecycleEvent)">@item.LifecycleEvent</span> }<strong>→ @item.EffectiveAction</strong></div><time datetime="@item.TimestampUtc.ToString("O")">@item.TimestampUtc.ToString("u")</time></header><div class="timeline-event-context"><a href="/identity-activity?identityId=@Uri.EscapeDataString(item.IdentityId)">@item.IdentityId</a><span>@(string.IsNullOrWhiteSpace(item.Environment) ? "Environment not provided" : item.Environment)</span><span>@(string.IsNullOrWhiteSpace(item.ResourceId) ? "Resource not provided" : item.ResourceId)</span><span>@item.RuntimeMode</span></div><p>@item.Reason</p><details><summary>Evaluation details</summary><dl><div><dt>Matched policy</dt><dd>@(item.MatchedPolicy ?? "No matched policy recorded")</dd></div><div><dt>Approval status</dt><dd>@(item.ApprovalStatus ?? "Not applicable")</dd></div><div><dt>Execution guidance</dt><dd>@(string.IsNullOrWhiteSpace(item.ExecutionGuidance) ? "Not recorded" : item.ExecutionGuidance)</dd></div></dl></details><a class="timeline-trace-link" href="/audit/@Uri.EscapeDataString(item.DecisionId)">View Decision Trace</a></article></li> }
+</ol></section> }
+</section>
+}
+}
+<footer class="app-footer">Seneschal v0.2.1-alpha</footer></main></div></body></html>

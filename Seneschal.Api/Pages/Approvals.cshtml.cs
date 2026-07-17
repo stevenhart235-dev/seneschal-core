@@ -26,6 +26,23 @@ public sealed class ApprovalsModel : PageModel
 
     public void OnGet() => Load();
 
+    public JsonResult OnGetState() => new(_store.GetAll().Select(record => new
+    {
+        approvalId = record.Id,
+        operationId = record.OperationId,
+        correlationMode = record.CorrelationMode.ToString(),
+        identity = record.IdentityId,
+        capability = record.CapabilityId,
+        environment = record.Environment,
+        resource = record.ResourceId,
+        requestedAt = record.RequestedAt,
+        status = record.Status.ToString(),
+        resolvedAt = record.ResolvedAt,
+        resolvedBy = record.ResolvedBy,
+        consumedAt = record.ConsumedAt,
+        consumedByDecisionId = record.ConsumedByDecisionId
+    }));
+
     public async Task<IActionResult> OnPostResolveAsync(
         string approvalId, string resolution, string resolvedBy)
     {

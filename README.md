@@ -20,14 +20,16 @@ cd seneschal-core
 
 The launcher packs the local client package, starts Seneschal and four package-based workers, waits for readiness, and opens the Dashboard automatically.
 
-To walk through the operation-scoped, single-use approval lifecycle against the running demo:
+### Guided approval demo
+
+Start the local demo, then run the guided operation-scoped, single-use approval walkthrough:
 
 ```powershell
 .\demo.ps1
 .\demo-approval.ps1
 ```
 
-The approval runner detects the current ApprovalWorker request and guides the presenter through approving or rejecting it in the portal.
+The runner detects the current ApprovalWorker request, opens the Approvals page, and verifies either the approval/consumption path or the rejection path. It never starts or stops the local demo.
 
 Run the guided Production Freeze story after the demo is ready:
 

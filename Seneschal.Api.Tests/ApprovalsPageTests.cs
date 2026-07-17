@@ -2,6 +2,7 @@ using Seneschal.Api.Pages;
 using Seneschal.Api.Services;
 using Seneschal.Core.Enums;
 using Seneschal.Core.Repositories;
+using System.Text.Json;
 using Xunit;
 
 namespace Seneschal.Api.Tests;
@@ -68,5 +69,25 @@ public sealed class ApprovalsPageTests : IClassFixture<ApiApplicationFactory>
              ApprovalStatus.Rejected, ApprovalStatus.Consumed],
             page.Approvals.Select(item => item.Status));
         Assert.Equal(pending.Id, page.Approvals.First().Id);
+    }
+
+    [Fact]
+    public void StateHandlerReturnsReadOnlyOperationScopedApprovalState()
+    {
+        var store = new InMemoryApprovalStore();
+        var requestedAt = DateTimeOffset.UtcNow;
+        var record = store.GetOrCreate(
+            "worker", "production.release.approve", "production",
+            "checkout-api", "reason", requestedAt, "release-demo-0042").Record;
+        var page = new ApprovalsModel(store, new InMemoryAuditEventStore(),
+            new InMemoryGovernanceModeStore(new RuntimeSettings()));
+
+        var json = JsonSerializer.Serialize(page.OnGetState().Value);
+
+        Assert.Contains(record.Id, json);
+        Assert.Contains("release-demo-0042", json);
+        Assert.Contains("Operation", json);
+        Assert.Contains("Pending", json);
+        Assert.Contains("production.release.approve", json);
     }
 }

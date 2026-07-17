@@ -41,10 +41,21 @@ public sealed class DemoLauncherTests
         Assert.Contains("release-approval-worker", script);
         Assert.Contains("production.release.approve", script);
         Assert.Contains("approvalOperationId", script);
+        Assert.Contains("${approvalsUrl}?handler=State", script);
+        Assert.Contains("correlationMode -eq 'Operation'", script);
         Assert.Contains("approvalAction -eq 'Consumed'", script);
         Assert.Contains("approvalAction -eq 'Used'", script);
-        Assert.Contains("Start it with .\\demo.ps1", script);
+        Assert.Contains("Get-CimInstance Win32_Process", script);
+        Assert.Contains("ApprovalWorker[\\\\/]ApprovalWorker\\.csproj", script);
+        Assert.Contains("$newPendingForOperation.Count -ne 1", script);
+        Assert.Contains("Timed out during '$Stage'", script);
+        Assert.Contains("The running demo was preserved", script);
+        Assert.Contains("Start it first with:", script);
+        Assert.Contains(".\\demo.ps1", script);
         Assert.DoesNotContain("& .\\demo.ps1", script);
         Assert.DoesNotContain("Start-Process dotnet", script);
+        Assert.DoesNotContain("Read-Host", script);
+        Assert.DoesNotContain("& .\\stop-demo.ps1", script);
+        Assert.DoesNotContain("handler=Resolve", script);
     }
 }

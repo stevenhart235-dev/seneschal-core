@@ -95,7 +95,7 @@ public sealed class GovernanceIncidentsPageTests :
         var html = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("Operations / Incidents / Detail", html);
+        Assert.Contains("href=\"/incidents\">Incidents</a> / Incident detail", html);
         Assert.Contains("Repeated denied governance decision", html);
         Assert.Contains("Critical", html);
         Assert.Contains("Open", html);
@@ -168,9 +168,9 @@ public sealed class GovernanceIncidentsPageTests :
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("Investigation", html);
-        Assert.Contains("Related Capability", html);
+        Assert.Contains("Investigate Capability Activity", html);
         Assert.Contains(
-            "/capability-explorer?capabilityId=DeleteProductionDatabase",
+            "/capability-activity?capabilityId=DeleteProductionDatabase&amp;identity=Developer",
             html);
         Assert.Contains("Related Identity", html);
         Assert.Contains("/identity-activity?identityId=Developer", html);
@@ -180,6 +180,7 @@ public sealed class GovernanceIncidentsPageTests :
         Assert.Contains(
             "/audit?capabilityId=DeleteProductionDatabase&amp;identityId=Developer",
             html);
+        Assert.Equal(1, html.Split("Open Filtered Audit Trail").Length - 1);
     }
 
     [Fact]

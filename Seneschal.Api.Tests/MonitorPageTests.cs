@@ -89,8 +89,10 @@ public sealed class MonitorPageTests : IClassFixture<ApiApplicationFactory>
         Assert.Contains("Caller should pause and retry", html);
         Assert.Contains("Window: Freeze &lt;window&gt; (Enforce)", html);
         Assert.Contains("release-&lt;001&gt;", html);
-        Assert.Contains("href=\"/audit/trace-1\"", html);
-        Assert.Contains("View Decision Trace", html);
+        Assert.Contains("Investigate Capability Activity", html);
+        Assert.Contains("/capability-activity?capabilityId=production.release.approve", html);
+        Assert.Contains("/capability-explorer?capabilityId=production.release.approve", html);
+        Assert.DoesNotContain("href=\"/audit/trace-1\"", html);
         Assert.DoesNotContain("Executed", html);
         Assert.Contains("worker&amp;lt;unsafe&gt;", html);
         Assert.DoesNotContain("Freeze <window>", html);

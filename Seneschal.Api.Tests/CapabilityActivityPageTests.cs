@@ -204,6 +204,11 @@ public sealed class CapabilityActivityPageTests :
         Assert.Contains("deny-filtered", html);
         Assert.DoesNotContain("allow-filtered", html);
         Assert.Contains($"capabilityId={Uri.EscapeDataString(capability)}", html);
+        Assert.Contains(
+            $"/audit?capabilityId={Uri.EscapeDataString(capability)}&amp;identityId=release-worker&amp;environment=production&amp;enforcementMode=LogOnly&amp;decision=deny",
+            html);
+        Assert.Contains("View capability profile", html);
+        Assert.Contains("href=\"/monitor\">Live Monitor</a> / Capability Activity", html);
     }
 
     [Fact]
@@ -226,13 +231,14 @@ public sealed class CapabilityActivityPageTests :
     }
 
     [Fact]
-    public async Task CapabilityExplorer_LinksToFullActivityTimeline()
+    public async Task CapabilityExplorer_UsesActivityAsPrimaryInvestigationAction()
     {
         var html = await _client.GetStringAsync(
             "/capability-explorer?capabilityId=production.deployment.execute");
 
-        Assert.Contains("Open full activity timeline", html);
+        Assert.Contains("Investigate Capability Activity", html);
         Assert.Contains("/capability-activity?capabilityId=production.deployment.execute", html);
+        Assert.DoesNotContain("Open full activity timeline", html);
     }
 
     [Fact]

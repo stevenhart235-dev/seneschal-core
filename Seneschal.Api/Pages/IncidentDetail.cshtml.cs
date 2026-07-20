@@ -94,6 +94,14 @@ public sealed class IncidentDetailModel : PageModel
             : $"/capability-explorer?capabilityId={Uri.EscapeDataString(Incident.CapabilityId)}";
     }
 
+    public string CapabilityActivityLink()
+    {
+        return Incident is null
+            ? "/capability-activity"
+            : $"/capability-activity?capabilityId={Uri.EscapeDataString(Incident.CapabilityId)}" +
+              $"&identity={Uri.EscapeDataString(Incident.IdentityId)}";
+    }
+
     public string IdentityLink()
     {
         return Incident is null

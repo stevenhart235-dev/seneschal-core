@@ -100,6 +100,33 @@ public sealed class CapabilityActivityModel : PageModel
             .OrderByDescending(item => item.TimestampUtc).ToList();
     }
 
+    public string FilteredAuditLink()
+    {
+        var parameters = new List<string>();
+        Add("capabilityId", CapabilityId);
+        Add("identityId", IdentityFilter);
+        Add("environment", EnvironmentFilter);
+        Add("enforcementMode", RuntimeModeFilter);
+        var auditDecision = NormalizeAuditDecision(DecisionFilter);
+        Add("decision", auditDecision);
+        return parameters.Count == 0 ? "/audit" : $"/audit?{string.Join("&", parameters)}";
+
+        void Add(string name, string? value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+                parameters.Add($"{name}={Uri.EscapeDataString(value)}");
+        }
+    }
+
+    private static string? NormalizeAuditDecision(string? value) =>
+        value?.ToLowerInvariant() switch
+        {
+            "allow" => "allow",
+            "deny" => "deny",
+            "pendingapproval" or "pending approval" => "requires_approval",
+            _ => null
+        };
+
     private bool MatchesFilters(CapabilityTimelineEvent item) =>
         Matches(IdentityFilter, item.IdentityId) &&
         Matches(EnvironmentFilter, item.Environment) &&

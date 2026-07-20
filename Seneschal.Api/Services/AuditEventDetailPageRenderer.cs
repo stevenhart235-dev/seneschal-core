@@ -13,7 +13,7 @@ public static class AuditEventDetailPageRenderer
         var html = new StringBuilder();
         AppendShellStart(html, "Seneschal Decision Trace");
         html.AppendLine("            <header class=\"page-header\">");
-        html.AppendLine("                <div class=\"breadcrumb\">Operations / Audit / Trace</div>");
+        html.AppendLine("                <nav class=\"breadcrumb\" aria-label=\"Breadcrumb\"><a href=\"/audit\">Audit Trail</a> / Decision Trace</nav>");
         html.AppendLine("                <h1>Decision Trace</h1>");
         html.AppendLine("                <p class=\"subtitle\">Audit Event Detail — why Seneschal returned this decision and what the caller should do next.</p>");
         html.AppendLine("            </header>");
@@ -77,10 +77,10 @@ public static class AuditEventDetailPageRenderer
     private static void AppendTraceNavigation(StringBuilder html, AuditEvent auditEvent)
     {
         html.AppendLine("            <nav class=\"trace-navigation\" aria-label=\"Related investigation links\">");
-        AppendNavLink(html, $"/capability-activity?capabilityId={Uri.EscapeDataString(auditEvent.CapabilityId)}", "Investigate Capability Activity");
+        AppendNavLink(html, BuildCapabilityActivityLink(auditEvent), "Investigate Capability Activity");
         AppendNavLink(html, $"/capability-explorer?capabilityId={Uri.EscapeDataString(auditEvent.CapabilityId)}", "View capability profile");
         AppendNavLink(html, $"/identity-activity?identityId={Uri.EscapeDataString(auditEvent.IdentityId)}", "View Identity Activity");
-        AppendNavLink(html, $"/audit?capabilityId={Uri.EscapeDataString(auditEvent.CapabilityId)}", "Open Filtered Audit Trail");
+        AppendNavLink(html, BuildFilteredAuditLink(auditEvent), "Open Filtered Audit Trail");
         if (HasApproval(auditEvent)) AppendNavLink(html, "/approvals", "View related approval");
         var policy = auditEvent.MatchedPolicies.FirstOrDefault();
         if (!string.IsNullOrWhiteSpace(policy)) AppendNavLink(html, $"/policies?policyId={Uri.EscapeDataString(policy)}", "View related policy");
@@ -287,7 +287,7 @@ public static class AuditEventDetailPageRenderer
         AppendMetadata(html, "Consumed at", auditEvent.ApprovalConsumedAt?.ToString("u") ?? string.Empty);
         AppendMetadata(html, "Consuming decision ID", auditEvent.ApprovalConsumedByDecisionId ?? string.Empty);
         AppendMetadata(html, "Effect", effect);
-        html.AppendLine("                </dl><a href=\"/approvals\">Open approval queue</a></section>");
+        html.AppendLine("                </dl></section>");
     }
 
     private static void AppendDecisionResolution(StringBuilder html, AuditEvent auditEvent)
@@ -499,6 +499,40 @@ public static class AuditEventDetailPageRenderer
     {
         html.Append("                    <li><span>").Append(Encode(label))
             .Append("</span><strong>").Append(Encode(evidence)).AppendLine("</strong></li>");
+    }
+
+    private static string BuildCapabilityActivityLink(AuditEvent auditEvent)
+    {
+        var parameters = new List<string>();
+        Add("capabilityId", auditEvent.CapabilityId);
+        Add("identity", auditEvent.IdentityId);
+        Add("environment", auditEvent.Environment);
+        Add("operationId", auditEvent.ApprovalOperationId);
+        Add("runtimeMode", auditEvent.EnforcementMode);
+        return $"/capability-activity?{string.Join("&", parameters)}";
+
+        void Add(string name, string? value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+                parameters.Add($"{name}={Uri.EscapeDataString(value)}");
+        }
+    }
+
+    private static string BuildFilteredAuditLink(AuditEvent auditEvent)
+    {
+        var parameters = new List<string>();
+        Add("capabilityId", auditEvent.CapabilityId);
+        Add("identityId", auditEvent.IdentityId);
+        Add("environment", auditEvent.Environment);
+        Add("enforcementMode", auditEvent.EnforcementMode);
+        Add("matchedPolicy", auditEvent.MatchedPolicies.FirstOrDefault());
+        return $"/audit?{string.Join("&", parameters)}";
+
+        void Add(string name, string? value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+                parameters.Add($"{name}={Uri.EscapeDataString(value)}");
+        }
     }
 
     private static string OutcomeHeadline(AuditEvent auditEvent)

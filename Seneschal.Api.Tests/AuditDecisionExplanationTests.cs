@@ -276,6 +276,14 @@ public sealed class AuditDecisionExplanationTests
         Assert.Contains("Open Filtered Audit Trail", html);
         Assert.Contains("View related approval", html);
         Assert.Contains("View related policy", html);
+        Assert.Contains(
+            "/capability-activity?capabilityId=production.deployment.execute&amp;identity=github-actions-production&amp;environment=production&amp;operationId=release-007&amp;runtimeMode=Enforce",
+            html);
+        Assert.Contains(
+            "/audit?capabilityId=production.deployment.execute&amp;identityId=github-actions-production&amp;environment=production&amp;enforcementMode=Enforce&amp;matchedPolicy=policy-a",
+            html);
+        Assert.Contains("href=\"/audit\">Audit Trail</a> / Decision Trace", html);
+        Assert.Equal(1, html.Split("View related approval").Length - 1);
     }
 
     [Fact]
@@ -322,7 +330,7 @@ public sealed class AuditDecisionExplanationTests
         Assert.Contains(effect, html);
         Assert.Contains("Requested at", html);
         Assert.Contains("Resolution reason", html);
-        Assert.Contains("Open approval queue", html);
+        Assert.Contains("View related approval", html);
     }
 
     [Fact]

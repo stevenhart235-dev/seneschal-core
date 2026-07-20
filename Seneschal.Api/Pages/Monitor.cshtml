@@ -17,7 +17,7 @@
     @await Html.PartialAsync("Shared/_PortalSidebar", "monitor")
     <main id="monitor-console" class="container explorer-page monitor-console" data-generated-at="@Model.GeneratedAtUtc.ToString("O")">
         <header class="page-header monitor-page-header">
-            <div><div class="breadcrumb">Overview / Live Monitor</div><h1>Live Monitor</h1><p class="subtitle">Watch current evaluations, runtime health, and events requiring attention.</p></div>
+            <div><nav class="breadcrumb" aria-label="Breadcrumb"><a href="/dashboard">Dashboard</a> / Live Monitor</nav><h1>Live Monitor</h1><p class="subtitle">Watch current evaluations, runtime health, and events requiring attention.</p></div>
             <a class="table-link" href="/dashboard">Open Dashboard</a>
         </header>
 
@@ -62,13 +62,13 @@
                         var effective = EffectiveResult(item.Decision, item.EnforcementMode);
                         <li class="monitor-event-row">
                             <time data-relative-time datetime="@item.TimestampUtc.ToString("O")">@item.TimestampUtc.ToString("u")</time>
-                            <div class="monitor-event-subject"><a href="/identity-activity?identityId=@Uri.EscapeDataString(item.IdentityId)">@item.IdentityId</a><a href="/capability-activity?capabilityId=@Uri.EscapeDataString(item.CapabilityId)">@item.CapabilityId</a></div>
+                            <div class="monitor-event-subject"><a href="/identity-activity?identityId=@Uri.EscapeDataString(item.IdentityId)">@item.IdentityId</a><a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(item.CapabilityId)" aria-label="View capability profile for @item.CapabilityId">@item.CapabilityId</a></div>
                             <div class="monitor-event-outcome"><span class="decision-badge decision-@DecisionClass(item.Decision)">@decision</span><span class="effective-result effective-@EffectiveClass(effective)">→ @effective</span></div>
                             <div class="monitor-event-context">
                                 @if (!string.IsNullOrWhiteSpace(item.GovernanceWindowName)) { <span class="window-participation">Window: @item.GovernanceWindowName (@item.GovernanceWindowMode)</span> }
                                 @if (!string.IsNullOrWhiteSpace(item.ApprovalOperationId)) { <code title="Application operation ID">@item.ApprovalOperationId</code> }
                             </div>
-                            <a class="monitor-trace-link" href="/audit/@Uri.EscapeDataString(item.Id)">View Decision Trace</a>
+                            <a class="monitor-trace-link" href="/capability-activity?capabilityId=@Uri.EscapeDataString(item.CapabilityId)&amp;identity=@Uri.EscapeDataString(item.IdentityId)&amp;environment=@Uri.EscapeDataString(item.Environment)&amp;runtimeMode=@Uri.EscapeDataString(item.EnforcementMode.ToString())">Investigate Capability Activity</a>
                         </li>
                     }
                     </ol>

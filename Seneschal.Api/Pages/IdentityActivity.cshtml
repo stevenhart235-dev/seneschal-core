@@ -18,14 +18,14 @@
         <main class="container explorer-page">
             <header class="page-header graph-page-header">
                 <div>
-                    <div class="breadcrumb">Operations / Identity Activity</div>
+                    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/identity-explorer">Identities</a> / Identity Activity</nav>
                     <h1>Identity Activity</h1>
                     <p class="subtitle">
                         Understand which identities are most active and where
                         runtime decisions are denied or pending approval.
                     </p>
                 </div>
-                <a class="button-link" href="/dashboard">Back to Dashboard</a>
+                <a class="button-link" href="/identity-explorer">Back to Identities</a>
             </header>
 
             @if (!Model.HasActivity)
@@ -146,7 +146,7 @@
                                             <a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(capability)">
                                                 @capability
                                             </a>
-                                            <span>observed</span>
+                                            <span>View capability profile</span>
                                         </li>
                                     }
                                 </ul>

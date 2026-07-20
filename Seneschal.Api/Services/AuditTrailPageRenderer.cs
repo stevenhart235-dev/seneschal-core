@@ -28,10 +28,11 @@ public static class AuditTrailPageRenderer
         html.Append(PortalSidebarRenderer.Render("audit"));
         html.AppendLine("        <main class=\"container explorer-page\">");
         html.AppendLine("            <header class=\"page-header\">");
-        html.AppendLine("                <div class=\"breadcrumb\">Operations / Audit Trail</div>");
+        html.AppendLine("                <nav class=\"breadcrumb\" aria-label=\"Breadcrumb\"><a href=\"/monitor\">Live Monitor</a> / Audit Trail</nav>");
         html.AppendLine("                <h1>Audit Trail</h1>");
         html.AppendLine("                <p class=\"subtitle\">Recent completed policy evaluations.</p>");
         html.AppendLine("            </header>");
+        AppendInvestigationNavigation(html, filter);
         AppendInsights(html, events);
         AppendFilterForm(html, filter);
 
@@ -149,6 +150,62 @@ public static class AuditTrailPageRenderer
         html.AppendLine("                    </div>");
         html.AppendLine("                </form>");
         html.AppendLine("            </details>");
+    }
+
+    private static void AppendInvestigationNavigation(
+        StringBuilder html,
+        AuditEventFilter filter)
+    {
+        if (string.IsNullOrWhiteSpace(filter.CapabilityId) &&
+            string.IsNullOrWhiteSpace(filter.IdentityId))
+            return;
+
+        html.AppendLine("            <nav class=\"trace-navigation\" aria-label=\"Continue investigation\">");
+        if (!string.IsNullOrWhiteSpace(filter.CapabilityId))
+        {
+            var parameters = new List<string>
+            {
+                $"capabilityId={Uri.EscapeDataString(filter.CapabilityId)}"
+            };
+            Add("identity", filter.IdentityId);
+            Add("environment", filter.Environment);
+            Add("runtimeMode", filter.EnforcementMode);
+            var decision = CapabilityActivityDecision(filter.Decision);
+            Add("decision", decision);
+            AppendInvestigationLink(html,
+                $"/capability-activity?{string.Join("&", parameters)}",
+                "Investigate Capability Activity");
+
+            void Add(string name, string? value)
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                    parameters.Add($"{name}={Uri.EscapeDataString(value)}");
+            }
+        }
+        if (!string.IsNullOrWhiteSpace(filter.IdentityId))
+        {
+            AppendInvestigationLink(html,
+                $"/identity-activity?identityId={Uri.EscapeDataString(filter.IdentityId)}",
+                "View Identity Activity");
+        }
+        html.AppendLine("            </nav>");
+    }
+
+    private static string? CapabilityActivityDecision(string? decision) =>
+        decision?.ToLowerInvariant() switch
+        {
+            "allow" => "Allow",
+            "deny" => "Deny",
+            "requires_approval" => "PendingApproval",
+            _ => null
+        };
+
+    private static void AppendInvestigationLink(
+        StringBuilder html, string href, string label)
+    {
+        html.Append("                <a href=\"")
+            .Append(Encode(href)).Append("\">")
+            .Append(Encode(label)).AppendLine("</a>");
     }
 
     private static void AppendInsights(

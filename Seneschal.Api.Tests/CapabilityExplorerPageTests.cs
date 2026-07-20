@@ -36,7 +36,8 @@ public sealed class CapabilityExplorerPageTests : IClassFixture<ApiApplicationFa
         Assert.Contains("owned by Platform Engineering", html);
         Assert.Contains("currently operating in LogOnly mode", html);
         Assert.Contains("Open documentation", html);
-        Assert.Contains("Open Interactive Graph", html);
+        Assert.Contains("Investigate Capability Activity", html);
+        Assert.Contains("/capability-activity?capabilityId=DeployApplication", html);
         Assert.Contains("aria-current=\"page\"><span>Capabilities", html);
     }
 

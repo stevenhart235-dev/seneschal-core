@@ -46,7 +46,7 @@
 
                 <header class="page-header graph-page-header">
                     <div>
-                        <div class="breadcrumb">Operations / Incidents / Detail</div>
+                        <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/incidents">Incidents</a> / Incident detail</nav>
                         <h1>@incident.Title</h1>
                         <p class="subtitle">
                             Focused context for a repeated governance decision.
@@ -141,9 +141,9 @@
                     </div>
 
                     <div class="investigation-grid">
-                        <a class="quick-action-card" href="@Model.CapabilityLink()">
+                        <a class="quick-action-card" href="@Model.CapabilityActivityLink()">
                             <span>◇</span>
-                            <strong>Related Capability</strong>
+                            <strong>Investigate Capability Activity</strong>
                             <small>@incident.CapabilityId</small>
                         </a>
                         <a class="quick-action-card" href="@Model.IdentityLink()">
@@ -181,9 +181,6 @@
                                 audit evidence.
                             </p>
                         </div>
-                        <a class="button-link" href="@Model.AuditLink()">
-                            Open Filtered Audit Trail
-                        </a>
                     </div>
 
                     <div class="timeline-facts">

@@ -414,6 +414,12 @@ public sealed class AuditTrailPageTests :
         Assert.Contains(
             "name=\"matchedPolicy\" placeholder=\"prod-secret-read\" value=\"Developers can deploy to dev\"",
             html);
+        Assert.Contains("aria-label=\"Continue investigation\"", html);
+        Assert.Contains(
+            "/capability-activity?capabilityId=DeployApplication&amp;identity=payment-agent&amp;environment=dev&amp;runtimeMode=LogOnly&amp;decision=Allow",
+            html);
+        Assert.Contains("/identity-activity?identityId=payment-agent", html);
+        Assert.Contains("href=\"/monitor\">Live Monitor</a> / Audit Trail", html);
     }
 
     private async Task PostEvaluationAsync(

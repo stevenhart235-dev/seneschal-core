@@ -53,12 +53,12 @@
                     <table class="activity-table">
                         <thead>
                             <tr>
-                                <th>Identity</th>
-                                <th>Total Requests</th>
-                                <th>Distinct Capabilities</th>
-                                <th>Denied</th>
-                                <th>Pending Approval</th>
-                                <th>Last Used</th>
+                                <th scope="col">Identity</th>
+                                <th scope="col">Total Requests</th>
+                                <th scope="col">Distinct Capabilities</th>
+                                <th scope="col">Denied</th>
+                                <th scope="col">Pending Approval</th>
+                                <th scope="col">Last Used</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -95,7 +95,7 @@
                 else if (Model.SelectedIdentity is not null)
                 {
                     var identity = Model.SelectedIdentity;
-                    <section class="panel identity-detail-panel">
+                    <section class="panel identity-detail-panel investigation-actions-panel">
                         <div class="dashboard-section-header">
                             <div>
                                 <h2>@identity.IdentityId</h2>

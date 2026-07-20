@@ -32,7 +32,7 @@ public sealed class GovernanceIncidentsPageTests :
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("Governance Incidents", html);
-        Assert.Contains("Operations / Incidents", html);
+        Assert.Contains("href=\"/audit\">Audit Trail</a> / Incidents", html);
         Assert.Contains("<span>Incidents</span>", html);
     }
 

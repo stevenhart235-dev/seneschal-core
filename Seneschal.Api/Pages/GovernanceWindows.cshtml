@@ -18,7 +18,7 @@
         <main class="container explorer-page governance-windows-page">
             <header class="page-header">
                 <div>
-                    <div class="breadcrumb">Governance / Governance Windows</div>
+                    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/governance">Runtime Governance</a> / Governance Windows</nav>
                     <h1>Governance Windows</h1>
                     <p class="subtitle">Manually observe or enforce a temporary capability-governance window.</p>
                 </div>
@@ -92,7 +92,7 @@
                 <h2>Evaluation behavior</h2>
                 <div class="table-scroll">
                     <table class="consequence-matrix">
-                        <thead><tr><th>Window state</th><th>Policy decision</th><th>Result</th><th>Audit evidence</th></tr></thead>
+                        <thead><tr><th scope="col">Window state</th><th scope="col">Policy decision</th><th scope="col">Result</th><th scope="col">Audit evidence</th></tr></thead>
                         <tbody>
                             <tr><td>Observe</td><td>Any</td><td>Unchanged</td><td>Governance Window matched: Production Freeze</td></tr>
                             <tr><td>Enforce</td><td>Allow</td><td>Deny</td><td>Blocked by Governance Window: Production Freeze</td></tr>

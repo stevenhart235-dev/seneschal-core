@@ -19,7 +19,7 @@
             @if (Model.IncidentNotFound)
             {
                 <header class="page-header">
-                    <div class="breadcrumb">Operations / Incidents / Not Found</div>
+                    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/incidents">Incidents</a> / Not found</nav>
                     <h1>Incident not found</h1>
                     <p class="subtitle">
                         No governance incident exists with id
@@ -27,7 +27,7 @@
                     </p>
                 </header>
 
-                <section class="panel">
+                <section class="panel investigation-actions-panel">
                     <h2>Missing Incident</h2>
                     <div class="empty-state">
                         <p class="muted">

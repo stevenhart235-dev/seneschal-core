@@ -141,9 +141,9 @@ public static class AuditTrailPageRenderer
             string.IsNullOrWhiteSpace(filter.IdentityId))
             return;
 
-        html.AppendLine("            <section class=\"panel\" aria-labelledby=\"investigation-actions-heading\">");
+        html.AppendLine("            <section class=\"panel investigation-actions-panel\" aria-labelledby=\"investigation-actions-heading\">");
         html.AppendLine("                <h2 id=\"investigation-actions-heading\">Continue investigation</h2>");
-        html.AppendLine("                <nav class=\"trace-navigation\" aria-label=\"Investigation actions\">");
+        html.AppendLine("                <nav class=\"trace-navigation investigation-actions\" aria-label=\"Investigation actions\">");
         if (!string.IsNullOrWhiteSpace(filter.CapabilityId))
         {
             var parameters = new List<string>

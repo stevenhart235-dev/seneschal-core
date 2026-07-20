@@ -18,7 +18,7 @@
         <main class="container explorer-page">
             <header class="page-header graph-page-header">
                 <div>
-                    <div class="breadcrumb">Operations / Incidents</div>
+                    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/audit">Audit Trail</a> / Incidents</nav>
                     <h1>Governance Incidents</h1>
                     <p class="subtitle">
                         Repeated denied or pending approval decisions grouped
@@ -71,17 +71,17 @@
                     <table class="activity-table incident-table">
                         <thead>
                             <tr>
-                                <th>Severity</th>
-                                <th>Status</th>
-                                <th>Title</th>
-                                <th>Capability</th>
-                                <th>Identity</th>
-                                <th>Decision Reason</th>
-                                <th>Matched Policy</th>
-                                <th>Occurrences</th>
-                                <th>First Seen</th>
-                                <th>Last Seen</th>
-                                <th>Actions</th>
+                                <th scope="col">Severity</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Title</th>
+                                <th scope="col">Capability</th>
+                                <th scope="col">Identity</th>
+                                <th scope="col">Decision Reason</th>
+                                <th scope="col">Matched Policy</th>
+                                <th scope="col">Occurrences</th>
+                                <th scope="col">First Seen</th>
+                                <th scope="col">Last Seen</th>
+                                <th scope="col">Actions</th>
                             </tr>
                         </thead>
                         <tbody>

@@ -52,7 +52,7 @@ public static class PolicyExplorerPageRenderer
         html.Append(PortalSidebarRenderer.Render("policies"));
         html.AppendLine("        <main class=\"container explorer-page\">");
         html.AppendLine("            <header class=\"page-header\">");
-        html.AppendLine("                <div class=\"breadcrumb\">Governance / Policies</div>");
+        html.AppendLine("                <nav class=\"breadcrumb\" aria-label=\"Breadcrumb\"><a href=\"/dashboard\">Dashboard</a> / Policies</nav>");
         html.AppendLine("                <h1>Policy Explorer</h1>");
         html.AppendLine("                <p class=\"subtitle\">Review configured policies and their projected governance relationships.</p>");
         html.AppendLine("            </header>");

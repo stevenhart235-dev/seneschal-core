@@ -76,7 +76,9 @@ public static class AuditEventDetailPageRenderer
 
     private static void AppendTraceNavigation(StringBuilder html, AuditEvent auditEvent)
     {
-        html.AppendLine("            <nav class=\"trace-navigation\" aria-label=\"Related investigation links\">");
+        html.AppendLine("            <section class=\"panel investigation-actions-panel\" aria-labelledby=\"trace-investigation-heading\">");
+        html.AppendLine("                <h2 id=\"trace-investigation-heading\">Continue investigation</h2>");
+        html.AppendLine("                <nav class=\"trace-navigation investigation-actions\" aria-label=\"Related investigation links\">");
         AppendNavLink(html, BuildCapabilityActivityLink(auditEvent), "Investigate Capability Activity");
         AppendNavLink(html, $"/capability-explorer?capabilityId={Uri.EscapeDataString(auditEvent.CapabilityId)}", "View capability profile");
         AppendNavLink(html, $"/identity-activity?identityId={Uri.EscapeDataString(auditEvent.IdentityId)}", "View Identity Activity");
@@ -84,7 +86,8 @@ public static class AuditEventDetailPageRenderer
         if (HasApproval(auditEvent)) AppendNavLink(html, "/approvals", "View related approval");
         var policy = auditEvent.MatchedPolicies.FirstOrDefault();
         if (!string.IsNullOrWhiteSpace(policy)) AppendNavLink(html, $"/policies?policyId={Uri.EscapeDataString(policy)}", "View related policy");
-        html.AppendLine("            </nav>");
+        html.AppendLine("                </nav>");
+        html.AppendLine("            </section>");
     }
 
     public static string RenderNotFound(string auditEventId)

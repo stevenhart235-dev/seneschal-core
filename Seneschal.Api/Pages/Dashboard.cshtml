@@ -14,8 +14,8 @@
 <body><div class="app-shell">
 @await Html.PartialAsync("Shared/_PortalSidebar", "dashboard")
 <main class="container reference-dashboard operational-dashboard">
-    <header class="reference-dashboard-header">
-        <div><div class="breadcrumb">Overview</div><h1>Dashboard</h1><p>Runtime governance across integrated applications.</p></div>
+    <header class="reference-dashboard-header page-header">
+        <div><div class="breadcrumb">Overview</div><h1>Dashboard</h1><p class="subtitle">Runtime governance across integrated applications.</p></div>
         <div class="reference-live-state"><span class="live-indicator" id="dashboard-live-state"><span aria-hidden="true"></span>Live</span><span id="dashboard-refresh-status" class="visually-hidden">Polling active</span><a href="/governance">Runtime Governance</a></div>
     </header>
 
@@ -56,7 +56,7 @@
                 <ol class="reference-activity-feed" id="live-decision-feed">
                 @foreach (var decision in Model.Live.Decisions.Take(6)) { <li data-event-id="@decision.Id"><details class="reference-event-disclosure"><summary><a class="reference-event-identity" href="/identity-activity?identityId=@Uri.EscapeDataString(decision.Identity)">@decision.Identity</a><a class="reference-event-capability" href="/capability-activity?capabilityId=@Uri.EscapeDataString(decision.Capability)">@decision.Capability</a><span class="decision-badge decision-@decision.Decision.ToLowerInvariant()">@(decision.Decision == "PendingApproval" ? "Pending Approval" : decision.Decision)</span><strong class="effective-action effective-@decision.EffectiveAction.Replace(" ", "-").ToLowerInvariant()">→ @decision.EffectiveAction</strong><time datetime="@decision.TimestampUtc.ToString("O")" data-relative-time="@decision.TimestampUtc.ToString("O")">@decision.TimestampUtc.ToString("u")</time><span class="reference-event-chevron" aria-hidden="true"></span></summary><dl class="reference-event-details"><div><dt>Reason</dt><dd>@decision.Reason</dd></div><div><dt>Matched policy</dt><dd>@(string.IsNullOrWhiteSpace(decision.MatchedPolicy) ? "None" : decision.MatchedPolicy)</dd></div><div><dt>Runtime mode</dt><dd>@decision.Mode</dd></div><div><dt>Identity</dt><dd>@decision.Identity</dd></div><div><dt>Capability</dt><dd>@decision.Capability</dd></div></dl></details></li> }
                 </ol>
-                @if (Model.Live.Decisions.Count == 0) { <p class="empty-state" id="live-decision-empty">No evaluations have been recorded in this runtime.</p> }
+                @if (Model.Live.Decisions.Count == 0) { <div class="empty-state" id="live-decision-empty"><strong>No evaluations recorded</strong><p>Decision evidence will appear when an integrated application calls Seneschal.</p><a href="/monitor">Open Live Monitor</a></div> }
                 <footer><a href="/monitor">Open Live Monitor →</a></footer>
             </article>
             <article class="reference-card reference-distribution-card" aria-labelledby="distribution-title">

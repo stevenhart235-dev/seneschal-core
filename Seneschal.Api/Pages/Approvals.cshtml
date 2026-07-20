@@ -8,7 +8,7 @@
 <body><div class="app-shell">
 @await Html.PartialAsync("Shared/_PortalSidebar", "approvals")
 <main class="container explorer-page approvals-page">
-<header class="page-header"><div><div class="breadcrumb">Governance / Approvals</div><h1>Approvals</h1>
+<header class="page-header"><div><nav class="breadcrumb" aria-label="Breadcrumb"><a href="/dashboard">Dashboard</a> / Approvals</nav><h1>Approvals</h1>
 <p class="subtitle">Resolve capability requests that require a manual human decision.</p></div></header>
 <p class="governance-volatile-note"><strong>Temporary runtime state.</strong> Approval records are held in memory and reset when Seneschal restarts.</p>
 <p class="approval-correlation-note"><strong>Approval scope:</strong> Operation ID provides exact operation correlation. Requests without one temporarily use legacy context matching.</p>
@@ -17,11 +17,11 @@
 @foreach (var approval in Model.Approvals.Where(item => item.Status == ApprovalStatus.Pending)) {
 <article class="panel approval-card"><div class="approval-card-heading"><span class="decision-badge approval-status approval-status-pending">Pending</span><code>@approval.Id</code></div><h3>@approval.CapabilityId</h3><p>@approval.RequestReason</p><dl><div><dt>Identity</dt><dd>@approval.IdentityId</dd></div><div><dt>Environment</dt><dd>@approval.Environment</dd></div><div><dt>Resource</dt><dd>@approval.ResourceId</dd></div><div><dt>Operation ID</dt><dd>@(approval.OperationId ?? "Not provided")</dd></div><div><dt>Correlation</dt><dd>@(approval.CorrelationMode == ApprovalCorrelationMode.Operation ? "Operation" : "Legacy Context")</dd></div><div><dt>Requested</dt><dd>@approval.RequestedAt.ToString("u")</dd></div></dl><form method="post" action="/approvals?handler=Resolve" class="approval-actions"><input type="hidden" name="approvalId" value="@approval.Id" /><label><span class="visually-hidden">Resolved by</span><input name="resolvedBy" required placeholder="Operator name" /></label><button name="resolution" value="Approved" type="submit">Approve</button><button class="button-destructive" name="resolution" value="Rejected" type="submit">Reject</button></form></article>
 }
-@if (!Model.Approvals.Any(item => item.Status == ApprovalStatus.Pending)) { <p class="panel empty-state">No pending approvals.</p> }
+@if (!Model.Approvals.Any(item => item.Status == ApprovalStatus.Pending)) { <div class="panel empty-state"><strong>No pending approvals</strong><p>No capability requests currently require a human decision. New requests will appear here automatically.</p></div> }
 </div></section>
 <section class="approval-section" aria-labelledby="approvalHistoryTitle"><header><h2 id="approvalHistoryTitle">Approval history</h2><span>@Model.Approvals.Count(item => item.Status != ApprovalStatus.Pending)</span></header><div class="approval-history-list">
 @foreach (var approval in Model.Approvals.Where(item => item.Status != ApprovalStatus.Pending)) {
 <article class="panel approval-history-row"><div><span class="decision-badge approval-status approval-status-@approval.Status.ToString().ToLowerInvariant()">@approval.Status</span><strong>@approval.CapabilityId</strong><small>@approval.IdentityId</small></div><dl><div><dt>Operation ID</dt><dd>@(approval.OperationId ?? "Not provided")</dd></div><div><dt>Correlation</dt><dd>@(approval.CorrelationMode == ApprovalCorrelationMode.Operation ? "Operation" : "Legacy Context")</dd></div><div><dt>Resource</dt><dd>@approval.ResourceId</dd></div><div><dt>Requested</dt><dd>@approval.RequestedAt.ToString("u")</dd></div><div><dt>Resolved</dt><dd>@(approval.ResolvedAt?.ToString("u") ?? "—")</dd></div><div><dt>Resolved by</dt><dd>@(approval.ResolvedBy ?? "—")</dd></div><div><dt>Consumed</dt><dd>@(approval.ConsumedAt?.ToString("u") ?? "—")</dd></div></dl></article>
 }
-@if (!Model.Approvals.Any(item => item.Status != ApprovalStatus.Pending)) { <p class="panel empty-state">No approval history.</p> }
+@if (!Model.Approvals.Any(item => item.Status != ApprovalStatus.Pending)) { <div class="panel empty-state"><strong>No approval history</strong><p>Resolved and consumed approval requests will appear here.</p></div> }
 </div></section></main></div></body></html>

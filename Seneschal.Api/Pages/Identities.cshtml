@@ -16,7 +16,7 @@
         @await Html.PartialAsync("Shared/_PortalSidebar", "identities")
         <main class="container explorer-page">
             <header class="page-header">
-                <div class="breadcrumb">Governance / Identities</div>
+                <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/dashboard">Dashboard</a> / Identities</nav>
                 <h1>Identities</h1>
                 <p class="subtitle">Configured callers that can request governed capabilities.</p>
             </header>
@@ -27,7 +27,7 @@
                 </div>
                 <div class="table-scroll" tabindex="0" role="region" aria-label="Configured identities">
                     <table class="audit-table">
-                        <thead><tr><th>Identity</th><th>Type</th><th>Description</th><th>Activity</th></tr></thead>
+                        <thead><tr><th scope="col">Identity</th><th scope="col">Type</th><th scope="col">Description</th><th scope="col">Activity</th></tr></thead>
                         <tbody>
                         @foreach (var identity in Model.Identities)
                         {

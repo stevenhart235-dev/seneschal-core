@@ -91,7 +91,9 @@ public sealed class DashboardPageTests :
 
         var html = await response.Content.ReadAsStringAsync();
 
-        Assert.Contains("No evaluations have been recorded", html);
+        Assert.Contains("No evaluations recorded", html);
+        Assert.Contains("Decision evidence will appear", html);
+        Assert.Contains("Open Live Monitor", html);
         Assert.Contains("Operational posture", html);
         Assert.Contains("Governance coverage", html);
         Assert.DoesNotContain("First-Run Guide", html);

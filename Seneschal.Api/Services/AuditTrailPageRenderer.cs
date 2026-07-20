@@ -32,51 +32,32 @@ public static class AuditTrailPageRenderer
         html.AppendLine("                <h1>Audit Trail</h1>");
         html.AppendLine("                <p class=\"subtitle\">Recent completed policy evaluations.</p>");
         html.AppendLine("            </header>");
-        AppendInvestigationNavigation(html, filter);
-        AppendInsights(html, events);
-        AppendFilterForm(html, filter);
+        AppendInvestigationContext(html, filter);
+        AppendSummary(html, events, filter);
 
         if (events.Count == 0)
         {
             html.AppendLine("            <section class=\"notice\">");
-            html.AppendLine("                <h2>No audit events yet</h2>");
-            html.AppendLine("                <p class=\"muted\">Audit events are created automatically when decisions are evaluated.</p>");
-            html.AppendLine("                <p class=\"muted\">Users do not manually create audit events. Run a policy evaluation to populate the audit trail.</p>");
-            html.AppendLine("                <p class=\"muted\">Try: <span class=\"code\">seneschal evaluate payment-agent azure.keyvault.secret.read production</span></p>");
+            if (HasActiveFilters(filter))
+            {
+                html.AppendLine("                <h2>No matching evidence</h2>");
+                html.AppendLine("                <p class=\"muted\">No audit events match the active filters. Review or clear the filters to broaden this investigation.</p>");
+                html.AppendLine("                <a class=\"table-link\" href=\"/audit\">Clear active filters</a>");
+            }
+            else
+            {
+                html.AppendLine("                <h2>No audit events recorded</h2>");
+                html.AppendLine("                <p class=\"muted\">Completed policy evaluations will appear here when audit evidence is recorded.</p>");
+            }
             html.AppendLine("            </section>");
         }
         else
         {
             AppendTimeline(html, events);
-
-            html.AppendLine("            <section class=\"panel\">");
-            html.AppendLine("                <h2>Recent Audit Events</h2>");
-            html.AppendLine("                <div class=\"table-scroll\" tabindex=\"0\" role=\"region\" aria-label=\"Recent audit events\">");
-            html.AppendLine("                <table class=\"audit-table\">");
-            html.AppendLine("                    <thead>");
-            html.AppendLine("                        <tr>");
-            html.AppendLine("                            <th>Timestamp</th>");
-            html.AppendLine("                            <th>Identity</th>");
-            html.AppendLine("                            <th>Capability</th>");
-            html.AppendLine("                            <th>Decision</th>");
-        html.AppendLine("                            <th>Matched Policy</th>");
-        html.AppendLine("                            <th>Reason</th>");
-        html.AppendLine("                            <th>Governance Window</th>");
-        html.AppendLine("                            <th>Trace</th>");
-        html.AppendLine("                        </tr>");
-            html.AppendLine("                    </thead>");
-            html.AppendLine("                    <tbody>");
-
-            foreach (var auditEvent in events)
-            {
-                AppendRow(html, auditEvent);
-            }
-
-            html.AppendLine("                    </tbody>");
-            html.AppendLine("                </table>");
-            html.AppendLine("                </div>");
-            html.AppendLine("            </section>");
         }
+
+        AppendInvestigationNavigation(html, filter);
+        AppendFilterForm(html, filter);
 
         html.AppendLine("            <footer class=\"app-footer\">Seneschal v0.2.1-alpha</footer>");
         html.AppendLine("        </main>");
@@ -160,7 +141,9 @@ public static class AuditTrailPageRenderer
             string.IsNullOrWhiteSpace(filter.IdentityId))
             return;
 
-        html.AppendLine("            <nav class=\"trace-navigation\" aria-label=\"Continue investigation\">");
+        html.AppendLine("            <section class=\"panel\" aria-labelledby=\"investigation-actions-heading\">");
+        html.AppendLine("                <h2 id=\"investigation-actions-heading\">Continue investigation</h2>");
+        html.AppendLine("                <nav class=\"trace-navigation\" aria-label=\"Investigation actions\">");
         if (!string.IsNullOrWhiteSpace(filter.CapabilityId))
         {
             var parameters = new List<string>
@@ -175,6 +158,9 @@ public static class AuditTrailPageRenderer
             AppendInvestigationLink(html,
                 $"/capability-activity?{string.Join("&", parameters)}",
                 "Investigate Capability Activity");
+            AppendInvestigationLink(html,
+                $"/capability-explorer?capabilityId={Uri.EscapeDataString(filter.CapabilityId)}",
+                "View capability profile");
 
             void Add(string name, string? value)
             {
@@ -188,7 +174,8 @@ public static class AuditTrailPageRenderer
                 $"/identity-activity?identityId={Uri.EscapeDataString(filter.IdentityId)}",
                 "View Identity Activity");
         }
-        html.AppendLine("            </nav>");
+        html.AppendLine("                </nav>");
+        html.AppendLine("            </section>");
     }
 
     private static string? CapabilityActivityDecision(string? decision) =>
@@ -208,9 +195,50 @@ public static class AuditTrailPageRenderer
             .Append(Encode(label)).AppendLine("</a>");
     }
 
-    private static void AppendInsights(
+    private static void AppendInvestigationContext(
         StringBuilder html,
-        IReadOnlyCollection<AuditEvent> events)
+        AuditEventFilter filter)
+    {
+        html.AppendLine("            <section class=\"panel\" aria-labelledby=\"investigation-context-heading\">");
+        html.AppendLine("                <h2 id=\"investigation-context-heading\">Investigation context</h2>");
+        if (!HasActiveFilters(filter))
+        {
+            html.AppendLine("                <p class=\"muted\">Showing all recent audit evidence. No filters are active.</p>");
+        }
+        else
+        {
+            html.AppendLine("                <p class=\"muted\">Showing audit evidence that matches all active filters.</p>");
+            html.AppendLine("                <dl class=\"timeline-meta\">");
+            AppendActiveFilter(html, "Capability", filter.CapabilityId);
+            AppendActiveFilter(html, "Identity", filter.IdentityId);
+            AppendActiveFilter(html, "Environment", filter.Environment);
+            AppendActiveFilter(html, "Runtime mode", filter.EnforcementMode);
+            AppendActiveFilter(html, "Decision", FilterDecisionLabel(filter.Decision));
+            AppendActiveFilter(html, "Matched policy", filter.MatchedPolicy);
+            html.AppendLine("                </dl>");
+        }
+        html.AppendLine("            </section>");
+    }
+
+    private static void AppendActiveFilter(StringBuilder html, string label, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return;
+        AppendTimelineField(html, label, value);
+    }
+
+    private static string? FilterDecisionLabel(string? decision) =>
+        decision?.ToLowerInvariant() switch
+        {
+            "allow" => "Allow",
+            "deny" => "Deny",
+            "requires_approval" => "Pending Approval",
+            _ => decision
+        };
+
+    private static void AppendSummary(
+        StringBuilder html,
+        IReadOnlyCollection<AuditEvent> events,
+        AuditEventFilter filter)
     {
         var totalDecisions = events.Count;
         var allowedCount = CountDecision(events, "allow");
@@ -227,22 +255,19 @@ public static class AuditTrailPageRenderer
             : events.Average(auditEvent => auditEvent.EvaluationDurationMs);
 
         html.AppendLine("            <section class=\"panel\">");
-        html.AppendLine("                <h2>Audit Insights</h2>");
+        html.AppendLine("                <h2>Investigation summary</h2>");
         html.AppendLine("                <div class=\"audit-insights-grid\">");
-        AppendInsightCard(html, "Total decisions", totalDecisions.ToString());
+        AppendInsightCard(html, "Matching events", totalDecisions.ToString());
         AppendInsightCard(html, "Allowed", allowedCount.ToString());
         AppendInsightCard(html, "Denied", deniedCount.ToString());
         AppendInsightCard(html, "Pending approval", pendingApprovalCount.ToString());
-        AppendInsightCard(html, "Most active identity", mostActiveIdentity);
-        AppendInsightCard(
-            html,
-            "Most evaluated capability",
-            mostEvaluatedCapability);
-        AppendInsightCard(html, "Most matched policy", mostMatchedPolicy);
-        AppendInsightCard(
-            html,
-            "Average evaluation duration",
-            $"{averageDuration:0.##} ms");
+        if (string.IsNullOrWhiteSpace(filter.IdentityId))
+            AppendInsightCard(html, "Most active identity", mostActiveIdentity);
+        if (string.IsNullOrWhiteSpace(filter.CapabilityId))
+            AppendInsightCard(html, "Most evaluated capability", mostEvaluatedCapability);
+        if (string.IsNullOrWhiteSpace(filter.MatchedPolicy))
+            AppendInsightCard(html, "Most matched policy", mostMatchedPolicy);
+        AppendInsightCard(html, "Average evaluation duration", $"{averageDuration:0.##} ms");
         html.AppendLine("                </div>");
         html.AppendLine("            </section>");
     }
@@ -288,7 +313,7 @@ public static class AuditTrailPageRenderer
         IReadOnlyCollection<AuditEvent> events)
     {
         html.AppendLine("            <section class=\"panel\">");
-        html.AppendLine("                <h2>Audit Timeline</h2>");
+        html.AppendLine("                <h2>Evidence</h2>");
         html.AppendLine("                <ol class=\"audit-timeline\">");
 
         foreach (var auditEvent in events.OrderByDescending(
@@ -313,6 +338,10 @@ public static class AuditTrailPageRenderer
             AppendTimelineField(html, "Identity", auditEvent.IdentityId);
             AppendTimelineField(html, "Capability", auditEvent.CapabilityId);
             AppendTimelineField(html, "Environment", auditEvent.Environment);
+            AppendTimelineField(html, "Runtime mode", auditEvent.EnforcementMode);
+            AppendTimelineField(html, "Operation", auditEvent.ApprovalOperationId ?? "Not recorded");
+            AppendTimelineField(html, "Policy", auditEvent.MatchedPolicies.FirstOrDefault() ?? "No matched policy recorded");
+            AppendTimelineField(html, "Approval", auditEvent.ApprovalStatus ?? "Not involved or not recorded");
             if (!string.IsNullOrWhiteSpace(auditEvent.GovernanceWindowName))
             {
                 AppendTimelineField(
@@ -436,41 +465,6 @@ public static class AuditTrailPageRenderer
                 selectedValue,
                 optionLabel,
                 StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static void AppendRow(
-        StringBuilder html,
-        AuditEvent auditEvent)
-    {
-        html.AppendLine("                        <tr>");
-        AppendCell(html, auditEvent.TimestampUtc.ToString("u"));
-        AppendCell(html, auditEvent.IdentityId);
-        AppendCell(html, auditEvent.CapabilityId);
-        html.Append("                            <td><span class=\"badge decision-badge ")
-            .Append(DecisionClass(auditEvent.Decision))
-            .Append("\">")
-            .Append(DecisionLabel(auditEvent.Decision))
-            .AppendLine("</span></td>");
-        AppendCell(
-            html,
-            auditEvent.MatchedPolicies.FirstOrDefault() ?? "none");
-        AppendCell(html, auditEvent.Reason);
-        AppendCell(
-            html,
-            auditEvent.GovernanceWindowMessage ?? "—");
-        html.Append("                            <td><a class=\"table-link\" href=\"/audit/")
-            .Append(Uri.EscapeDataString(auditEvent.Id))
-            .AppendLine("\">View Decision Trace</a></td>");
-        html.AppendLine("                        </tr>");
-    }
-
-    private static void AppendCell(
-        StringBuilder html,
-        string value)
-    {
-        html.Append("                            <td>")
-            .Append(WebUtility.HtmlEncode(value))
-            .AppendLine("</td>");
     }
 
     private static string Encode(string value)

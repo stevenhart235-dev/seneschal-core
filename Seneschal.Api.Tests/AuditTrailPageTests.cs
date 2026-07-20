@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Seneschal.Api.Models;
+using Seneschal.Api.Services;
 using Xunit;
 
 namespace Seneschal.Api.Tests;
@@ -50,19 +52,27 @@ public sealed class AuditTrailPageTests :
         Assert.Contains("class=\"active\" href=\"/audit\"", html);
         Assert.Contains("Live Monitor", html);
         Assert.DoesNotContain("href=\"/resources\"", html);
-        Assert.Contains("Audit Insights", html);
-        Assert.Contains("Total decisions", html);
+        Assert.Contains("Investigation context", html);
+        Assert.Contains("No filters are active", html);
+        Assert.Contains("Investigation summary", html);
+        Assert.Contains("Matching events", html);
         Assert.Contains("Most active identity", html);
         Assert.Contains("Most evaluated capability", html);
         Assert.Contains("Most matched policy", html);
         Assert.Contains("Average evaluation duration", html);
         Assert.True(
-            html.IndexOf("Audit Insights", StringComparison.Ordinal) <
+            html.IndexOf("Investigation context", StringComparison.Ordinal) <
+            html.IndexOf("Investigation summary", StringComparison.Ordinal));
+        Assert.True(
+            html.IndexOf("Investigation summary", StringComparison.Ordinal) <
+            html.IndexOf("Evidence", StringComparison.Ordinal));
+        Assert.True(
+            html.IndexOf("Evidence", StringComparison.Ordinal) <
             html.IndexOf("Filter Audit Events", StringComparison.Ordinal));
-        Assert.Contains("Audit Timeline", html);
+        Assert.Contains("Evidence", html);
         Assert.Contains("timeline-item", html);
-        Assert.Contains("Recent Audit Events", html);
-        Assert.Contains("audit-table", html);
+        Assert.DoesNotContain("Recent Audit Events", html);
+        Assert.DoesNotContain("audit-table", html);
         Assert.Contains("/audit/", html);
         Assert.Contains("View Decision Trace", html);
         Assert.Contains("Developer", html);
@@ -101,7 +111,7 @@ public sealed class AuditTrailPageTests :
 
         var html = await response.Content.ReadAsStringAsync();
 
-        Assert.Contains("Audit Timeline", html);
+        Assert.Contains("Evidence", html);
         Assert.Contains("timeline-item", html);
         Assert.Contains(matchingIdentity, html);
         Assert.DoesNotContain(otherIdentity, html);
@@ -141,9 +151,10 @@ public sealed class AuditTrailPageTests :
 
         var html = await response.Content.ReadAsStringAsync();
 
-        Assert.Contains("Audit Insights", html);
-        AssertInsight(html, "Total decisions", "2");
-        AssertInsight(html, "Most active identity", matchingIdentity);
+        Assert.Contains("Investigation summary", html);
+        AssertInsight(html, "Matching events", "2");
+        Assert.Contains("<dt>Identity</dt>", html);
+        Assert.Contains(matchingIdentity, html);
         Assert.Contains("DeployApplication", html);
         Assert.Contains("DeleteProductionDatabase", html);
         Assert.DoesNotContain(otherIdentity, html);
@@ -166,22 +177,14 @@ public sealed class AuditTrailPageTests :
 
         var html = await response.Content.ReadAsStringAsync();
 
-        Assert.Contains("Audit Insights", html);
-        AssertInsight(html, "Total decisions", "0");
-        AssertInsight(html, "Most active identity", "none");
+        Assert.Contains("Investigation summary", html);
+        AssertInsight(html, "Matching events", "0");
         AssertInsight(html, "Most evaluated capability", "none");
         AssertInsight(html, "Most matched policy", "none");
         AssertInsight(html, "Average evaluation duration", "0 ms");
-        Assert.Contains("No audit events yet", html);
-        Assert.Contains(
-            "Audit events are created automatically when decisions are evaluated.",
-            html);
-        Assert.Contains(
-            "Users do not manually create audit events.",
-            html);
-        Assert.Contains(
-            "seneschal evaluate payment-agent azure.keyvault.secret.read production",
-            html);
+        Assert.Contains("No matching evidence", html);
+        Assert.Contains("No audit events match the active filters", html);
+        Assert.Contains("Clear active filters", html);
     }
 
     [Fact]
@@ -414,13 +417,63 @@ public sealed class AuditTrailPageTests :
         Assert.Contains(
             "name=\"matchedPolicy\" placeholder=\"prod-secret-read\" value=\"Developers can deploy to dev\"",
             html);
-        Assert.Contains("aria-label=\"Continue investigation\"", html);
+        Assert.Contains("aria-label=\"Investigation actions\"", html);
         Assert.Contains(
             "/capability-activity?capabilityId=DeployApplication&amp;identity=payment-agent&amp;environment=dev&amp;runtimeMode=LogOnly&amp;decision=Allow",
             html);
         Assert.Contains("/identity-activity?identityId=payment-agent", html);
         Assert.Contains("href=\"/monitor\">Live Monitor</a> / Audit Trail", html);
+        Assert.Contains("Showing audit evidence that matches all active filters", html);
+        Assert.Contains("<dt>Capability</dt>", html);
+        Assert.Contains("<dt>Identity</dt>", html);
+        Assert.Contains("<dt>Runtime mode</dt>", html);
+        Assert.Contains("<dt>Decision</dt>", html);
+        Assert.Contains("/capability-explorer?capabilityId=DeployApplication", html);
+        Assert.Equal(1, html.Split("Investigate Capability Activity").Length - 1);
     }
+
+    [Fact]
+    public void Audit_EmptyUnfilteredStateExplainsThatNothingIsRecorded()
+    {
+        var html = AuditTrailPageRenderer.Render([], new AuditEventFilter());
+
+        Assert.Contains("No filters are active", html);
+        Assert.Contains("No audit events recorded", html);
+        Assert.Contains("Completed policy evaluations will appear here", html);
+        Assert.DoesNotContain("No matching evidence", html);
+        Assert.DoesNotContain("aria-label=\"Investigation actions\"", html);
+    }
+
+    [Fact]
+    public void Audit_EvidenceIsNewestFirstAndRenderedOnlyOnce()
+    {
+        var older = EvidenceEvent("older", DateTimeOffset.Parse("2026-01-01T10:00:00Z"));
+        var newer = EvidenceEvent("newer", DateTimeOffset.Parse("2026-01-01T11:00:00Z"));
+
+        var html = AuditTrailPageRenderer.Render([older, newer], new AuditEventFilter());
+
+        Assert.True(html.IndexOf("/audit/newer", StringComparison.Ordinal) <
+            html.IndexOf("/audit/older", StringComparison.Ordinal));
+        Assert.Equal(1, html.Split("/audit/newer").Length - 1);
+        Assert.Contains("Operation", html);
+        Assert.Contains("Policy", html);
+        Assert.Contains("Approval", html);
+    }
+
+    private static AuditEvent EvidenceEvent(string id, DateTimeOffset timestamp) => new()
+    {
+        Id = id,
+        TimestampUtc = timestamp,
+        IdentityId = "operator",
+        CapabilityId = "production.release",
+        Environment = "production",
+        EnforcementMode = "Enforce",
+        Decision = "allow",
+        Reason = "Allowed by policy.",
+        MatchedPolicies = ["release-policy"],
+        ApprovalOperationId = "release-001",
+        ApprovalStatus = "Consumed"
+    };
 
     private async Task PostEvaluationAsync(
         string identity,

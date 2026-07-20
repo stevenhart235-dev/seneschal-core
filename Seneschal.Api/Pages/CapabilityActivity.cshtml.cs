@@ -220,11 +220,11 @@ public sealed class CapabilityActivityModel : PageModel
             :
         (item.Decision, item.EnforcementMode) switch
         {
-            (DecisionType.Allow, _) => "Executed",
-            (DecisionType.Deny, EnforcementMode.LogOnly) => "Executed and recorded",
-            (DecisionType.Deny, _) => "Blocked",
-            (DecisionType.RequireApproval, EnforcementMode.LogOnly) => "Executed and recorded",
-            (DecisionType.RequireApproval, _) => "Blocked pending approval",
+            (DecisionType.Allow, _) => "Caller may proceed",
+            (DecisionType.Deny, EnforcementMode.LogOnly) => "Recorded; caller may continue",
+            (DecisionType.Deny, _) => "Caller should block the operation",
+            (DecisionType.RequireApproval, EnforcementMode.LogOnly) => "Recorded; caller may continue",
+            (DecisionType.RequireApproval, _) => "Caller should pause and retry",
             _ => "Recorded"
         };
 

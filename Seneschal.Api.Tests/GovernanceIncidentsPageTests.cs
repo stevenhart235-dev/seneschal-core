@@ -130,8 +130,7 @@ public sealed class GovernanceIncidentsPageTests :
         var html = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("Related Audit", html);
-        Assert.Contains("View Filtered Audit", html);
+        Assert.Contains("Open Filtered Audit Trail", html);
         Assert.Contains(
             "/audit?capabilityId=DeleteProductionDatabase&amp;identityId=Developer",
             html);
@@ -177,7 +176,7 @@ public sealed class GovernanceIncidentsPageTests :
         Assert.Contains("/identity-activity?identityId=Developer", html);
         Assert.Contains("Related Policy", html);
         Assert.Contains("/policies", html);
-        Assert.Contains("Related Audit", html);
+        Assert.Contains("Open Filtered Audit Trail", html);
         Assert.Contains(
             "/audit?capabilityId=DeleteProductionDatabase&amp;identityId=Developer",
             html);

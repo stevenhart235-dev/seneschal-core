@@ -88,8 +88,8 @@ public sealed class CapabilityActivityPageTests :
         Assert.Contains("Denied evaluation", html);
         Assert.Contains("Pending approval", html);
         Assert.Contains("Most recent activity", html);
-        Assert.Contains("All audit events", html);
-        Assert.Contains("All capability activity", html);
+        Assert.Contains("Open Filtered Audit Trail", html);
+        Assert.Contains("All Capability Activity", html);
         Assert.Contains(
             $"/audit?capabilityId={Uri.EscapeDataString(capability)}",
             html);
@@ -163,7 +163,9 @@ public sealed class CapabilityActivityPageTests :
         Assert.Contains("Consumed", html);
         Assert.Contains("Rejected", html);
         Assert.Contains("Legacy context evaluations", html);
-        Assert.Contains("Executed and recorded", html);
+        Assert.Contains("Recorded; caller may continue", html);
+        Assert.Contains("View Decision Trace", html);
+        Assert.DoesNotContain("Executed", html);
         Assert.Contains("Denied by policy.", html);
         Assert.Contains("No matched policy recorded", html);
         Assert.Contains("/audit/allow-final", html);

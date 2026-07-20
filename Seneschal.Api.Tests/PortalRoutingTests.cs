@@ -36,7 +36,6 @@ public sealed class PortalRoutingTests : IClassFixture<ApiApplicationFactory>
     [InlineData("/policies", "/policies")]
     [InlineData("/capability-explorer", "/capability-explorer")]
     [InlineData("/identity-explorer", "/identity-explorer")]
-    [InlineData("/resources", "/resources")]
     [InlineData("/capability-activity", "/capability-activity")]
     [InlineData("/identity-activity", "/identity-activity")]
     [InlineData("/audit", "/audit")]

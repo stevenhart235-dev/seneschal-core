@@ -35,7 +35,7 @@ public sealed class GovernanceModePageTests :
         Assert.DoesNotContain("Return to LogOnly?", html);
         Assert.Contains("Enable runtime enforcement?", html);
         Assert.Contains("Existing Allow decisions will continue", html);
-        Assert.Contains("Runtime governance mode is in memory", html);
+        Assert.Contains("Runtime mode is held in memory", html);
         Assert.Contains("resets to LogOnly when Seneschal restarts", html);
     }
 

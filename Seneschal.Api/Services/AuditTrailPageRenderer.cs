@@ -20,7 +20,7 @@ public static class AuditTrailPageRenderer
         html.AppendLine("<head>");
         html.AppendLine("    <meta charset=\"utf-8\" />");
         html.AppendLine("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />");
-        html.AppendLine("    <title>Seneschal Audit Trail</title>");
+        html.AppendLine("    <title>Audit Trail</title>");
         html.AppendLine("    <link rel=\"stylesheet\" href=\"/styles.css\" />");
         html.AppendLine("</head>");
         html.AppendLine("<body>");
@@ -29,7 +29,7 @@ public static class AuditTrailPageRenderer
         html.AppendLine("        <main class=\"container explorer-page\">");
         html.AppendLine("            <header class=\"page-header\">");
         html.AppendLine("                <div class=\"breadcrumb\">Operations / Audit Trail</div>");
-        html.AppendLine("                <h1>Seneschal Audit Trail</h1>");
+        html.AppendLine("                <h1>Audit Trail</h1>");
         html.AppendLine("                <p class=\"subtitle\">Recent completed policy evaluations.</p>");
         html.AppendLine("            </header>");
         AppendInsights(html, events);
@@ -119,16 +119,16 @@ public static class AuditTrailPageRenderer
                 ("", "All"),
                 ("allow", "Allow"),
                 ("deny", "Deny"),
-                ("requires_approval", "PendingApproval")
+                ("requires_approval", "Pending Approval")
             ]);
         AppendFilterSelect(
             html,
             "enforcementMode",
-            "Enforcement Mode",
+            "Runtime mode",
             filter.EnforcementMode,
             [
                 ("", "All"),
-                ("LogOnly", "Monitor"),
+                ("LogOnly", "LogOnly"),
                 ("Enforce", "Enforce")
             ]);
         AppendFilterInput(
@@ -269,7 +269,7 @@ public static class AuditTrailPageRenderer
                 .AppendLine("</p>");
             html.Append("                            <a class=\"table-link\" href=\"/audit/")
                 .Append(Uri.EscapeDataString(auditEvent.Id))
-                .AppendLine("\">View trace</a>");
+                .AppendLine("\">View Decision Trace</a>");
             html.AppendLine("                        </article>");
             html.AppendLine("                    </li>");
         }
@@ -403,7 +403,7 @@ public static class AuditTrailPageRenderer
             auditEvent.GovernanceWindowMessage ?? "—");
         html.Append("                            <td><a class=\"table-link\" href=\"/audit/")
             .Append(Uri.EscapeDataString(auditEvent.Id))
-            .AppendLine("\">View trace</a></td>");
+            .AppendLine("\">View Decision Trace</a></td>");
         html.AppendLine("                        </tr>");
     }
 
@@ -436,7 +436,7 @@ public static class AuditTrailPageRenderer
     {
         return decision switch
         {
-            "requires_approval" => "pending",
+            "requires_approval" => "Pending Approval",
             _ => decision
         };
     }

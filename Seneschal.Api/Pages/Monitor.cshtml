@@ -9,7 +9,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Seneschal Monitor</title>
+    <title>Live Monitor</title>
     <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -17,7 +17,7 @@
     @await Html.PartialAsync("Shared/_PortalSidebar", "monitor")
     <main id="monitor-console" class="container explorer-page monitor-console" data-generated-at="@Model.GeneratedAtUtc.ToString("O")">
         <header class="page-header monitor-page-header">
-            <div><div class="breadcrumb">Overview / Monitor</div><h1>Monitor</h1><p class="subtitle">Live operational state across the Seneschal runtime.</p></div>
+            <div><div class="breadcrumb">Overview / Live Monitor</div><h1>Live Monitor</h1><p class="subtitle">Watch current evaluations, runtime health, and events requiring attention.</p></div>
             <a class="table-link" href="/dashboard">Open Dashboard</a>
         </header>
 
@@ -68,7 +68,7 @@
                                 @if (!string.IsNullOrWhiteSpace(item.GovernanceWindowName)) { <span class="window-participation">Window: @item.GovernanceWindowName (@item.GovernanceWindowMode)</span> }
                                 @if (!string.IsNullOrWhiteSpace(item.ApprovalOperationId)) { <code title="Application operation ID">@item.ApprovalOperationId</code> }
                             </div>
-                            <a class="monitor-trace-link" href="/audit/@Uri.EscapeDataString(item.Id)">View trace</a>
+                            <a class="monitor-trace-link" href="/audit/@Uri.EscapeDataString(item.Id)">View Decision Trace</a>
                         </li>
                     }
                     </ol>
@@ -104,6 +104,6 @@
 @functions {
     private static string DecisionLabel(DecisionType decision) => decision == DecisionType.RequireApproval ? "Pending Approval" : decision.ToString();
     private static string DecisionClass(DecisionType decision) => decision == DecisionType.RequireApproval ? "pending" : decision.ToString().ToLowerInvariant();
-    private static string EffectiveResult(DecisionType decision, EnforcementMode mode) => decision switch { DecisionType.Allow => "Executed", DecisionType.RequireApproval when mode == EnforcementMode.Enforce => "Blocked pending approval", DecisionType.Deny when mode == EnforcementMode.Enforce => "Blocked", _ => "Executed and recorded" };
-    private static string EffectiveClass(string effective) => effective switch { "Executed" => "executed", "Executed and recorded" => "recorded", "Blocked pending approval" => "pending-blocked", _ => "blocked" };
+    private static string EffectiveResult(DecisionType decision, EnforcementMode mode) => decision switch { DecisionType.Allow => "Caller may proceed", DecisionType.RequireApproval when mode == EnforcementMode.Enforce => "Caller should pause and retry", DecisionType.Deny when mode == EnforcementMode.Enforce => "Caller should block the operation", _ => "Recorded; caller may continue" };
+    private static string EffectiveClass(string effective) => effective switch { "Caller may proceed" => "executed", "Recorded; caller may continue" => "recorded", "Caller should pause and retry" => "pending-blocked", _ => "blocked" };
 }

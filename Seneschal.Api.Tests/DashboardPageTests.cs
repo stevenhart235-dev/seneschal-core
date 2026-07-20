@@ -42,9 +42,9 @@ public sealed class DashboardPageTests :
         Assert.Contains("Explore", html);
         Assert.Contains("<span>Dashboard</span>", html);
         Assert.Contains("class=\"active\" href=\"/dashboard\"", html);
-        Assert.Contains("Monitor", html);
+        Assert.Contains("Live Monitor", html);
         Assert.Contains("/monitor", html);
-        Assert.Contains("/resources", html);
+        Assert.DoesNotContain("href=\"/resources\"", html);
         Assert.Contains("/graph-view", html);
         Assert.Contains("Operational posture", html);
         Assert.Contains("Live Decision Activity", html);
@@ -180,7 +180,7 @@ public sealed class DashboardPageTests :
 
         Assert.Contains("Governance / Resources", html);
         Assert.Contains("Resource Explorer Coming Soon", html);
-        Assert.Contains("class=\"active\" href=\"/resources\"", html);
+        Assert.DoesNotContain("href=\"/resources\"", html);
     }
 
     [Fact]
@@ -202,7 +202,8 @@ public sealed class DashboardPageTests :
         Assert.Contains("LogOnly", html);
         Assert.Contains("Live Decision Activity", html);
         Assert.Contains(identity, html);
-        Assert.Contains("Executed and recorded", html);
+        Assert.Contains("Recorded; caller may continue", html);
+        Assert.DoesNotContain("Executed", html);
     }
 
     [Fact]
@@ -220,11 +221,11 @@ public sealed class DashboardPageTests :
 
         var snapshot = DashboardModel.CreateLiveSnapshot(events, EnforcementMode.Enforce, now);
 
-        Assert.Equal("Executed and recorded", snapshot.Decisions.Single(item => item.Id == "log-only").EffectiveAction);
-        Assert.Equal("Blocked", snapshot.Decisions.Single(item => item.Id == "enforce").EffectiveAction);
-        Assert.Equal("Executed", snapshot.Decisions.Single(item => item.Id == "allow").EffectiveAction);
-        Assert.Equal("Executed and recorded", snapshot.Decisions.Single(item => item.Id == "pending-log").EffectiveAction);
-        Assert.Equal("Blocked pending approval", snapshot.Decisions.Single(item => item.Id == "pending-enforce").EffectiveAction);
+        Assert.Equal("Recorded; caller may continue", snapshot.Decisions.Single(item => item.Id == "log-only").EffectiveAction);
+        Assert.Equal("Caller should block the operation", snapshot.Decisions.Single(item => item.Id == "enforce").EffectiveAction);
+        Assert.Equal("Caller may proceed", snapshot.Decisions.Single(item => item.Id == "allow").EffectiveAction);
+        Assert.Equal("Recorded; caller may continue", snapshot.Decisions.Single(item => item.Id == "pending-log").EffectiveAction);
+        Assert.Equal("Caller should pause and retry", snapshot.Decisions.Single(item => item.Id == "pending-enforce").EffectiveAction);
     }
 
     [Fact]

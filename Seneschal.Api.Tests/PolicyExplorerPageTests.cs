@@ -55,12 +55,13 @@ public sealed class PolicyExplorerPageTests :
 
         var html = await response.Content.ReadAsStringAsync();
 
-        Assert.Contains("Seneschal Policy Explorer", html);
+        Assert.Contains("<title>Policy Explorer</title>", html);
+        Assert.Contains("<h1>Policy Explorer</h1>", html);
         Assert.Contains("class=\"active\" href=\"/policies\"", html);
         Assert.Contains("Policy Profile", html);
         Assert.Contains("Developers can deploy to dev", html);
         Assert.Contains("decision-badge decision-allow", html);
-        Assert.Contains("Monitor mode", html);
+        Assert.Contains("Runtime mode: LogOnly", html);
         Assert.Contains("Priority: 4", html);
         Assert.Contains("Applies To", html);
         Assert.Contains("Related identities", html);
@@ -77,7 +78,8 @@ public sealed class PolicyExplorerPageTests :
         Assert.Contains("Conditions", html);
         Assert.Contains("<dt>Identity</dt>", html);
         Assert.Contains("<dd>Developer</dd>", html);
-        Assert.Contains("Related Audit", html);
+        Assert.Contains("<h3>Audit Trail</h3>", html);
+        Assert.Contains("Open Filtered Audit Trail", html);
         Assert.Contains("/audit?matchedPolicy=Developers%20can%20deploy%20to%20dev", html);
         Assert.Contains("Recommendations", html);
         Assert.Contains("Policy has not been exercised yet", html);

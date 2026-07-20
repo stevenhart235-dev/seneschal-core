@@ -90,7 +90,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         {
             Severity = "Error",
             Category = "RuntimeSettings",
-            Message = $"Runtime enforcement mode '{runtimeSettings.Mode}' is not valid."
+            Message = $"Runtime mode '{runtimeSettings.Mode}' is not valid."
         });
     }
 

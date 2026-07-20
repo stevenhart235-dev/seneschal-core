@@ -45,8 +45,11 @@ public sealed class AuditTrailPageTests :
 
         var html = await response.Content.ReadAsStringAsync();
 
-        Assert.Contains("Seneschal Audit Trail", html);
+        Assert.Contains("<title>Audit Trail</title>", html);
+        Assert.Contains("<h1>Audit Trail</h1>", html);
         Assert.Contains("class=\"active\" href=\"/audit\"", html);
+        Assert.Contains("Live Monitor", html);
+        Assert.DoesNotContain("href=\"/resources\"", html);
         Assert.Contains("Audit Insights", html);
         Assert.Contains("Total decisions", html);
         Assert.Contains("Most active identity", html);
@@ -61,7 +64,7 @@ public sealed class AuditTrailPageTests :
         Assert.Contains("Recent Audit Events", html);
         Assert.Contains("audit-table", html);
         Assert.Contains("/audit/", html);
-        Assert.Contains("View trace", html);
+        Assert.Contains("View Decision Trace", html);
         Assert.Contains("Developer", html);
         Assert.Contains("DeployApplication", html);
         Assert.Contains("decision-badge decision-allow", html);
@@ -103,7 +106,7 @@ public sealed class AuditTrailPageTests :
         Assert.Contains(matchingIdentity, html);
         Assert.DoesNotContain(otherIdentity, html);
         Assert.Contains("Environment", html);
-        Assert.Contains("View trace", html);
+        Assert.Contains("View Decision Trace", html);
         Assert.Contains($"/audit/", html);
     }
 
@@ -397,12 +400,13 @@ public sealed class AuditTrailPageTests :
         Assert.Contains("<option value=\"allow\" selected>Allow</option>", html);
         Assert.Contains("<option value=\"deny\">Deny</option>", html);
         Assert.Contains(
-            "<option value=\"requires_approval\">PendingApproval</option>",
+            "<option value=\"requires_approval\">Pending Approval</option>",
             html);
         Assert.Contains("<select name=\"enforcementMode\">", html);
         Assert.Contains(
-            "<option value=\"LogOnly\" selected>Monitor</option>",
+            "<option value=\"LogOnly\" selected>LogOnly</option>",
             html);
+        Assert.Contains("Runtime mode", html);
         Assert.Contains("<option value=\"Enforce\">Enforce</option>", html);
         Assert.Contains(
             "name=\"environment\" placeholder=\"production\" value=\"dev\"",

@@ -20,7 +20,7 @@
                 <div class="breadcrumb">Overview / Runtime Governance</div>
                 <h1>Runtime Governance</h1>
                 <p class="subtitle">
-                    Switch Seneschal between monitor/log-only mode and active
+                    Switch Seneschal between LogOnly and active
                     enforcement without restarting the application.
                 </p>
             </header>
@@ -45,7 +45,7 @@
             </section>
 
             <p class="governance-volatile-note">
-                <strong>Temporary setting.</strong> Runtime governance mode is in memory and resets to LogOnly when Seneschal restarts.
+                <strong>Temporary setting.</strong> Runtime mode is held in memory and resets to LogOnly when Seneschal restarts.
             </p>
 
             <section class="governance-summary-grid">
@@ -78,7 +78,7 @@
                             <tbody>
                                 <tr><th scope="row"><span class="decision-badge decision-allow">Allow</span></th><td>Execute</td><td>Execute</td></tr>
                                 <tr><th scope="row"><span class="decision-badge decision-deny">Deny</span></th><td>Execute and record</td><td>Block</td></tr>
-                                <tr><th scope="row"><span class="decision-badge decision-pendingapproval">Pending Approval</span></th><td>Execute and record</td><td>Block pending approval</td></tr>
+                                <tr><th scope="row"><span class="decision-badge decision-pendingapproval">Pending Approval</span></th><td>Record; caller may continue</td><td>Caller should pause and retry</td></tr>
                             </tbody>
                         </table>
                     </div>

@@ -43,9 +43,7 @@ public sealed class MonitorModel : PageModel
         _incidentStore = incidentStore;
     }
 
-    public string CurrentMode => _governanceModeStore.GetMode() == EnforcementMode.LogOnly
-        ? "Monitor"
-        : "Enforce";
+    public string CurrentMode => _governanceModeStore.GetMode().ToString();
 
     public string CanonicalRuntimeMode => _governanceModeStore.GetMode().ToString();
     public GovernanceWindow GovernanceWindow { get; private set; } = null!;
@@ -241,7 +239,7 @@ public sealed class MonitorModel : PageModel
             >= 100 => "Ready for targeted enforcement on stable capability paths.",
             >= 75 => "Review denied and pending decisions before enabling enforcement.",
             >= 50 => "Continue monitoring until activity and audit history are broader.",
-            _ => "Start with inventory and monitor-mode runtime evaluations."
+            _ => "Start with inventory and LogOnly runtime evaluations."
         };
     }
 
@@ -315,7 +313,7 @@ public sealed class MonitorModel : PageModel
         {
             >= 90 => "Ready for Enforcement",
             >= 70 => "Nearly Ready",
-            >= 40 => "Remain in Monitor",
+            >= 40 => "Remain in LogOnly",
             _ => "Not Ready"
         };
     }
@@ -328,7 +326,7 @@ public sealed class MonitorModel : PageModel
                 "Candidate for targeted enforcement after owner review.",
             "Nearly Ready" =>
                 "Review remaining signals before enabling enforcement.",
-            "Remain in Monitor" =>
+            "Remain in LogOnly" =>
                 "Keep observing until denials, approvals, and volume stabilize.",
             _ =>
                 "Do not enforce yet; gather successful activity and resolve blockers."
@@ -414,7 +412,7 @@ public sealed class MonitorModel : PageModel
                         .. advice.ExplanationReasons
                     ],
                     $"/capability-activity?capabilityId={Uri.EscapeDataString(advice.CapabilityId)}",
-                    "View capability activity"));
+                    "Investigate Capability Activity"));
             }
             else
             {
@@ -428,7 +426,7 @@ public sealed class MonitorModel : PageModel
                         .. advice.ExplanationReasons
                     ],
                     $"/capability-activity?capabilityId={Uri.EscapeDataString(advice.CapabilityId)}",
-                    "View capability activity"));
+                    "Investigate Capability Activity"));
             }
         }
 
@@ -464,7 +462,7 @@ public sealed class MonitorModel : PageModel
                     $"Denied evaluations: {capability.DeniedCount}"
                 ],
                 $"/audit?capabilityId={Uri.EscapeDataString(capability.CapabilityId)}",
-                "View related audit events"));
+                "Open Filtered Audit Trail"));
         }
 
         return recommendations;
@@ -514,7 +512,7 @@ public sealed class MonitorModel : PageModel
                     $"Observed evaluations without matched policy: {group.LongCount()}"
                 ],
                 $"/audit?capabilityId={Uri.EscapeDataString(group.Key.CapabilityId)}",
-                "View related audit events"))
+                "Open Filtered Audit Trail"))
             .ToList();
     }
 }

@@ -13,14 +13,13 @@ public static class PortalSidebarRenderer
         html.AppendLine("            <nav class=\"sidebar-nav\" aria-label=\"Primary navigation\">");
         AppendGroup(html, "Overview",
             ("dashboard", "/dashboard", "Dashboard"),
-            ("monitor", "/monitor", "Monitor"));
+            ("monitor", "/monitor", "Live Monitor"));
         AppendGroup(html, "Governance",
             ("governance", "/governance", "Runtime Governance"),
             ("governance-windows", "/governance-windows", "Governance Windows"),
             ("policies", "/policies", "Policies"),
             ("capabilities", "/capability-explorer", "Capabilities"),
-            ("identities", "/identity-explorer", "Identities"),
-            ("resources", "/resources", "Resources"));
+            ("identities", "/identity-explorer", "Identities"));
         AppendGroup(html, "Operations",
             ("capability-activity", "/capability-activity", "Capability Activity"),
             ("identity-activity", "/identity-activity", "Identity Activity"),

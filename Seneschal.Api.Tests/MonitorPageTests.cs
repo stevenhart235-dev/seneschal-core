@@ -23,6 +23,9 @@ public sealed class MonitorPageTests : IClassFixture<ApiApplicationFactory>
         using var client = CreateClient();
         var html = await GetMonitor(client);
 
+        Assert.Contains("<title>Live Monitor</title>", html);
+        Assert.Contains("<h1>Live Monitor</h1>", html);
+        Assert.Contains("Watch current evaluations, runtime health, and events requiring attention.", html);
         Assert.Contains("Operational status", html);
         Assert.Contains("Healthy", html);
         Assert.Contains("Canonical mode: <b>LogOnly</b>", html);
@@ -83,10 +86,12 @@ public sealed class MonitorPageTests : IClassFixture<ApiApplicationFactory>
 
         Assert.Contains("Live decision stream", html);
         Assert.Contains("Pending Approval", html);
-        Assert.Contains("Blocked pending approval", html);
+        Assert.Contains("Caller should pause and retry", html);
         Assert.Contains("Window: Freeze &lt;window&gt; (Enforce)", html);
         Assert.Contains("release-&lt;001&gt;", html);
         Assert.Contains("href=\"/audit/trace-1\"", html);
+        Assert.Contains("View Decision Trace", html);
+        Assert.DoesNotContain("Executed", html);
         Assert.Contains("worker&amp;lt;unsafe&gt;", html);
         Assert.DoesNotContain("Freeze <window>", html);
     }

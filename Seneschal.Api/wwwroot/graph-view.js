@@ -299,7 +299,7 @@
         const destinations = {
             Capability: [
                 ['Open Capability Explorer', `/capability-explorer?capabilityId=${encodeURIComponent(domainId)}`],
-                ['View Capability Activity', `/capability-activity?capabilityId=${encodeURIComponent(domainId)}`]
+                ['Investigate Capability Activity', `/capability-activity?capabilityId=${encodeURIComponent(domainId)}`]
             ],
             Identity: [['View Identity Activity', `/identity-activity?identityId=${encodeURIComponent(domainId)}`]],
             Policy: [['View Policies', '/policies']],

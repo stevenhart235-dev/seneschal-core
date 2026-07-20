@@ -77,13 +77,13 @@ public static class AuditEventDetailPageRenderer
     private static void AppendTraceNavigation(StringBuilder html, AuditEvent auditEvent)
     {
         html.AppendLine("            <nav class=\"trace-navigation\" aria-label=\"Related investigation links\">");
-        AppendNavLink(html, $"/capability-activity?capabilityId={Uri.EscapeDataString(auditEvent.CapabilityId)}", "Capability Activity");
-        AppendNavLink(html, $"/capability-explorer?capabilityId={Uri.EscapeDataString(auditEvent.CapabilityId)}", "Capability profile");
-        AppendNavLink(html, $"/identity-activity?identityId={Uri.EscapeDataString(auditEvent.IdentityId)}", "Identity activity");
-        AppendNavLink(html, $"/audit?capabilityId={Uri.EscapeDataString(auditEvent.CapabilityId)}", "Filtered Audit Trail");
-        if (HasApproval(auditEvent)) AppendNavLink(html, "/approvals", "Related approval");
+        AppendNavLink(html, $"/capability-activity?capabilityId={Uri.EscapeDataString(auditEvent.CapabilityId)}", "Investigate Capability Activity");
+        AppendNavLink(html, $"/capability-explorer?capabilityId={Uri.EscapeDataString(auditEvent.CapabilityId)}", "View capability profile");
+        AppendNavLink(html, $"/identity-activity?identityId={Uri.EscapeDataString(auditEvent.IdentityId)}", "View Identity Activity");
+        AppendNavLink(html, $"/audit?capabilityId={Uri.EscapeDataString(auditEvent.CapabilityId)}", "Open Filtered Audit Trail");
+        if (HasApproval(auditEvent)) AppendNavLink(html, "/approvals", "View related approval");
         var policy = auditEvent.MatchedPolicies.FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(policy)) AppendNavLink(html, $"/policies?policyId={Uri.EscapeDataString(policy)}", "Related policy");
+        if (!string.IsNullOrWhiteSpace(policy)) AppendNavLink(html, $"/policies?policyId={Uri.EscapeDataString(policy)}", "View related policy");
         html.AppendLine("            </nav>");
     }
 
@@ -327,7 +327,7 @@ public static class AuditEventDetailPageRenderer
         AppendResolutionStep(html, "Governance Window", windowText, changedDecision ? "trace-overridden" : "trace-continued");
         AppendResolutionStep(html, "Runtime Governance", auditEvent.EnforcementMode, "trace-mode");
         AppendResolutionStep(html, "Execution guidance", GetExecutionGuidance(auditEvent), "trace-mode");
-        AppendResolutionStep(html, "Effective application result", effective.Text, effective.CssClass);
+        AppendResolutionStep(html, "Effective action", effective.Text, effective.CssClass);
         html.AppendLine("                </ol>");
         html.AppendLine("            </section>");
     }

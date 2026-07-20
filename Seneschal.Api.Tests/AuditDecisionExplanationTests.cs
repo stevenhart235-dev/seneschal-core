@@ -57,7 +57,7 @@ public sealed class AuditDecisionExplanationTests
         Assert.Contains("Policy Decision", html);
         Assert.Contains("Allow", html);
         Assert.Contains("No window override", html);
-        Assert.Contains("Effective application result", html);
+        Assert.Contains("Effective action", html);
         Assert.Contains("Caller may proceed", html);
     }
 
@@ -270,6 +270,12 @@ public sealed class AuditDecisionExplanationTests
         Assert.Contains("/audit?capabilityId=production.deployment.execute", html);
         Assert.Contains("/approvals", html);
         Assert.Contains("/policies?policyId=policy-a", html);
+        Assert.Contains("Investigate Capability Activity", html);
+        Assert.Contains("View capability profile", html);
+        Assert.Contains("View Identity Activity", html);
+        Assert.Contains("Open Filtered Audit Trail", html);
+        Assert.Contains("View related approval", html);
+        Assert.Contains("View related policy", html);
     }
 
     [Fact]

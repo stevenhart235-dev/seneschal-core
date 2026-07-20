@@ -227,13 +227,13 @@ public sealed class DashboardModel : PageModel
         var decision = DecisionLabel(auditEvent.Decision);
         var effectiveAction = auditEvent.Decision switch
         {
-            DecisionType.Allow => "Executed",
+            DecisionType.Allow => "Caller may proceed",
             DecisionType.RequireApproval
                 when auditEvent.EnforcementMode == EnforcementMode.Enforce
-                => "Blocked pending approval",
+                => "Caller should pause and retry",
             _ when auditEvent.EnforcementMode == EnforcementMode.Enforce
-                => "Blocked",
-            _ => "Executed and recorded"
+                => "Caller should block the operation",
+            _ => "Recorded; caller may continue"
         };
 
         return new DashboardLiveDecision(

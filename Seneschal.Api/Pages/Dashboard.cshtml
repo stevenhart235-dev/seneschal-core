@@ -63,7 +63,7 @@
                 <header class="reference-card-header"><div><h3 id="distribution-title">Decision Distribution</h3><p>Current runtime</p></div></header>
                 <div class="reference-donut @(Model.TotalRuntimeDecisions == 0 ? "is-empty" : "")" id="decision-distribution" style="--allow: @allowPercent; --deny: @denyPercent; --pending: @pendingPercent" role="img" aria-label="Allow @Model.AllowedRuntimeDecisions, Deny @Model.DeniedRuntimeDecisions, Pending Approval @Model.PendingApprovalRuntimeDecisions"><div><strong>@Model.TotalRuntimeDecisions</strong><span>Total decisions</span></div></div>
                 <dl class="reference-distribution-legend"><div class="distribution-allow"><dt>Allow</dt><dd id="distribution-allow-count">@Model.AllowedRuntimeDecisions</dd></div><div class="distribution-deny"><dt>Deny</dt><dd id="distribution-deny-count">@Model.DeniedRuntimeDecisions</dd></div><div class="distribution-pending"><dt>Pending Approval</dt><dd id="distribution-pending-count">@Model.PendingApprovalRuntimeDecisions</dd></div></dl>
-                <footer><a href="/capability-activity">View capability activity →</a></footer>
+                <footer><a href="/capability-activity">Investigate Capability Activity →</a></footer>
             </article>
         </div>
     </section>
@@ -74,7 +74,7 @@
             <article class="attention-summary deny-attention"><span>Top denied capability</span><strong id="attention-deny-detail-count">@Model.DeniedRuntimeDecisions</strong><p>@(Model.MostDeniedCapability?.CapabilityId ?? "No denied capability observed")</p><a href="/audit?decision=deny">Investigate denials →</a></article>
             <article class="attention-summary pending-attention"><span>Pending approvals</span><strong id="attention-pending-detail-count">@Model.PendingApprovalRuntimeDecisions</strong><p>@(pendingCapability?.CapabilityId ?? "No pending capability observed")</p><a href="/approvals">Review approvals →</a></article>
             <article class="attention-summary"><span>Active governance windows</span><strong>@(Model.GovernanceWindow.Enabled ? "1" : "0")</strong><p>@(Model.GovernanceWindow.Enabled ? $"{Model.GovernanceWindow.Name} · {Model.GovernanceWindow.Mode}" : "No governance windows are active")</p><a href="/governance-windows">Review windows →</a></article>
-            <article class="attention-summary"><span>Most active identity</span><strong class="attention-identity-value">@(Model.MostActiveIdentity?.TotalRequests ?? 0)</strong><p>@(Model.MostActiveIdentity?.IdentityId ?? "No active identity observed")</p><a href="/identity-activity">Review identity activity →</a></article>
+            <article class="attention-summary"><span>Most active identity</span><strong class="attention-identity-value">@(Model.MostActiveIdentity?.TotalRequests ?? 0)</strong><p>@(Model.MostActiveIdentity?.IdentityId ?? "No active identity observed")</p><a href="/identity-activity">View Identity Activity →</a></article>
         </div>
     </section>
 

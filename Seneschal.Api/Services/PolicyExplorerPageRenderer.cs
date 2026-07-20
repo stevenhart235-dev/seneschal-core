@@ -44,7 +44,7 @@ public static class PolicyExplorerPageRenderer
         html.AppendLine("<head>");
         html.AppendLine("    <meta charset=\"utf-8\" />");
         html.AppendLine("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />");
-        html.AppendLine("    <title>Seneschal Policy Explorer</title>");
+        html.AppendLine("    <title>Policy Explorer</title>");
         html.AppendLine("    <link rel=\"stylesheet\" href=\"/styles.css\" />");
         html.AppendLine("</head>");
         html.AppendLine("<body>");
@@ -53,7 +53,7 @@ public static class PolicyExplorerPageRenderer
         html.AppendLine("        <main class=\"container explorer-page\">");
         html.AppendLine("            <header class=\"page-header\">");
         html.AppendLine("                <div class=\"breadcrumb\">Governance / Policies</div>");
-        html.AppendLine("                <h1>Seneschal Policy Explorer</h1>");
+        html.AppendLine("                <h1>Policy Explorer</h1>");
         html.AppendLine("                <p class=\"subtitle\">Review configured policies and their projected governance relationships.</p>");
         html.AppendLine("            </header>");
         html.AppendLine("            <section class=\"policy-grid\">");
@@ -160,7 +160,7 @@ public static class PolicyExplorerPageRenderer
         html.AppendLine("                        </div>");
         html.AppendLine("                        <div class=\"badge-row\">");
         AppendEffectBadge(html, card.Policy.Decision);
-        html.AppendLine("                            <span class=\"badge monitor-mode-badge\">Monitor mode</span>");
+        html.AppendLine("                            <span class=\"badge monitor-mode-badge\">Runtime mode: LogOnly</span>");
         html.AppendLine("                        </div>");
         html.AppendLine("                    </div>");
         html.Append("                    <p class=\"policy-reason\">")
@@ -201,10 +201,10 @@ public static class PolicyExplorerPageRenderer
 
         html.AppendLine("                    <section class=\"dashboard-columns policy-profile-columns\">");
         html.AppendLine("                        <div class=\"policy-profile-section\">");
-        html.AppendLine("                            <h3>Related Audit</h3>");
+        html.AppendLine("                            <h3>Audit Trail</h3>");
         html.Append("                            <p><a class=\"table-link\" href=\"/audit?matchedPolicy=")
             .Append(Uri.EscapeDataString(card.Policy.Name))
-            .AppendLine("\">View filtered audit trail</a></p>");
+            .AppendLine("\">Open Filtered Audit Trail</a></p>");
         if (card.RecentAuditEvents.Count == 0)
         {
             html.AppendLine("                            <p class=\"muted empty-state\">No recent audit events matched this policy.</p>");

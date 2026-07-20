@@ -58,7 +58,7 @@ public sealed class AuditDecisionExplanationTests
         Assert.Contains("Allow", html);
         Assert.Contains("No window override", html);
         Assert.Contains("Effective application result", html);
-        Assert.Contains("Executed", html);
+        Assert.Contains("Caller may proceed", html);
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public sealed class AuditDecisionExplanationTests
         AssertSections(html, hasWindow: true);
         Assert.Contains("Matched; policy result unchanged", html);
         Assert.Contains("Weekend production freeze.", html);
-        Assert.Contains("Executed", html);
+        Assert.Contains("Caller may proceed", html);
     }
 
     [Fact]
@@ -224,6 +224,124 @@ public sealed class AuditDecisionExplanationTests
         Assert.Contains("Policy A", html);
         Assert.Contains("(matched)", html);
         Assert.Contains("(request.changeTicket missing)", html);
+    }
+
+    [Theory]
+    [InlineData("deny", "Enforce", "Denied and blocked", "Blocked")]
+    [InlineData("deny", "LogOnly", "Denied, recorded, and allowed to continue", "ContinueLogOnly")]
+    [InlineData("requires_approval", "Enforce", "Approval required. Caller should pause and retry", "Pause")]
+    [InlineData("allow", "LogOnly", "Allowed; caller may proceed", "Proceed")]
+    public void Render_OutcomeHeaderExplainsDecisionModeAndGuidance(
+        string decision, string mode, string headline, string guidance)
+    {
+        var auditEvent = CreateEvent(decision, mode, decision);
+        auditEvent.ExecutionGuidance = guidance;
+
+        var html = AuditEventDetailPageRenderer.Render(auditEvent);
+
+        Assert.Contains("Final Outcome", html);
+        Assert.Contains(headline, html);
+        Assert.Contains("Effective action", html);
+        Assert.Contains("Runtime mode", html);
+        Assert.Contains("Execution Guidance", html);
+        Assert.Contains("Seneschal does not execute, pause, queue, or retry", html);
+    }
+
+    [Fact]
+    public void Render_RequestContextAndRelatedNavigationPreserveInvestigationScope()
+    {
+        var auditEvent = CreateEvent("requires_approval", "Enforce", "requires_approval");
+        auditEvent.ApprovalId = "approval-7";
+        auditEvent.ApprovalStatus = "Pending";
+        auditEvent.ApprovalAction = "Requested";
+        auditEvent.ApprovalOperationId = "release-007";
+        auditEvent.ApprovalCorrelationMode = "Operation";
+
+        var html = AuditEventDetailPageRenderer.Render(auditEvent);
+
+        Assert.Contains("Operation ID", html);
+        Assert.Contains("release-007", html);
+        Assert.Contains("Correlation mode", html);
+        Assert.Contains("Caller / API key context", html);
+        Assert.Contains("Not recorded in this audit event", html);
+        Assert.Contains("/capability-activity?capabilityId=production.deployment.execute", html);
+        Assert.Contains("/capability-explorer?capabilityId=production.deployment.execute", html);
+        Assert.Contains("/identity-activity?identityId=github-actions-production", html);
+        Assert.Contains("/audit?capabilityId=production.deployment.execute", html);
+        Assert.Contains("/approvals", html);
+        Assert.Contains("/policies?policyId=policy-a", html);
+    }
+
+    [Fact]
+    public void Render_DefaultDenyAndPartialEvidenceAreExplicit()
+    {
+        var auditEvent = CreateEvent("deny", "Enforce", "deny");
+        auditEvent.MatchedPolicies = [];
+        auditEvent.PolicyEvaluations = [];
+        auditEvent.ResourceId = "";
+        auditEvent.ApprovalOperationId = null;
+
+        var html = AuditEventDetailPageRenderer.Render(auditEvent);
+
+        Assert.Contains("default Deny result was used", html);
+        Assert.Contains("Condition-level evidence was not recorded", html);
+        Assert.Contains("Policy evaluation evidence is unavailable", html);
+        Assert.Contains("Not provided", html);
+        Assert.Contains("Legacy or not applicable", html);
+        Assert.Contains("No Governance Window participated", html);
+    }
+
+    [Theory]
+    [InlineData("Pending", "Requested", "Approval remains pending")]
+    [InlineData("Approved", "Approved", "Approval resolved; awaiting a matching retry")]
+    [InlineData("Rejected", "Rejected", "Changed Pending Approval to Deny")]
+    [InlineData("Consumed", "Consumed", "Changed Pending Approval to Allow")]
+    public void Render_ApprovalLifecycleStateIsVisible(
+        string status, string action, string effect)
+    {
+        var auditEvent = CreateEvent(
+            status == "Rejected" ? "deny" : status == "Consumed" ? "allow" : "requires_approval",
+            "Enforce", "requires_approval");
+        auditEvent.ApprovalId = "approval-state";
+        auditEvent.ApprovalStatus = status;
+        auditEvent.ApprovalAction = action;
+        auditEvent.ApprovalOperationId = "operation-state";
+        auditEvent.ApprovalCorrelationMode = "Operation";
+
+        var html = AuditEventDetailPageRenderer.Render(auditEvent);
+
+        Assert.Contains("Human Approval", html);
+        Assert.Contains("Approval status", html);
+        Assert.Contains(status, html);
+        Assert.Contains(effect, html);
+        Assert.Contains("Requested at", html);
+        Assert.Contains("Resolution reason", html);
+        Assert.Contains("Open approval queue", html);
+    }
+
+    [Fact]
+    public void Render_RawEvidenceUsesCollapsedDisclosures()
+    {
+        var html = RenderEvent("allow", "Enforce", "allow");
+
+        Assert.Contains("<details class=\"panel raw-trace-fields\"><summary>Raw decision payload", html);
+        Assert.Contains("Matched policy identifiers", html);
+        Assert.Contains("Diagnostic metadata", html);
+        Assert.Contains("Raw Fields / Raw audit record", html);
+        Assert.Contains("original request payload is not retained", html);
+        Assert.Contains("Evaluation Sequence", html);
+    }
+
+    [Fact]
+    public void RenderNotFound_ExplainsMissingDecisionAndLinksToAuditTrail()
+    {
+        var html = AuditEventDetailPageRenderer.RenderNotFound("missing-<decision>");
+
+        Assert.Contains("Audit event not found", html);
+        Assert.Contains("missing-&lt;decision&gt;", html);
+        Assert.Contains("href=\"/audit\"", html);
+        Assert.Contains("Back to Audit Trail", html);
+        Assert.DoesNotContain("missing-<decision>", html);
     }
 
     private static string RenderEvent(

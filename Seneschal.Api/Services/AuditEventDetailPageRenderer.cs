@@ -15,12 +15,15 @@ public static class AuditEventDetailPageRenderer
         html.AppendLine("            <header class=\"page-header\">");
         html.AppendLine("                <div class=\"breadcrumb\">Operations / Audit / Trace</div>");
         html.AppendLine("                <h1>Decision Trace</h1>");
-        html.AppendLine("                <p class=\"subtitle\">Audit Event Detail — how Seneschal reached the final outcome for this evaluation.</p>");
-        html.AppendLine("                <a href=\"/audit\">Back to Audit Trail</a>");
+        html.AppendLine("                <p class=\"subtitle\">Audit Event Detail — why Seneschal returned this decision and what the caller should do next.</p>");
         html.AppendLine("            </header>");
 
+        AppendOutcomeHeader(html, auditEvent);
+        AppendPlainEnglishExplanation(html, auditEvent);
+        AppendTraceNavigation(html, auditEvent);
         AppendRequestContext(html, auditEvent);
         AppendPolicyEvaluation(html, auditEvent);
+        AppendDecisionResolution(html, auditEvent);
         if (HasApproval(auditEvent))
         {
             AppendApproval(html, auditEvent);
@@ -29,11 +32,59 @@ public static class AuditEventDetailPageRenderer
         {
             AppendGovernanceWindow(html, auditEvent);
         }
-        AppendDecisionResolution(html, auditEvent);
-        AppendFinalOutcome(html, auditEvent);
+        else
+        {
+            AppendNoGovernanceWindow(html);
+        }
+        AppendExecutionGuidance(html, auditEvent);
+        AppendTraceSequence(html, auditEvent);
         AppendRawFields(html, auditEvent);
         AppendShellEnd(html);
         return html.ToString();
+    }
+
+    private static void AppendOutcomeHeader(StringBuilder html, AuditEvent auditEvent)
+    {
+        var effective = GetEffectiveResult(auditEvent);
+        var decision = DisplayDecision(auditEvent.Decision);
+        html.Append("            <section class=\"trace-outcome-hero ")
+            .Append(effective.CssClass).Append(" decision-")
+            .Append(Encode(decision.Replace(" ", "-").ToLowerInvariant()))
+            .AppendLine("\" aria-labelledby=\"trace-outcome-title\">");
+        html.AppendLine("                <div class=\"trace-outcome-primary\"><span>Final Outcome</span>");
+        html.Append("                    <h2 id=\"trace-outcome-title\">")
+            .Append(Encode(OutcomeHeadline(auditEvent))).AppendLine("</h2>");
+        html.Append("                    <p>").Append(Encode(auditEvent.Reason)).AppendLine("</p></div>");
+        html.AppendLine("                <dl class=\"trace-outcome-facts\">");
+        AppendMetadata(html, "Final decision", decision);
+        AppendMetadata(html, "Effective action", effective.Text);
+        AppendMetadata(html, "Runtime mode", auditEvent.EnforcementMode);
+        AppendMetadata(html, "Execution guidance", GetExecutionGuidance(auditEvent));
+        AppendMetadata(html, "Identity", auditEvent.IdentityId);
+        AppendMetadata(html, "Capability", auditEvent.CapabilityId);
+        AppendMetadata(html, "Resource", auditEvent.ResourceId);
+        AppendMetadata(html, "Operation ID", auditEvent.ApprovalOperationId ?? "Not provided");
+        html.AppendLine("                </dl></section>");
+    }
+
+    private static void AppendPlainEnglishExplanation(StringBuilder html, AuditEvent auditEvent)
+    {
+        html.AppendLine("            <section class=\"trace-explanation\" aria-labelledby=\"trace-explanation-title\">");
+        html.AppendLine("                <span id=\"trace-explanation-title\">Why this happened</span>");
+        html.Append("                <p>").Append(Encode(BuildExplanation(auditEvent))).AppendLine("</p></section>");
+    }
+
+    private static void AppendTraceNavigation(StringBuilder html, AuditEvent auditEvent)
+    {
+        html.AppendLine("            <nav class=\"trace-navigation\" aria-label=\"Related investigation links\">");
+        AppendNavLink(html, $"/capability-activity?capabilityId={Uri.EscapeDataString(auditEvent.CapabilityId)}", "Capability Activity");
+        AppendNavLink(html, $"/capability-explorer?capabilityId={Uri.EscapeDataString(auditEvent.CapabilityId)}", "Capability profile");
+        AppendNavLink(html, $"/identity-activity?identityId={Uri.EscapeDataString(auditEvent.IdentityId)}", "Identity activity");
+        AppendNavLink(html, $"/audit?capabilityId={Uri.EscapeDataString(auditEvent.CapabilityId)}", "Filtered Audit Trail");
+        if (HasApproval(auditEvent)) AppendNavLink(html, "/approvals", "Related approval");
+        var policy = auditEvent.MatchedPolicies.FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(policy)) AppendNavLink(html, $"/policies?policyId={Uri.EscapeDataString(policy)}", "Related policy");
+        html.AppendLine("            </nav>");
     }
 
     public static string RenderNotFound(string auditEventId)
@@ -56,11 +107,17 @@ public static class AuditEventDetailPageRenderer
         html.AppendLine("            <section class=\"panel decision-trace-section\">");
         html.AppendLine("                <span class=\"trace-section-number\">1</span><h2>Request Context</h2>");
         html.AppendLine("                <dl class=\"trace-context-grid\">");
-        AppendMetadata(html, "Identity", auditEvent.IdentityId);
-        AppendMetadata(html, "Capability", auditEvent.CapabilityId);
+        AppendLinkedMetadata(html, "Identity", auditEvent.IdentityId,
+            $"/identity-activity?identityId={Uri.EscapeDataString(auditEvent.IdentityId)}");
+        AppendLinkedMetadata(html, "Capability", auditEvent.CapabilityId,
+            $"/capability-explorer?capabilityId={Uri.EscapeDataString(auditEvent.CapabilityId)}");
         AppendMetadata(html, "Environment", auditEvent.Environment);
         AppendMetadata(html, "Resource", auditEvent.ResourceId);
+        AppendMetadata(html, "Operation ID", auditEvent.ApprovalOperationId ?? "Not provided");
+        AppendMetadata(html, "Correlation mode", auditEvent.ApprovalCorrelationMode ?? "Legacy or not applicable");
+        AppendMetadata(html, "Caller / API key context", "Not recorded in this audit event");
         AppendMetadata(html, "Timestamp", auditEvent.TimestampUtc.ToString("u"));
+        AppendMetadata(html, "Evaluation latency", $"{auditEvent.EvaluationDurationMs} ms");
         AppendMetadata(html, "Request ID", auditEvent.RequestId);
         AppendMetadata(html, "Decision ID", auditEvent.Id);
         html.AppendLine("                </dl>");
@@ -80,6 +137,8 @@ public static class AuditEventDetailPageRenderer
         AppendMetadata(html, "Policy decision", DisplayDecision(auditEvent.PolicyDecision));
         AppendMetadata(html, "Reason", auditEvent.PolicyReason);
         html.AppendLine("                </dl>");
+        html.Append("                <p class=\"policy-resolution-summary\">")
+            .Append(Encode(BuildPolicyResolution(auditEvent))).AppendLine("</p>");
 
         html.AppendLine("                <h3>Condition evaluation</h3>");
         html.AppendLine("                <div class=\"why-timeline\">");
@@ -116,7 +175,7 @@ public static class AuditEventDetailPageRenderer
             .ToList();
         foreach (var policy in visiblePolicies)
         {
-            AppendPolicyOutcome(html, policy);
+            AppendPolicyOutcome(html, policy, winningPolicyId);
         }
         if (auditEvent.PolicyEvaluations.Count == 0)
         {
@@ -133,7 +192,7 @@ public static class AuditEventDetailPageRenderer
                 .AppendLine(")</summary><ul class=\"policy-evaluation-list\">");
             foreach (var policy in remainingPolicies)
             {
-                AppendPolicyOutcome(html, policy);
+                AppendPolicyOutcome(html, policy, winningPolicyId);
             }
             html.AppendLine("                </ul></details>");
         }
@@ -176,7 +235,9 @@ public static class AuditEventDetailPageRenderer
         html.AppendLine("                <dl class=\"trace-context-grid\">");
         AppendMetadata(html, "Window name", auditEvent.GovernanceWindowName ?? string.Empty);
         AppendMetadata(html, "Window mode", auditEvent.GovernanceWindowMode ?? string.Empty);
+        AppendMetadata(html, "Status", "Participated");
         AppendMetadata(html, "Matched", "Yes");
+        AppendMetadata(html, "Scope", $"Capability {auditEvent.CapabilityId} in {Fallback(auditEvent.Environment, "an unspecified environment")}");
         AppendMetadata(html, "Effect on policy result", effect);
         AppendMetadata(html, "Window reason", auditEvent.GovernanceWindowReason ?? auditEvent.GovernanceWindowMessage ?? string.Empty);
         html.AppendLine("                </dl>");
@@ -188,12 +249,18 @@ public static class AuditEventDetailPageRenderer
         html.AppendLine("            </section>");
     }
 
+    private static void AppendNoGovernanceWindow(StringBuilder html)
+    {
+        html.AppendLine("            <aside class=\"trace-compact-state\"><strong>No Governance Window participated</strong><span>The decision was resolved without Governance Window context or override.</span></aside>");
+    }
+
     private static void AppendApproval(StringBuilder html, AuditEvent auditEvent)
     {
         var effect = auditEvent.ApprovalStatus switch
         {
             "Consumed" => "Changed Pending Approval to Allow",
             "Rejected" => "Changed Pending Approval to Deny",
+            "Approved" => "Approval resolved; awaiting a matching retry",
             _ => "Approval remains pending"
         };
         html.AppendLine("            <section class=\"panel decision-trace-section trace-approval\">");
@@ -203,8 +270,7 @@ public static class AuditEventDetailPageRenderer
         AppendMetadata(html, "Approval scope",
             auditEvent.ApprovalCorrelationMode == "Operation" ? "Exact operation" : "Legacy context matching");
         AppendMetadata(html, "Action", auditEvent.ApprovalAction ?? string.Empty);
-        AppendMetadata(html, "Human approval",
-            auditEvent.ApprovalStatus == "Consumed" ? "Approved" : auditEvent.ApprovalStatus ?? string.Empty);
+        AppendMetadata(html, "Approval status", auditEvent.ApprovalStatus ?? "Not recorded");
         AppendMetadata(html, "Approval usage",
             auditEvent.ApprovalStatus == "Consumed"
                 ? auditEvent.ApprovalCorrelationMode == "Operation"
@@ -212,12 +278,16 @@ public static class AuditEventDetailPageRenderer
                     : "Consumed by this legacy-context evaluation"
                 : auditEvent.ApprovalAction ?? string.Empty);
         AppendMetadata(html, "Request reason", auditEvent.ApprovalRequestReason ?? string.Empty);
+        AppendMetadata(html, "Requested at", auditEvent.ApprovalAction is "Requested" or "Reused"
+            ? auditEvent.TimestampUtc.ToString("u") : "Not recorded on this audit event");
         AppendMetadata(html, "Resolved at", auditEvent.ApprovalResolvedAt?.ToString("u") ?? string.Empty);
         AppendMetadata(html, "Resolved by", auditEvent.ApprovalResolvedBy ?? string.Empty);
+        AppendMetadata(html, "Resolution reason", auditEvent.ApprovalStatus == "Rejected"
+            ? auditEvent.Reason : "No separate resolution reason recorded");
         AppendMetadata(html, "Consumed at", auditEvent.ApprovalConsumedAt?.ToString("u") ?? string.Empty);
         AppendMetadata(html, "Consuming decision ID", auditEvent.ApprovalConsumedByDecisionId ?? string.Empty);
         AppendMetadata(html, "Effect", effect);
-        html.AppendLine("                </dl></section>");
+        html.AppendLine("                </dl><a href=\"/approvals\">Open approval queue</a></section>");
     }
 
     private static void AppendDecisionResolution(StringBuilder html, AuditEvent auditEvent)
@@ -237,6 +307,8 @@ public static class AuditEventDetailPageRenderer
             .Append(HasWindow(auditEvent) ? "4" : "3")
             .AppendLine("</span><h2>Decision Resolution</h2>");
         html.AppendLine("                <ol class=\"resolution-flow\">");
+        html.Append("                    <li class=\"resolution-summary-step\"><span>Resolution summary</span><strong>")
+            .Append(Encode(BuildPolicyResolution(auditEvent))).AppendLine("</strong></li>");
         AppendResolutionStep(html, "Policy Decision", DisplayDecision(auditEvent.PolicyDecision), "trace-passed");
         if (HasApproval(auditEvent))
         {
@@ -291,10 +363,48 @@ public static class AuditEventDetailPageRenderer
         html.AppendLine("            </section>");
     }
 
+    private static void AppendExecutionGuidance(StringBuilder html, AuditEvent auditEvent)
+    {
+        var guidance = GetExecutionGuidance(auditEvent);
+        html.AppendLine("            <section class=\"trace-guidance\" aria-labelledby=\"execution-guidance-title\">");
+        html.AppendLine("                <div><span>Caller action</span><h2 id=\"execution-guidance-title\">Execution Guidance</h2></div>");
+        html.Append("                <strong>").Append(Encode(guidance)).AppendLine("</strong>");
+        html.Append("                <p>").Append(Encode(GuidanceText(guidance, auditEvent))).AppendLine("</p>");
+        html.Append("                <small>Advisory guidance for the integrated caller. Seneschal does not execute, pause, queue, or retry the external operation. Runtime mode: ")
+            .Append(Encode(auditEvent.EnforcementMode)).AppendLine(".</small></section>");
+    }
+
+    private static void AppendTraceSequence(StringBuilder html, AuditEvent auditEvent)
+    {
+        html.AppendLine("            <section class=\"panel trace-sequence\" aria-labelledby=\"trace-sequence-title\">");
+        html.AppendLine("                <h2 id=\"trace-sequence-title\">Evaluation Sequence</h2><ol>");
+        AppendSequenceItem(html, "Request received", auditEvent.TimestampUtc.ToString("u"));
+        AppendSequenceItem(html, "Policy evaluation", auditEvent.PolicyEvaluations.Count > 0
+            ? $"{auditEvent.PolicyEvaluations.Count} policy result(s) recorded" : "Condition-level evidence unavailable");
+        if (HasWindow(auditEvent)) AppendSequenceItem(html, "Governance Window evaluation",
+            $"{auditEvent.GovernanceWindowName} · {auditEvent.GovernanceWindowMode}");
+        if (HasApproval(auditEvent)) AppendSequenceItem(html,
+            $"Approval {Fallback(auditEvent.ApprovalAction, "evaluated").ToLowerInvariant()}",
+            auditEvent.ApprovalResolvedAt?.ToString("u") ?? auditEvent.ApprovalConsumedAt?.ToString("u") ?? "Recorded during this evaluation");
+        AppendSequenceItem(html, "Decision resolved", DisplayDecision(auditEvent.Decision));
+        AppendSequenceItem(html, "Audit recorded", $"Decision ID {auditEvent.Id}");
+        AppendSequenceItem(html, "Caller guidance returned", GetExecutionGuidance(auditEvent));
+        html.AppendLine("                </ol></section>");
+    }
+
     private static void AppendRawFields(StringBuilder html, AuditEvent auditEvent)
     {
+        html.AppendLine("            <section class=\"trace-raw-disclosures\" aria-label=\"Raw and diagnostic details\">");
+        html.AppendLine("            <details class=\"panel raw-trace-fields\"><summary>Raw decision payload</summary><p class=\"muted\">The original request payload is not retained. Request identifiers and recorded context are available in the raw audit record below.</p></details>");
+        html.AppendLine("            <details class=\"panel raw-trace-fields\"><summary>Matched policy identifiers</summary>");
+        html.Append("                <p>").Append(Encode(FormatList(auditEvent.MatchedPolicies))).AppendLine("</p></details>");
+        html.AppendLine("            <details class=\"panel raw-trace-fields\"><summary>Diagnostic metadata</summary><dl class=\"metadata-grid\">");
+        AppendMetadata(html, "Decision ID", auditEvent.Id);
+        AppendMetadata(html, "Request ID", auditEvent.RequestId);
+        AppendMetadata(html, "Evaluation duration", $"{auditEvent.EvaluationDurationMs} ms");
+        html.AppendLine("                </dl></details>");
         html.AppendLine("            <details class=\"panel raw-trace-fields\">");
-        html.AppendLine("                <summary>Raw Fields</summary>");
+        html.AppendLine("                <summary>Raw Fields / Raw audit record</summary>");
         html.AppendLine("                <dl class=\"metadata-grid\">");
         AppendMetadata(html, "Id", auditEvent.Id);
         AppendMetadata(html, "RequestId", auditEvent.RequestId);
@@ -328,6 +438,7 @@ public static class AuditEventDetailPageRenderer
         AppendMetadata(html, "EvaluationDurationMs", auditEvent.EvaluationDurationMs.ToString());
         html.AppendLine("                </dl>");
         html.AppendLine("            </details>");
+        html.AppendLine("            </section>");
     }
 
     private static void AppendCondition(StringBuilder html, AuditConditionEvaluation condition)
@@ -346,7 +457,8 @@ public static class AuditEventDetailPageRenderer
             .AppendLine("</dd></dl></div>");
     }
 
-    private static void AppendPolicyOutcome(StringBuilder html, AuditPolicyEvaluation policy)
+    private static void AppendPolicyOutcome(StringBuilder html,
+        AuditPolicyEvaluation policy, string? winningPolicyId)
     {
         var failed = policy.Conditions.FirstOrDefault(condition => !condition.Passed);
         var outcome = policy.Matched ? "matched" : failed is null ? "did not match" :
@@ -356,7 +468,17 @@ public static class AuditEventDetailPageRenderer
             .Append("\"><span aria-label=\"").Append(policy.Matched ? "Matched" : "Not matched")
             .Append("\">").Append(policy.Matched ? "&#10003;" : "&#10007;")
             .Append("</span><strong>").Append(Encode(policy.PolicyName))
-            .Append("</strong><span>(").Append(Encode(outcome)).AppendLine(")</span></li>");
+            .Append("</strong><span>(").Append(Encode(outcome)).Append(")</span><dl>")
+            .Append("<dt>Match result</dt><dd>").Append(policy.Matched ? "Matched" : "Not matched")
+            .Append("</dd><dt>Effect</dt><dd>Not recorded per policy</dd>")
+            .Append("<dt>Priority</dt><dd>Not recorded</dd><dt>Contribution</dt><dd>")
+            .Append(Encode(string.Equals(policy.PolicyId, winningPolicyId,
+                    StringComparison.OrdinalIgnoreCase)
+                ? "Recorded winning policy"
+                : policy.Matched
+                    ? "Matched; exact precedence unavailable"
+                    : "Did not contribute to the outcome"))
+            .AppendLine("</dd></dl></li>");
     }
 
     private static void AppendResolutionStep(StringBuilder html, string label, string value, string cssClass)
@@ -373,11 +495,104 @@ public static class AuditEventDetailPageRenderer
             .Append(Encode(value)).AppendLine("</strong></div>");
     }
 
+    private static void AppendSequenceItem(StringBuilder html, string label, string evidence)
+    {
+        html.Append("                    <li><span>").Append(Encode(label))
+            .Append("</span><strong>").Append(Encode(evidence)).AppendLine("</strong></li>");
+    }
+
+    private static string OutcomeHeadline(AuditEvent auditEvent)
+    {
+        if (SameDecision(auditEvent.Decision, "allow"))
+        {
+            return auditEvent.ApprovalStatus == "Consumed"
+                ? "Approved for this operation; approval consumed"
+                : "Allowed; caller may proceed";
+        }
+        if (IsPending(auditEvent.Decision))
+        {
+            return auditEvent.EnforcementMode.Equals("LogOnly", StringComparison.OrdinalIgnoreCase)
+                ? "Approval required, recorded, and allowed to continue"
+                : "Approval required. Caller should pause and retry";
+        }
+        return auditEvent.EnforcementMode.Equals("LogOnly", StringComparison.OrdinalIgnoreCase)
+            ? "Denied, recorded, and allowed to continue"
+            : "Denied and blocked";
+    }
+
+    private static string BuildExplanation(AuditEvent auditEvent)
+    {
+        var decision = DisplayDecision(auditEvent.Decision);
+        var winningPolicy = auditEvent.PolicyEvaluations.FirstOrDefault(item => item.Matched)
+            ?.PolicyName ?? auditEvent.MatchedPolicies.FirstOrDefault();
+        var basis = string.IsNullOrWhiteSpace(winningPolicy)
+            ? SameDecision(auditEvent.Decision, "deny")
+                ? "No matching policy identifier was recorded, so the audit evidence reflects the default Deny outcome."
+                : $"No matching policy identifier was recorded for the {decision} outcome."
+            : $"This request returned {decision} after {winningPolicy} matched. Recorded reason: {Fallback(auditEvent.PolicyReason, auditEvent.Reason)}.";
+
+        if (IsPending(auditEvent.Decision))
+        {
+            basis += auditEvent.EnforcementMode.Equals("LogOnly", StringComparison.OrdinalIgnoreCase)
+                ? " Human approval is required, but LogOnly records the result and allows the caller to continue."
+                : $" The caller should pause and retry{OperationRetryText(auditEvent)} after the approval is resolved.";
+        }
+        else if (SameDecision(auditEvent.Decision, "deny"))
+        {
+            basis += auditEvent.EnforcementMode.Equals("LogOnly", StringComparison.OrdinalIgnoreCase)
+                ? " Seneschal was operating in LogOnly mode, so the denial was recorded and the caller was allowed to continue."
+                : " Runtime enforcement was active, so the caller was instructed not to execute the operation.";
+        }
+        else
+        {
+            basis += " The caller was instructed to proceed.";
+        }
+
+        if (HasWindow(auditEvent))
+            basis += $" Governance Window {auditEvent.GovernanceWindowName} participated in {auditEvent.GovernanceWindowMode} mode.";
+        return basis;
+    }
+
+    private static string BuildPolicyResolution(AuditEvent auditEvent)
+    {
+        var matched = auditEvent.PolicyEvaluations.Count(item => item.Matched);
+        if (matched == 0 && auditEvent.MatchedPolicies.Count == 0 &&
+            SameDecision(auditEvent.PolicyDecision, "deny"))
+            return "No configured policy match was recorded, so the default Deny result was used.";
+        if (IsPending(auditEvent.PolicyDecision))
+            return "The recorded matching policy required human approval.";
+        if (matched > 0)
+            return $"{matched} evaluated {(matched == 1 ? "policy matched" : "policies matched")}; the recorded policy result was {DisplayDecision(auditEvent.PolicyDecision)}. Exact policy priority or precedence was not recorded.";
+        if (auditEvent.MatchedPolicies.Count > 0)
+            return $"The recorded matched policy produced {DisplayDecision(auditEvent.PolicyDecision)}. Condition-level precedence data is unavailable.";
+        return $"The audit record contains a {DisplayDecision(auditEvent.PolicyDecision)} policy result, but policy match details are unavailable.";
+    }
+
+    private static string GuidanceText(string guidance, AuditEvent auditEvent) =>
+        guidance.ToLowerInvariant() switch
+        {
+            "proceed" => "Continue with the requested operation.",
+            "block" => "Do not execute the requested operation.",
+            "pause" => $"Pause this operation and retry{OperationRetryText(auditEvent)} after approval is resolved.",
+            "continuelogonly" => "The decision was recorded, but Seneschal is not enforcing it.",
+            "retry" => "Retry the same operation after the blocking condition changes.",
+            "queue" => "Queue the operation for later processing.",
+            _ => "Follow the recorded execution guidance before continuing."
+        };
+
+    private static string OperationRetryText(AuditEvent auditEvent) =>
+        string.IsNullOrWhiteSpace(auditEvent.ApprovalOperationId)
+            ? " with the same request context (no Operation ID was recorded)"
+            : $" using the same Operation ID ({auditEvent.ApprovalOperationId})";
+
+    private static string Fallback(string? value, string fallback) =>
+        string.IsNullOrWhiteSpace(value) ? fallback : value;
+
     private static (string Text, string CssClass) GetEffectiveResult(AuditEvent auditEvent)
     {
         if (SameDecision(auditEvent.Decision, "allow"))
         {
-            return ("Executed", "trace-passed");
+            return ("Caller may proceed", "trace-passed");
         }
         if (auditEvent.EnforcementMode.Equals("LogOnly", StringComparison.OrdinalIgnoreCase))
         {
@@ -449,6 +664,20 @@ public static class AuditEventDetailPageRenderer
     {
         html.Append("                    <dt>").Append(Encode(label)).Append("</dt><dd>")
             .Append(Encode(string.IsNullOrWhiteSpace(value) ? "none" : value)).AppendLine("</dd>");
+    }
+
+    private static void AppendLinkedMetadata(StringBuilder html, string label,
+        string value, string href)
+    {
+        html.Append("                    <dt>").Append(Encode(label))
+            .Append("</dt><dd><a href=\"").Append(Encode(href)).Append("\">")
+            .Append(Encode(Fallback(value, "none"))).AppendLine("</a></dd>");
+    }
+
+    private static void AppendNavLink(StringBuilder html, string href, string label)
+    {
+        html.Append("                <a href=\"").Append(Encode(href)).Append("\">")
+            .Append(Encode(label)).AppendLine("</a>");
     }
 
     private static string FormatList(IReadOnlyCollection<string> values) =>

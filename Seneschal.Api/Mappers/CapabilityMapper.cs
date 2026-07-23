@@ -42,6 +42,7 @@ public static class CapabilityMapper
                 ? "Active"
                 : capability.Lifecycle,
             DocumentationUrl = capability.DocumentationUrl,
+            Technology = capability.Technology,
             Tags = capability.Tags?.ToList() ?? []
         };
     }

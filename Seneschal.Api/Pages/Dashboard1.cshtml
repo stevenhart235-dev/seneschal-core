@@ -1,0 +1,36 @@
+@page "/dashboard1"
+@model Seneschal.Api.Pages.DashboardLabModel
+@using Seneschal.Api.Pages
+@using Seneschal.Core.Enums
+@{
+    Layout = "Shared/_DashboardLabLayout";
+    ViewData["Title"] = "Operations";
+    ViewData["LabActive"] = "operations";
+    var latest = Model.Decisions.FirstOrDefault();
+}
+<main class="page-body">
+<div class="container-xl">
+    <header class="lab-page-header d-flex flex-wrap align-items-end justify-content-between gap-3">
+        <div><div class="page-pretitle">Dashboard Design Lab · Static snapshot</div><h2 class="page-title">Operations</h2></div>
+        <div class="lab-status-row"><span class="badge bg-azure-lt">@Model.Mode</span><span class="text-secondary">Last evidence @(latest is null ? "not recorded" : DashboardLabModel.Age(latest.TimestampUtc))</span>@if(Model.Window.Enabled){<a class="badge bg-yellow-lt text-yellow" href="/governance-windows">@Model.Window.Name</a>}</div>
+    </header>
+    <section class="row row-cards lab-metrics mb-3" aria-label="Operational metrics">
+        <div class="col-6 col-md"><article class="card"><div class="card-body"><div class="text-secondary">Evaluations</div><div class="h2">@Model.Total</div></div></article></div>
+        <div class="col-6 col-md"><article class="card"><div class="card-body"><div class="text-secondary">Denied</div><div class="h2 text-red">@Model.Denied</div></div></article></div>
+        <div class="col-6 col-md"><article class="card"><div class="card-body"><div class="text-secondary">Pending</div><div class="h2 text-yellow">@Model.Pending</div></div></article></div>
+        <div class="col-6 col-md"><article class="card"><div class="card-body"><div class="text-secondary">Active window</div><div class="h2">@(Model.Window.Enabled ? "1" : "0")</div></div></article></div>
+    </section>
+    <div class="lab-main-grid">
+        <section class="card" aria-labelledby="operations-feed"><div class="card-header"><h3 class="card-title" id="operations-feed">Recent decisions</h3><div class="card-actions"><a href="/monitor">Open Live Monitor</a></div></div>
+        @if(Model.Decisions.Count == 0){<div class="lab-empty"><strong>No evaluations recorded</strong><span>Activity will appear after an integrated caller requests a capability.</span></div>}else{
+        <div class="table-responsive"><table class="table table-vcenter card-table lab-feed-table"><thead><tr><th>Age</th><th class="lab-identity">Identity</th><th>Capability</th><th>Decision</th><th class="lab-environment">Environment</th><th><span class="visually-hidden">Investigate</span></th></tr></thead><tbody>
+        @foreach(var item in Model.Decisions.Take(10)){<tr><td class="text-secondary">@DashboardLabModel.Age(item.TimestampUtc)</td><td class="lab-identity"><a href="/identity-activity?identityId=@Uri.EscapeDataString(item.IdentityId)">@item.IdentityId</a></td><td><a href="/capability-activity?capabilityId=@Uri.EscapeDataString(item.CapabilityId)">@item.CapabilityId</a></td><td><span class="badge @DashboardLabModel.BadgeClass(item.Decision)">@DashboardLabModel.DecisionLabel(item.Decision)</span></td><td class="lab-environment">@(string.IsNullOrWhiteSpace(item.Environment) ? "Not provided" : item.Environment)</td><td><a class="btn btn-sm" href="/audit/@Uri.EscapeDataString(item.Id)">Trace</a></td></tr>}
+        </tbody></table></div>}</section>
+        <aside class="card" aria-labelledby="operations-queue"><div class="card-header"><h3 class="card-title" id="operations-queue">Investigation queue</h3><span class="badge bg-secondary-lt ms-auto">@Model.InvestigationQueue.Count</span></div>
+        @if(Model.InvestigationQueue.Count == 0 && !Model.Window.Enabled){<div class="lab-empty"><strong>Queue clear</strong><span>No denied or pending decisions require review.</span></div>}else{<div class="list-group list-group-flush">
+        @foreach(var item in Model.InvestigationQueue.Take(6)){<a class="list-group-item list-group-item-action" href="/audit/@Uri.EscapeDataString(item.Id)"><div class="lab-queue-item"><span class="badge @DashboardLabModel.BadgeClass(item.Decision)">@DashboardLabModel.DecisionLabel(item.Decision)</span><span class="text-truncate"><strong class="d-block text-truncate">@item.CapabilityId</strong><small class="text-secondary">@item.IdentityId · @(string.IsNullOrWhiteSpace(item.Environment) ? "No environment" : item.Environment)</small></span><small class="text-secondary">@DashboardLabModel.Age(item.TimestampUtc)</small></div></a>}
+        @if(Model.Window.Enabled){<a class="list-group-item list-group-item-action" href="/governance-windows"><div class="lab-queue-item"><span class="badge bg-yellow-lt">Window</span><span><strong class="d-block">@Model.Window.Name</strong><small class="text-secondary">@Model.Window.Mode</small></span><span>Review</span></div></a>}
+        </div>}<div class="card-footer d-flex gap-3"><a href="/incidents">Incidents</a><a href="/approvals">Approvals</a><a href="/audit">Audit Trail</a></div></aside>
+    </div>
+    <section class="card mt-3"><div class="card-body py-3"><div class="row g-3"><div class="col-md"><span class="text-secondary d-block">Runtime mode</span><strong>@Model.Mode</strong></div><div class="col-md"><span class="text-secondary d-block">Capabilities observed</span><strong>@Model.Activity.Capabilities.Count</strong></div><div class="col-md"><span class="text-secondary d-block">Identities observed</span><strong>@Model.Activity.Identities.Count</strong></div><div class="col-md"><span class="text-secondary d-block">Governance Window</span><strong>@(Model.Window.Enabled ? Model.Window.Mode : "Inactive")</strong></div></div></div></section>
+</div></main>

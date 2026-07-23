@@ -6,86 +6,170 @@
     var allowPercent = Model.AllowedRuntimeDecisions * 100d / total;
     var denyPercent = Model.DeniedRuntimeDecisions * 100d / total;
     var pendingPercent = Model.PendingApprovalRuntimeDecisions * 100d / total;
-    var projectedAffected = Model.DeniedRuntimeDecisions + Model.PendingApprovalRuntimeDecisions;
-    var pendingCapability = Model.Activity.Capabilities.Where(x => x.PendingApprovalCount > 0).OrderByDescending(x => x.LastUsedUtc).FirstOrDefault();
+    var queueDecisions = Model.Live.Decisions
+        .Where(item => item.Decision is "Deny" or "PendingApproval")
+        .Take(5)
+        .ToList();
+
+    string DecisionLabel(string decision) =>
+        decision == "PendingApproval" ? "Pending Approval" : decision;
+
+    string DecisionClass(string decision) =>
+        decision.ToLowerInvariant() switch
+        {
+            "pendingapproval" => "pending",
+            "deny" => "deny",
+            _ => "allow"
+        };
 }
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Seneschal Dashboard</title><link rel="stylesheet" href="/styles.css" /></head>
-<body><div class="app-shell">
-@await Html.PartialAsync("Shared/_PortalSidebar", "dashboard")
-<main class="container reference-dashboard operational-dashboard">
-    <header class="reference-dashboard-header page-header">
-        <div><div class="breadcrumb">Overview</div><h1>Dashboard</h1><p class="subtitle">Runtime governance across integrated applications.</p></div>
-        <div class="reference-live-state"><span class="live-indicator" id="dashboard-live-state"><span aria-hidden="true"></span>Live</span><span id="dashboard-refresh-status" class="visually-hidden">Polling active</span><a href="/governance">Runtime Governance</a></div>
-    </header>
-
-    <section class="dashboard-posture-panel mode-posture-@Model.Live.CurrentMode.ToLowerInvariant()" id="governance-posture" aria-labelledby="posture-title">
-        <div class="dashboard-posture-primary">
-            <span class="posture-eyebrow">Operational posture</span>
-            <div class="dashboard-posture-state">
-                <div class="dashboard-health-state"><span class="posture-health-dot" aria-hidden="true"></span><div><strong>Healthy</strong><small>Overall operational status</small></div></div>
-                <div class="dashboard-mode-state"><span>Runtime Governance</span><strong id="governance-posture-title">@(Model.Live.CurrentMode == "LogOnly" ? "Monitoring" : "Enforcing")</strong><small>Canonical mode: <b id="governance-posture-mode">@Model.Live.CurrentMode</b></small></div>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seneschal Dashboard</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<div class="app-shell">
+    @await Html.PartialAsync("Shared/_PortalSidebar", "dashboard")
+    <main class="container demo-dashboard">
+        <header class="demo-dashboard-header">
+            <div>
+                <div class="breadcrumb">Overview</div>
+                <h1>Dashboard</h1>
             </div>
-            <p id="governance-posture-description">@(Model.Live.CurrentMode == "LogOnly" ? "Seneschal is responding. Decisions are recorded and integrated operations continue." : "Seneschal is responding. Denied and pending operations are projected as blocked.")</p>
-        </div>
-        <div class="dashboard-posture-support">
-            <dl>
-                <div><dt>Active Governance Windows</dt><dd>@(Model.GovernanceWindow.Enabled ? "1" : "0")</dd><small>@(Model.GovernanceWindow.Enabled ? $"{Model.GovernanceWindow.Name} · {Model.GovernanceWindow.Mode}" : "No active windows")</small></div>
-                <div><dt>Last evaluation</dt><dd><time id="live-last-evaluation" data-relative-time="@Model.Live.LastEvaluationUtc?.ToString("O")">@(Model.Live.LastEvaluationUtc is null ? "No evaluations" : Model.Live.LastEvaluationUtc.Value.ToString("u"))</time></dd><small>Live polling every 3 seconds</small></div>
-            </dl>
-            <nav aria-label="Operational posture actions"><a href="/governance">Runtime Governance →</a><a href="/governance-windows">Governance Windows →</a></nav>
-        </div>
-    </section>
+            <div class="demo-dashboard-live" aria-label="Dashboard live status">
+                <span class="live-indicator" id="dashboard-live-state"><span aria-hidden="true"></span><strong id="dashboard-live-status-label">Connecting</strong></span>
+                <span class="demo-runtime-mode" id="governance-posture-mode">@Model.Live.CurrentMode</span>
+                <span id="dashboard-refresh-status" class="visually-hidden">Polling active</span>
+                <span>Updated <time id="dashboard-last-updated" datetime="@Model.Live.GeneratedAtUtc.ToString("O")" data-relative-time="@Model.Live.GeneratedAtUtc.ToString("O")">just now</time></span>
+                <button type="button" class="demo-dashboard-refresh" id="dashboard-refresh" aria-label="Refresh Dashboard status">Refresh</button>
+            </div>
+        </header>
 
-    <section class="dashboard-section" aria-labelledby="executive-summary-title">
-        <header class="dashboard-section-heading"><div><span>Current runtime</span><h2 id="executive-summary-title">Executive Summary</h2></div></header>
-        <div class="reference-kpi-grid executive-kpi-grid">
-            <article class="reference-kpi"><span class="executive-kpi-icon" aria-hidden="true">I</span><div><span>Active identities</span><strong id="live-identity-count">@Model.Live.ActiveIdentityCount</strong><small>Evaluated in the last 20 seconds</small></div></article>
-            <article class="reference-kpi"><span class="executive-kpi-icon" aria-hidden="true">C</span><div><span>Active capabilities</span><strong id="live-capability-count">@Model.Live.ActiveCapabilityCount</strong><small>Current runtime activity</small></div></article>
-            <article class="reference-kpi"><span class="executive-kpi-icon" aria-hidden="true">Σ</span><div><span>Total decisions</span><strong id="live-total-decisions">@Model.TotalRuntimeDecisions</strong><small>Available runtime evidence</small></div></article>
-            <article class="reference-kpi deny-kpi"><span class="executive-kpi-icon" aria-hidden="true">!</span><div><span>Denied decisions</span><strong id="attention-deny-count">@Model.DeniedRuntimeDecisions</strong><small>Policy or governance denial</small></div></article>
-            <article class="reference-kpi pending-kpi"><span class="executive-kpi-icon" aria-hidden="true">○</span><div><span>Pending Approval</span><strong id="attention-pending-count">@Model.PendingApprovalRuntimeDecisions</strong><small>Awaiting human resolution</small></div></article>
-        </div>
-    </section>
+        <section class="demo-metric-strip" aria-label="Current runtime metrics">
+            <article><span>Active capabilities</span><strong id="live-capability-count">@Model.Live.ActiveCapabilityCount</strong></article>
+            <article><span>Denied decisions</span><strong class="metric-deny" id="attention-deny-count">@Model.DeniedRuntimeDecisions</strong></article>
+            <article><span>Pending approvals</span><strong class="metric-pending" id="attention-pending-count">@Model.PendingApprovalRuntimeDecisions</strong></article>
+            <article><span>Active windows</span><strong>@(Model.GovernanceWindow.Enabled ? 1 : 0)</strong></article>
+            <article><span>Recent evaluations</span><strong id="live-total-decisions">@Model.Live.TotalDecisions</strong></article>
+        </section>
 
-    <section class="dashboard-section" aria-labelledby="operational-feed-title">
-        <header class="dashboard-section-heading"><div><span>Live evidence</span><h2 id="operational-feed-title">Operational Feed</h2><p>Recent capability decisions and their projected application effect.</p></div></header>
-        <div class="operational-feed-grid">
-            <article class="reference-card reference-activity-card" aria-labelledby="live-activity-title">
-                <header class="reference-card-header"><div><h3 id="live-activity-title">Live Decision Activity</h3><p>Identity, capability, decision, and projected action</p></div><span class="live-update-label" aria-live="polite" id="live-update-label">Watching for evaluations</span></header>
-                <ol class="reference-activity-feed" id="live-decision-feed">
-                @foreach (var decision in Model.Live.Decisions.Take(6)) { <li data-event-id="@decision.Id"><details class="reference-event-disclosure"><summary><a class="reference-event-identity" href="/identity-activity?identityId=@Uri.EscapeDataString(decision.Identity)">@decision.Identity</a><a class="reference-event-capability" href="/capability-activity?capabilityId=@Uri.EscapeDataString(decision.Capability)">@decision.Capability</a><span class="decision-badge decision-@decision.Decision.ToLowerInvariant()">@(decision.Decision == "PendingApproval" ? "Pending Approval" : decision.Decision)</span><strong class="effective-action effective-@decision.EffectiveAction.Replace(" ", "-").ToLowerInvariant()">→ @decision.EffectiveAction</strong><time datetime="@decision.TimestampUtc.ToString("O")" data-relative-time="@decision.TimestampUtc.ToString("O")">@decision.TimestampUtc.ToString("u")</time><span class="reference-event-chevron" aria-hidden="true"></span></summary><dl class="reference-event-details"><div><dt>Reason</dt><dd>@decision.Reason</dd></div><div><dt>Matched policy</dt><dd>@(string.IsNullOrWhiteSpace(decision.MatchedPolicy) ? "None" : decision.MatchedPolicy)</dd></div><div><dt>Runtime mode</dt><dd>@decision.Mode</dd></div><div><dt>Identity</dt><dd>@decision.Identity</dd></div><div><dt>Capability</dt><dd>@decision.Capability</dd></div></dl></details></li> }
+        <div class="demo-dashboard-workspace">
+            <section class="demo-console-panel demo-feed-panel" aria-labelledby="operational-feed-title">
+                <header class="demo-panel-header">
+                    <h2 id="operational-feed-title">Operational Feed</h2>
+                    <a href="/monitor">Open Live Monitor</a>
+                </header>
+                <div class="demo-feed-columns" aria-hidden="true">
+                    <span>Time</span><span>Identity</span><span>Capability</span><span>Decision</span><span>Effective action</span><span></span>
+                </div>
+                <div class="demo-dashboard-empty @(Model.Live.Decisions.Count == 0 ? "" : "is-hidden")" id="live-decision-empty">
+                        <strong>No evaluations recorded</strong>
+                        <span>Waiting for runtime activity.</span>
+                </div>
+                <ol class="demo-feed" id="live-decision-feed">
+                    @foreach (var decision in Model.Live.Decisions.Take(7))
+                    {
+                        <li data-event-id="@decision.Id">
+                            <details class="demo-feed-event">
+                                <summary>
+                                    <time datetime="@decision.TimestampUtc.ToString("O")" data-relative-time="@decision.TimestampUtc.ToString("O")">@decision.TimestampUtc.ToString("u")</time>
+                                    <a href="/identity-activity?identityId=@Uri.EscapeDataString(decision.Identity)">@decision.Identity</a>
+                                    <a href="/capability-activity?capabilityId=@Uri.EscapeDataString(decision.Capability)">@decision.Capability</a>
+                                    <span class="decision-badge decision-@DecisionClass(decision.Decision)">@DecisionLabel(decision.Decision)</span>
+                                    <strong>@Seneschal.Api.Pages.DashboardModel.DisplayEffectiveAction(decision.Decision, decision.Mode)</strong>
+                                    <span class="demo-feed-chevron" aria-hidden="true"></span>
+                                </summary>
+                                <dl>
+                                    <div><dt>Reason</dt><dd>@decision.Reason</dd></div>
+                                    <div><dt>Effective action</dt><dd>@decision.EffectiveAction</dd></div>
+                                    <div><dt>Runtime mode</dt><dd>@decision.Mode</dd></div>
+                                    <div><dt>Environment</dt><dd>@decision.Environment</dd></div>
+                                    <div><dt>Matched policy</dt><dd>@(decision.MatchedPolicy ?? "No matched policy recorded")</dd></div>
+                                </dl>
+                            </details>
+                        </li>
+                    }
                 </ol>
-                @if (Model.Live.Decisions.Count == 0) { <div class="empty-state" id="live-decision-empty"><strong>No evaluations recorded</strong><p>Decision evidence will appear when an integrated application calls Seneschal.</p><a href="/monitor">Open Live Monitor</a></div> }
-                <footer><a href="/monitor">Open Live Monitor →</a></footer>
+            </section>
+
+            <aside class="demo-console-panel demo-queue-panel" aria-labelledby="investigation-queue-title">
+                <header class="demo-panel-header">
+                    <h2 id="investigation-queue-title">Investigation Queue</h2>
+                    <span><strong id="investigation-queue-count">@(queueDecisions.Count + (Model.GovernanceWindow.Enabled ? 1 : 0))</strong> items</span>
+                </header>
+                <ol class="demo-investigation-queue" id="dashboard-investigation-queue">
+                    @foreach (var item in queueDecisions)
+                    {
+                        var pending = item.Decision == "PendingApproval";
+                        var href = pending
+                            ? "/approvals"
+                            : $"/capability-activity?capabilityId={Uri.EscapeDataString(item.Capability)}&decision=Deny&identity={Uri.EscapeDataString(item.Identity)}";
+                        <li>
+                            <a href="@href">
+                                <span class="decision-badge decision-@DecisionClass(item.Decision)">@DecisionLabel(item.Decision)</span>
+                                <strong>@item.Capability</strong>
+                                <small>@item.Identity · @Seneschal.Api.Pages.DashboardModel.DisplayEffectiveAction(item.Decision, item.Mode)</small>
+                                <time datetime="@item.TimestampUtc.ToString("O")" data-relative-time="@item.TimestampUtc.ToString("O")">@item.TimestampUtc.ToString("u")</time>
+                            </a>
+                        </li>
+                    }
+                    @if (Model.GovernanceWindow.Enabled)
+                    {
+                        <li data-window-item>
+                            <a href="/governance-windows">
+                                <span class="status-badge">@Model.GovernanceWindow.Mode</span>
+                                <strong>@Model.GovernanceWindow.Name</strong>
+                                <small>Active Governance Window</small>
+                                <span>Review</span>
+                            </a>
+                        </li>
+                    }
+                </ol>
+                <div class="demo-dashboard-empty @(queueDecisions.Count == 0 && !Model.GovernanceWindow.Enabled ? "" : "is-hidden")" id="investigation-queue-empty">
+                        <strong>Queue clear</strong>
+                        <span>No recent denied or pending decisions.</span>
+                </div>
+                <footer><a href="/incidents">View incidents</a><a href="/approvals">View approvals</a></footer>
+            </aside>
+        </div>
+
+        <section class="demo-supporting-grid" aria-label="Supporting runtime information">
+            <article class="demo-console-panel demo-runtime-summary">
+                <header class="demo-panel-header"><h2>Runtime Summary</h2><a href="/governance">Runtime Governance</a></header>
+                <dl>
+                    <div><dt>Mode</dt><dd id="runtime-summary-mode">@Model.Live.CurrentMode</dd></div>
+                    <div><dt>Audit evidence</dt><dd>@(Model.AuditEventsAvailable ? "Available" : "Not observed")</dd></div>
+                    <div><dt>Average latency</dt><dd>@Model.AverageEvaluationDurationMs.ToString("0.##") ms</dd></div>
+                    <div><dt>Last evaluation</dt><dd><time id="live-last-evaluation" datetime="@Model.Live.LastEvaluationUtc?.ToString("O")">@(Model.Live.LastEvaluationUtc?.ToString("u") ?? "None")</time></dd></div>
+                </dl>
             </article>
-            <article class="reference-card reference-distribution-card" aria-labelledby="distribution-title">
-                <header class="reference-card-header"><div><h3 id="distribution-title">Decision Distribution</h3><p>Current runtime</p></div></header>
-                <div class="reference-donut @(Model.TotalRuntimeDecisions == 0 ? "is-empty" : "")" id="decision-distribution" style="--allow: @allowPercent; --deny: @denyPercent; --pending: @pendingPercent" role="img" aria-label="Allow @Model.AllowedRuntimeDecisions, Deny @Model.DeniedRuntimeDecisions, Pending Approval @Model.PendingApprovalRuntimeDecisions"><div><strong>@Model.TotalRuntimeDecisions</strong><span>Total decisions</span></div></div>
-                <dl class="reference-distribution-legend"><div class="distribution-allow"><dt>Allow</dt><dd id="distribution-allow-count">@Model.AllowedRuntimeDecisions</dd></div><div class="distribution-deny"><dt>Deny</dt><dd id="distribution-deny-count">@Model.DeniedRuntimeDecisions</dd></div><div class="distribution-pending"><dt>Pending Approval</dt><dd id="distribution-pending-count">@Model.PendingApprovalRuntimeDecisions</dd></div></dl>
-                <footer><a href="/capability-activity">Investigate Capability Activity →</a></footer>
+
+            <article class="demo-console-panel demo-top-capabilities">
+                <header class="demo-panel-header"><h2>Top Capabilities</h2><a href="/capability-explorer">Capability Explorer</a></header>
+                <ol id="top-capability-list">
+                @foreach (var capability in Model.TopCapabilitiesByRequestCount.Take(4))
+                {
+                    var width = Model.MostActiveCapability?.TotalRequests > 0
+                        ? capability.TotalRequests * 100d / Model.MostActiveCapability.TotalRequests
+                        : 0;
+                    <li><a href="/capability-activity?capabilityId=@Uri.EscapeDataString(capability.CapabilityId)">@capability.CapabilityId</a><span><i style="width: @width.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></i></span><strong>@capability.TotalRequests</strong></li>
+                }
+                </ol>
             </article>
-        </div>
-    </section>
 
-    <section class="dashboard-section" aria-labelledby="attention-title">
-        <header class="dashboard-section-heading"><div><span>Investigation queue</span><h2 id="attention-title">Attention</h2><p>Current signals that may require operational review.</p></div></header>
-        <div class="attention-summary-grid">
-            <article class="attention-summary deny-attention"><span>Top denied capability</span><strong id="attention-deny-detail-count">@Model.DeniedRuntimeDecisions</strong><p>@(Model.MostDeniedCapability?.CapabilityId ?? "No denied capability observed")</p><a href="/audit?decision=deny">Investigate denials →</a></article>
-            <article class="attention-summary pending-attention"><span>Pending approvals</span><strong id="attention-pending-detail-count">@Model.PendingApprovalRuntimeDecisions</strong><p>@(pendingCapability?.CapabilityId ?? "No pending capability observed")</p><a href="/approvals">Review approvals →</a></article>
-            <article class="attention-summary"><span>Active governance windows</span><strong>@(Model.GovernanceWindow.Enabled ? "1" : "0")</strong><p>@(Model.GovernanceWindow.Enabled ? $"{Model.GovernanceWindow.Name} · {Model.GovernanceWindow.Mode}" : "No governance windows are active")</p><a href="/governance-windows">Review windows →</a></article>
-            <article class="attention-summary"><span>Most active identity</span><strong class="attention-identity-value">@(Model.MostActiveIdentity?.TotalRequests ?? 0)</strong><p>@(Model.MostActiveIdentity?.IdentityId ?? "No active identity observed")</p><a href="/identity-activity">View Identity Activity →</a></article>
-        </div>
-    </section>
-
-    <section class="dashboard-section supporting-operations" aria-labelledby="supporting-title">
-        <header class="dashboard-section-heading"><div><span>Runtime detail</span><h2 id="supporting-title">Operational Context</h2></div></header>
-        <div class="reference-secondary-grid">
-            <article class="reference-card projected-impact-card"><header class="reference-card-header"><div><h3>Projected Application Impact</h3><p>Mode-derived; external execution is not confirmed</p></div></header><div class="reference-impact-value"><strong id="application-impact-value">@(Model.Live.CurrentMode == "Enforce" ? projectedAffected : 0)</strong><span>projected blocked</span></div><p id="application-impact-description">@(Model.Live.CurrentMode == "LogOnly" ? $"{projectedAffected} denied or pending operations would continue and be recorded." : "Denied and pending operations are projected as blocked while Enforce is active.")</p><dl class="reference-impact-breakdown @(Model.Live.CurrentMode == "Enforce" ? "" : "is-hidden")" id="application-impact-breakdown"><div><dt>Denied</dt><dd id="application-impact-denied">@Model.DeniedRuntimeDecisions</dd></div><div><dt>Pending approval</dt><dd id="application-impact-pending">@Model.PendingApprovalRuntimeDecisions</dd></div></dl><footer><a href="/governance">Review runtime governance →</a></footer></article>
-            <article class="reference-card runtime-health-card"><header class="reference-card-header"><div><h3>Runtime Health</h3></div></header><div class="reference-health-state"><span aria-hidden="true"></span><strong>Healthy</strong><small>Seneschal is responding</small></div><dl><div><dt>Runtime mode</dt><dd>@Model.Live.CurrentMode</dd></div><div><dt>Audit evidence</dt><dd>@(Model.AuditEventsAvailable ? "Available" : "Not observed")</dd></div><div><dt>Evaluations</dt><dd>@Model.TotalRuntimeDecisions</dd></div></dl><footer><a href="/diagnostics-view">View diagnostics →</a></footer></article>
-            <article class="reference-card reference-capabilities-card"><header class="reference-card-header"><div><h3>Most Active Capabilities</h3><p>Evaluation volume in this runtime</p></div></header><ol>@foreach (var capability in Model.TopCapabilitiesByRequestCount) { var width = Model.MostActiveCapability?.TotalRequests > 0 ? capability.TotalRequests * 100d / Model.MostActiveCapability.TotalRequests : 0; <li><a href="/capability-activity?capabilityId=@Uri.EscapeDataString(capability.CapabilityId)">@capability.CapabilityId</a><div><span style="width: @width.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%"></span></div><strong>@capability.TotalRequests</strong></li> }</ol><footer><a href="/capability-activity">View all capabilities →</a></footer></article>
-        </div>
-    </section>
-
-    <section class="reference-coverage-strip" aria-label="Governance coverage"><span>Governance coverage</span><a href="/capability-explorer"><strong>@Model.TotalCapabilities</strong> capabilities</a><a href="/identity-explorer"><strong>@Model.TotalIdentities</strong> identities</a><a href="/policies"><strong>@Model.TotalPolicies</strong> policies</a><a href="/audit"><strong>@Model.TotalRuntimeDecisions</strong> evaluations</a></section>
-</main></div><script src="/dashboard-live.js" defer></script></body></html>
+            <article class="demo-console-panel demo-decision-distribution">
+                <header class="demo-panel-header"><h2>Decision Distribution</h2><a href="/audit">Audit Trail</a></header>
+                <div class="demo-distribution-body">
+                    <div class="reference-donut @(Model.TotalRuntimeDecisions == 0 ? "is-empty" : "")" id="decision-distribution" style="--allow: @allowPercent; --deny: @denyPercent; --pending: @pendingPercent" role="img" aria-label="Allow @Model.AllowedRuntimeDecisions, Deny @Model.DeniedRuntimeDecisions, Pending Approval @Model.PendingApprovalRuntimeDecisions"><div><strong id="distribution-total-count">@Model.TotalRuntimeDecisions</strong><span>Total</span></div></div>
+                    <dl><div class="distribution-allow"><dt>Allow</dt><dd id="distribution-allow-count">@Model.AllowedRuntimeDecisions</dd></div><div class="distribution-deny"><dt>Deny</dt><dd id="distribution-deny-count">@Model.DeniedRuntimeDecisions</dd></div><div class="distribution-pending"><dt>Pending</dt><dd id="distribution-pending-count">@Model.PendingApprovalRuntimeDecisions</dd></div></dl>
+                </div>
+            </article>
+        </section>
+    </main>
+</div>
+<script src="/dashboard-live.js" defer></script>
+</body>
+</html>

@@ -55,6 +55,8 @@ builder.Services.AddSingleton<IGovernanceGraph>(services =>
                     .GetPolicies())));
 builder.Services.AddSingleton<ICapabilityExplorer, CapabilityExplorer>();
 builder.Services.AddSingleton<GraphBuilder>();
+builder.Services.AddSingleton<TechnologyClassifier>();
+builder.Services.AddSingleton<TechnologyActivityService>();
 
 var app = builder.Build();
 

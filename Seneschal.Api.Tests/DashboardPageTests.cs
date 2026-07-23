@@ -35,7 +35,12 @@ public sealed class DashboardPageTests :
         var html = await response.Content.ReadAsStringAsync();
 
         Assert.Contains("<h1>Dashboard</h1>", html);
-        Assert.Contains("Runtime governance across integrated applications.", html);
+        Assert.Equal(1, html.Split("aria-label=\"Dashboard live status\"").Length - 1);
+        Assert.Contains("id=\"dashboard-live-status-label\">Connecting</strong>", html);
+        Assert.DoesNotContain(">Unavailable</strong>", html);
+        Assert.Contains("id=\"governance-posture-mode\"", html);
+        Assert.Contains("id=\"dashboard-last-updated\"", html);
+        Assert.Contains("id=\"dashboard-refresh\" aria-label=\"Refresh Dashboard status\"", html);
         Assert.Contains("Overview", html);
         Assert.Contains("Governance", html);
         Assert.Contains("Operations", html);
@@ -46,16 +51,36 @@ public sealed class DashboardPageTests :
         Assert.Contains("/monitor", html);
         Assert.DoesNotContain("href=\"/resources\"", html);
         Assert.Contains("/graph-view", html);
-        Assert.Contains("Operational posture", html);
-        Assert.Contains("Live Decision Activity", html);
-        Assert.Contains("Attention", html);
-        Assert.Contains("Most Active Capabilities", html);
-        Assert.Contains("Governance coverage", html);
+        Assert.Contains("demo-metric-strip", html);
+        Assert.Contains("Active capabilities", html);
+        Assert.Contains("Denied decisions", html);
+        Assert.Contains("Pending approvals", html);
+        Assert.Contains("Active windows", html);
+        Assert.Contains("Recent evaluations", html);
+        Assert.Contains("demo-dashboard-workspace", html);
+        Assert.Contains("Operational Feed", html);
+        Assert.Contains("Investigation Queue", html);
+        Assert.Contains("Top Capabilities", html);
+        Assert.Equal(1, html.Split("id=\"live-decision-feed\"").Length - 1);
+        Assert.Equal(1, html.Split("id=\"live-decision-empty\"").Length - 1);
+        Assert.Equal(1, html.Split("id=\"dashboard-investigation-queue\"").Length - 1);
+        Assert.Contains("Runtime Summary", html);
+        Assert.DoesNotContain("Operational posture", html);
+        Assert.DoesNotContain("dashboard-posture-panel", html);
+        Assert.DoesNotContain("attention-summary", html);
+        Assert.DoesNotContain("Governance coverage", html);
+        Assert.DoesNotContain("Live runtime governance", html);
+        Assert.DoesNotContain("Newest decisions first", html);
+        Assert.DoesNotContain("Overall operational status", html);
+        Assert.DoesNotContain("Canonical mode", html);
+        Assert.DoesNotContain("Seneschal is responding", html);
+        Assert.DoesNotContain("Supporting metrics", html);
+        Assert.DoesNotContain("What needs attention", html);
         Assert.Contains("Capability Activity", html);
         Assert.Contains("/capability-activity", html);
         Assert.Contains("Identity Activity", html);
         Assert.Contains("/identity-activity", html);
-        Assert.Contains("Total decisions", html);
+        Assert.Contains("Recent evaluations", html);
         Assert.Contains("Capabilities", html);
         Assert.Contains("Policies", html);
         Assert.Contains("Identities", html);
@@ -92,10 +117,11 @@ public sealed class DashboardPageTests :
         var html = await response.Content.ReadAsStringAsync();
 
         Assert.Contains("No evaluations recorded", html);
-        Assert.Contains("Decision evidence will appear", html);
+        Assert.Contains("Waiting for runtime activity", html);
         Assert.Contains("Open Live Monitor", html);
-        Assert.Contains("Operational posture", html);
-        Assert.Contains("Governance coverage", html);
+        Assert.Contains("Queue clear", html);
+        Assert.DoesNotContain("Operational posture", html);
+        Assert.DoesNotContain("Governance coverage", html);
         Assert.DoesNotContain("First-Run Guide", html);
     }
 
@@ -127,13 +153,12 @@ public sealed class DashboardPageTests :
 
         var html = await response.Content.ReadAsStringAsync();
 
-        Assert.Contains("Total decisions", html);
+        Assert.Contains("Recent evaluations", html);
         Assert.Contains("Decision Distribution", html);
-        Assert.Contains("Live Decision Activity", html);
-        Assert.Contains("Most Active Capabilities", html);
+        Assert.Contains("Operational Feed", html);
+        Assert.Contains("Top Capabilities", html);
         Assert.Contains(capability, html);
         Assert.Contains(identity, html);
-        Assert.Contains("Governance coverage", html);
     }
 
     [Fact]
@@ -166,9 +191,9 @@ public sealed class DashboardPageTests :
         var html = await response.Content.ReadAsStringAsync();
 
         Assert.DoesNotContain("First-Run Guide", html);
-        Assert.Contains("Operational posture", html);
-        Assert.Contains("Live Decision Activity", html);
-        Assert.Contains("Most Active Capabilities", html);
+        Assert.Contains("Operational Feed", html);
+        Assert.Contains("Investigation Queue", html);
+        Assert.Contains("Top Capabilities", html);
     }
 
     [Fact]
@@ -199,11 +224,11 @@ public sealed class DashboardPageTests :
 
         var html = await _client.GetStringAsync("/dashboard");
 
-        Assert.Contains("Operational posture", html);
         Assert.Contains("Runtime Governance", html);
         Assert.Contains("LogOnly", html);
-        Assert.Contains("Live Decision Activity", html);
+        Assert.Contains("Operational Feed", html);
         Assert.Contains(identity, html);
+        Assert.Contains(">Continue (recorded)</strong>", html);
         Assert.Contains("Recorded; caller may continue", html);
         Assert.DoesNotContain("Executed", html);
     }
@@ -228,6 +253,17 @@ public sealed class DashboardPageTests :
         Assert.Equal("Caller may proceed", snapshot.Decisions.Single(item => item.Id == "allow").EffectiveAction);
         Assert.Equal("Recorded; caller may continue", snapshot.Decisions.Single(item => item.Id == "pending-log").EffectiveAction);
         Assert.Equal("Caller should pause and retry", snapshot.Decisions.Single(item => item.Id == "pending-enforce").EffectiveAction);
+    }
+
+    [Theory]
+    [InlineData("Deny", "LogOnly", "Continue (recorded)")]
+    [InlineData("PendingApproval", "LogOnly", "Continue (recorded)")]
+    [InlineData("Deny", "Enforce", "Block")]
+    [InlineData("PendingApproval", "Enforce", "Wait for approval")]
+    public void DashboardActionLabel_IsDecisionAndModeAware(
+        string decision, string mode, string expected)
+    {
+        Assert.Equal(expected, DashboardModel.DisplayEffectiveAction(decision, mode));
     }
 
     [Fact]
@@ -260,7 +296,32 @@ public sealed class DashboardPageTests :
         Assert.Contains("\"totalDecisions\"", json);
         Assert.Contains("\"activeIdentityCount\"", json);
         Assert.Contains("\"decisions\"", json);
+        Assert.Contains("\"topCapabilities\"", json);
         Assert.DoesNotContain("apiKey", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void DashboardPolling_UsesStableTargetsAndOneRefreshPath()
+    {
+        var apiDirectory = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "..", "Seneschal.Api"));
+        var script = File.ReadAllText(Path.Combine(
+            apiDirectory, "wwwroot", "dashboard-live.js"));
+
+        Assert.Contains("requiredElement(\"#live-decision-feed\")", script);
+        Assert.Contains("requiredElement(\"#dashboard-investigation-queue\")", script);
+        Assert.Contains("requiredElement(\"#top-capability-list\")", script);
+        Assert.Contains("let requestInFlight = false", script);
+        Assert.Contains("if (document.hidden || requestInFlight) return", script);
+        Assert.Contains("finally", script);
+        Assert.Contains("requestInFlight = false", script);
+        Assert.Equal(1, script.Split("async function refresh()").Length - 1);
+        Assert.Contains("addEventListener(\"click\", refresh)", script);
+        Assert.Contains("setInterval(refresh, intervalMs)", script);
+        Assert.Contains("refresh();", script);
+        Assert.Contains("#dashboard-live-status-label\").textContent = \"Live\"", script);
+        Assert.Contains("#dashboard-live-status-label\").textContent = \"Unavailable\"", script);
+        Assert.Contains("element(\"details\", \"demo-feed-event\")", script);
     }
 
     [Fact]
@@ -280,6 +341,10 @@ public sealed class DashboardPageTests :
         var html = await _client.GetStringAsync("/dashboard");
         Assert.Contains("release-approval-worker", html);
         Assert.Contains("Pending Approval", html);
+        Assert.Contains(">Continue (recorded)</strong>", html);
+        Assert.Contains("Recorded; caller may continue", html);
+        Assert.Contains("href=\"/approvals\"", html);
+        Assert.Contains("demo-investigation-queue", html);
         Assert.Contains("Decision Distribution", html);
         Assert.Contains("distribution-pending", html);
 

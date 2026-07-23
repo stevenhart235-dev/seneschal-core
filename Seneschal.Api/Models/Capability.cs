@@ -10,5 +10,6 @@ public class Capability
     public string Owner { get; set; } = "";
     public string Lifecycle { get; set; } = "";
     public string DocumentationUrl { get; set; } = "";
+    public string Technology { get; set; } = "";
     public List<string> Tags { get; set; } = new();
 }

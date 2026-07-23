@@ -2,6 +2,7 @@
     const endpoint = "/dashboard?handler=Live";
     const intervalMs = 3000;
     let timer;
+    let requestInFlight = false;
     let knownEventIds = new Set(
         [...document.querySelectorAll("[data-event-id]")].map(element => element.dataset.eventId));
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -17,35 +18,48 @@
 
     const decisionClass = value => `decision-${value.toLowerCase()}`;
     const decisionLabel = value => value === "PendingApproval" ? "Pending Approval" : value;
+    const shortAction = value => ({
+        "Caller may proceed": "Proceed",
+        "Recorded; caller may continue": "Continue (recorded)",
+        "Caller should block the operation": "Block",
+        "Caller should pause and retry": "Wait for approval"
+    })[value] || value;
     const element = (tag, className, text) => {
         const node = document.createElement(tag);
         if (className) node.className = className;
         if (text !== undefined) node.textContent = text;
         return node;
     };
+    const requiredElement = selector => {
+        const matches = document.querySelectorAll(selector);
+        if (matches.length !== 1) {
+            throw new Error(`Dashboard live target ${selector} resolved to ${matches.length} elements`);
+        }
+        return matches[0];
+    };
 
     function renderDecision(decision, isNew) {
         const item = element("li", isNew && !reducedMotion.matches ? "live-event-new" : "");
         item.dataset.eventId = decision.id;
-        const disclosure = element("details", "reference-event-disclosure");
+        const disclosure = element("details", "demo-feed-event");
         const summary = element("summary");
         const time = element("time", "", relativeTime(decision.timestampUtc));
         time.dateTime = decision.timestampUtc;
         time.dataset.relativeTime = decision.timestampUtc;
-        const identity = element("a", "reference-event-identity", decision.identity);
+        const identity = element("a", "", decision.identity);
         identity.href = `/identity-activity?identityId=${encodeURIComponent(decision.identity)}`;
-        const capability = element("a", "reference-event-capability", decision.capability);
+        const capability = element("a", "", decision.capability);
         capability.href = `/capability-activity?capabilityId=${encodeURIComponent(decision.capability)}`;
         summary.append(
+            time,
             identity,
             capability,
             element("span", `decision-badge ${decisionClass(decision.decision)}`, decisionLabel(decision.decision)),
-            element("strong", `effective-action effective-${decision.effectiveAction.toLowerCase().replaceAll(" ", "-")}`, `→ ${decision.effectiveAction}`),
-            time,
-            element("span", "reference-event-chevron"));
+            element("strong", "", shortAction(decision.effectiveAction)),
+            element("span", "demo-feed-chevron"));
         summary.lastChild.setAttribute("aria-hidden", "true");
-        const details = element("dl", "reference-event-details");
-        [["Reason", decision.reason], ["Matched policy", decision.matchedPolicy || "None"], ["Runtime mode", decision.mode], ["Identity", decision.identity], ["Capability", decision.capability]].forEach(([label, value]) => {
+        const details = element("dl");
+        [["Reason", decision.reason], ["Effective action", decision.effectiveAction], ["Runtime mode", decision.mode], ["Environment", decision.environment], ["Matched policy", decision.matchedPolicy || "No matched policy recorded"]].forEach(([label, value]) => {
             const group = element("div");
             group.append(element("dt", "", label), element("dd", "", value));
             details.append(group);
@@ -56,17 +70,10 @@
     }
 
     function render(data) {
-        const enforce = data.currentMode === "Enforce";
-        const posture = document.querySelector("#governance-posture");
-        posture.className = `dashboard-posture-panel mode-posture-${data.currentMode.toLowerCase()}`;
-        document.querySelector("#governance-posture-title").textContent = enforce ? "Enforcing" : "Monitoring";
-        document.querySelector("#governance-posture-description").textContent = enforce
-            ? "Seneschal is responding. Denied and pending operations are projected as blocked."
-            : "Seneschal is responding. Decisions are recorded and integrated operations continue.";
-        document.querySelector("#governance-posture-mode").textContent = data.currentMode;
-        document.querySelector("#live-identity-count").textContent = data.activeIdentityCount;
-        document.querySelector("#live-capability-count").textContent = data.activeCapabilityCount;
-        document.querySelector("#live-total-decisions").textContent = data.totalDecisions;
+        requiredElement("#governance-posture-mode").textContent = data.currentMode;
+        requiredElement("#runtime-summary-mode").textContent = data.currentMode;
+        requiredElement("#live-capability-count").textContent = data.activeCapabilityCount;
+        requiredElement("#live-total-decisions").textContent = data.totalDecisions;
         const lastEvaluation = document.querySelector("#live-last-evaluation");
         if (lastEvaluation) {
             lastEvaluation.dataset.relativeTime = data.lastEvaluationUtc || "";
@@ -74,10 +81,39 @@
         }
 
         const newIds = data.decisions.filter(decision => !knownEventIds.has(decision.id)).map(decision => decision.id);
-        const feed = document.querySelector("#live-decision-feed");
-        feed.replaceChildren(...data.decisions.slice(0, 6).map(decision => renderDecision(decision, newIds.includes(decision.id))));
-        document.querySelector("#live-decision-empty")?.remove();
+        const feed = requiredElement("#live-decision-feed");
+        feed.replaceChildren(...data.decisions.slice(0, 7).map(decision => renderDecision(decision, newIds.includes(decision.id))));
+        requiredElement("#live-decision-empty").classList.toggle("is-hidden", data.decisions.length !== 0);
         knownEventIds = new Set(data.decisions.map(decision => decision.id));
+
+        const queue = requiredElement("#dashboard-investigation-queue");
+        {
+            const windowItem = queue.querySelector("[data-window-item]");
+            const items = data.decisions
+                .filter(decision => decision.decision === "Deny" || decision.decision === "PendingApproval")
+                .slice(0, 5)
+                .map(decision => {
+                    const item = element("li");
+                    const link = element("a");
+                    link.href = decision.decision === "PendingApproval"
+                        ? "/approvals"
+                        : `/capability-activity?capabilityId=${encodeURIComponent(decision.capability)}&decision=Deny&identity=${encodeURIComponent(decision.identity)}`;
+                    const context = element("small", "", `${decision.identity} · ${shortAction(decision.effectiveAction)}`);
+                    link.append(
+                        element("span", `decision-badge ${decisionClass(decision.decision)}`, decisionLabel(decision.decision)),
+                        element("strong", "", decision.capability),
+                        context,
+                        element("time", "", relativeTime(decision.timestampUtc)));
+                    link.lastChild.dateTime = decision.timestampUtc;
+                    item.append(link);
+                    return item;
+                });
+            if (windowItem) items.push(windowItem);
+            queue.replaceChildren(...items);
+            requiredElement("#investigation-queue-count").textContent = items.length;
+            const queueEmpty = document.querySelector("#investigation-queue-empty");
+            if (queueEmpty) queueEmpty.classList.toggle("is-hidden", items.length !== 0);
+        }
 
         const workers = document.querySelector("#active-worker-list");
         workers?.replaceChildren(...data.identities.map(identity => {
@@ -125,21 +161,45 @@
             document.querySelector("#distribution-allow-count").textContent = data.allowed;
             document.querySelector("#distribution-deny-count").textContent = data.denied;
             document.querySelector("#distribution-pending-count").textContent = data.pending;
+            requiredElement("#distribution-total-count").textContent = data.totalDecisions;
         }
 
+        const topCapabilities = requiredElement("#top-capability-list");
+        const highestRequestCount = data.topCapabilities.length === 0 ? 0 : data.topCapabilities[0].totalRequests;
+        topCapabilities.replaceChildren(...data.topCapabilities.map(capability => {
+            const item = element("li");
+            const link = element("a", "", capability.capability);
+            link.href = `/capability-activity?capabilityId=${encodeURIComponent(capability.capability)}`;
+            const bar = element("span");
+            const fill = element("i");
+            fill.style.width = `${highestRequestCount > 0 ? capability.totalRequests * 100 / highestRequestCount : 0}%`;
+            bar.append(fill);
+            item.append(link, bar, element("strong", "", capability.totalRequests));
+            return item;
+        }));
+
         document.querySelector("#dashboard-refresh-status").textContent = `Polling active; refreshed ${relativeTime(data.generatedAtUtc)}`;
-        if (newIds.length) document.querySelector("#live-update-label").textContent = `${newIds.length} new evaluation${newIds.length === 1 ? "" : "s"}`;
+        const updated = document.querySelector("#dashboard-last-updated");
+        if (updated) {
+            updated.dateTime = data.generatedAtUtc;
+            updated.dataset.relativeTime = data.generatedAtUtc;
+            updated.textContent = relativeTime(data.generatedAtUtc);
+        }
     }
 
     async function refresh() {
-        if (document.hidden) return;
+        if (document.hidden || requestInFlight) return;
+        requestInFlight = true;
         try {
             const response = await fetch(endpoint, { headers: { Accept: "application/json" }, cache: "no-store" });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             render(await response.json());
-            document.querySelector("#dashboard-live-state").lastChild.textContent = "Live";
-        } catch {
-            document.querySelector("#dashboard-live-state").lastChild.textContent = "Refresh unavailable";
+            requiredElement("#dashboard-live-status-label").textContent = "Live";
+        } catch (error) {
+            console.error("Dashboard live refresh failed", error);
+            requiredElement("#dashboard-live-status-label").textContent = "Unavailable";
+        } finally {
+            requestInFlight = false;
         }
     }
 
@@ -149,12 +209,9 @@
     }
 
     document.addEventListener("visibilitychange", () => {
-        const label = document.querySelector("#dashboard-live-state");
         if (document.hidden) {
             clearInterval(timer);
-            label.lastChild.textContent = "Paused";
         } else {
-            label.lastChild.textContent = "Live";
             refresh();
             schedule();
         }
@@ -163,5 +220,7 @@
     setInterval(() => document.querySelectorAll("[data-relative-time]").forEach(time => {
         time.textContent = relativeTime(time.dataset.relativeTime);
     }), 1000);
+    document.querySelector("#dashboard-refresh")?.addEventListener("click", refresh);
+    refresh();
     schedule();
 })();

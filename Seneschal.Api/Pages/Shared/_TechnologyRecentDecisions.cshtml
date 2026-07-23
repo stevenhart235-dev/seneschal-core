@@ -1,0 +1,44 @@
+@model Seneschal.Api.Services.TechnologyActivity
+@using Seneschal.Core.Enums
+@{ var technology = Model; }
+<section class="panel technology-section technology-recent-decisions">
+    <header class="technology-section-header">
+        <div>
+            <h2>Recent decisions</h2>
+            <p>Latest retained Decision Trace evidence for this technology.</p>
+        </div>
+        <a href="/audit">View Audit Trail</a>
+    </header>
+    @if (technology.RecentDecisions.Count == 0)
+    {
+        <div class="empty-state">
+            <strong>No decisions recorded</strong>
+            <p>Configured capabilities have no retained audit evidence.</p>
+        </div>
+    }
+    else
+    {
+        <div class="activity-table-wrap">
+            <table class="activity-table">
+                <thead>
+                    <tr><th>Time</th><th>Application</th><th>Capability</th><th>Environment</th><th>Decision</th><th>Reason</th><th>Investigation</th></tr>
+                </thead>
+                <tbody>
+                @foreach (var decision in technology.RecentDecisions.Take(12))
+                {
+                    var label = decision.Decision == DecisionType.RequireApproval ? "Pending Approval" : decision.Decision.ToString();
+                    <tr>
+                        <td>@decision.TimestampUtc.ToString("u")</td>
+                        <td><a href="/identity-activity?identityId=@Uri.EscapeDataString(decision.IdentityId)">@decision.IdentityId</a></td>
+                        <td><a href="/capability-activity?capabilityId=@Uri.EscapeDataString(decision.CapabilityId)">@decision.CapabilityId</a></td>
+                        <td>@(string.IsNullOrWhiteSpace(decision.Environment) ? "Not provided" : decision.Environment)</td>
+                        <td><span class="decision-badge decision-@label.Replace(" ","").ToLowerInvariant()">@label</span></td>
+                        <td class="technology-reason">@decision.Reason</td>
+                        <td><a href="/audit/@Uri.EscapeDataString(decision.Id)">View Decision Trace</a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

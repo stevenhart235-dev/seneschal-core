@@ -28,6 +28,7 @@ public sealed record Capability
     public string Owner { get; init; } = string.Empty;
     public string Lifecycle { get; init; } = string.Empty;
     public string DocumentationUrl { get; init; } = string.Empty;
+    public string Technology { get; init; } = string.Empty;
     public string Version { get; init; } = string.Empty;
     public List<string> Tags { get; init; } = new();
 }

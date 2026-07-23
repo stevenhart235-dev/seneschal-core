@@ -1,0 +1,33 @@
+.dashboard-lab { --tblr-body-bg: #f4f6fa; }
+.dashboard-lab .page-wrapper { min-width: 0; }
+.dashboard-lab .navbar-brand span { color: var(--tblr-secondary); font-size: .7rem; font-weight: 500; margin-left: .4rem; }
+.lab-sidebar-note { padding: 1rem; color: var(--tblr-secondary); font-size: .75rem; }
+.lab-sidebar-note p { margin: .65rem 0; }
+.lab-sidebar-note a { color: inherit; }
+.lab-page-header { padding: 1.25rem 0 .75rem; }
+.lab-page-header .page-pretitle { letter-spacing: .08em; }
+.lab-status-row { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+.lab-metrics .card-body { padding: .8rem 1rem; }
+.lab-metrics .h2 { margin: .15rem 0 0; }
+.lab-main-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr); gap: 1rem; }
+.lab-investigation-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(18rem, 2fr); gap: 1rem; }
+.lab-capability-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(18rem, 2fr); gap: 1rem; }
+.lab-card-fill { height: 100%; }
+.lab-feed-table td, .lab-feed-table th { vertical-align: middle; white-space: nowrap; }
+.lab-feed-table .lab-reason { max-width: 24rem; overflow: hidden; text-overflow: ellipsis; }
+.lab-queue-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .75rem; align-items: start; }
+.lab-queue-item .text-truncate { min-width: 0; }
+.lab-empty { padding: 3rem 1rem; text-align: center; color: var(--tblr-secondary); }
+.lab-empty strong { display: block; color: var(--tblr-body-color); margin-bottom: .35rem; }
+.lab-capability-row { display: grid; grid-template-columns: minmax(0, 1fr) 7rem 3.5rem; gap: 1rem; align-items: center; }
+.lab-risk-high { border-left: 3px solid var(--tblr-danger); }
+.lab-risk-medium { border-left: 3px solid var(--tblr-warning); }
+@media (max-width: 1100px) {
+    .lab-main-grid, .lab-investigation-grid, .lab-capability-grid { grid-template-columns: 1fr; }
+    .lab-feed-table .lab-environment { display: none; }
+}
+@media (max-width: 760px) {
+    .lab-feed-table .lab-identity, .lab-feed-table .lab-reason { display: none; }
+    .lab-capability-row { grid-template-columns: minmax(0, 1fr) 4rem; }
+    .lab-capability-row .progress { display: none; }
+}

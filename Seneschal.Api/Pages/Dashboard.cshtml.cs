@@ -174,7 +174,15 @@ public sealed class DashboardModel : PageModel
             Denied = activity.Capabilities.Sum(
                 capability => capability.DeniedCount),
             Pending = activity.Capabilities.Sum(
-                capability => capability.PendingApprovalCount)
+                capability => capability.PendingApprovalCount),
+            TopCapabilities = activity.Capabilities
+                .OrderByDescending(capability => capability.TotalRequests)
+                .ThenBy(capability => capability.CapabilityId)
+                .Take(4)
+                .Select(capability => new DashboardTopCapability(
+                    capability.CapabilityId,
+                    capability.TotalRequests))
+                .ToList()
         };
 
         return new JsonResult(snapshot);
@@ -251,6 +259,17 @@ public sealed class DashboardModel : PageModel
 
     private static string DecisionLabel(DecisionType decision) =>
         decision == DecisionType.RequireApproval ? "PendingApproval" : decision.ToString();
+
+    public static string DisplayEffectiveAction(string decision, string mode) =>
+        (decision, mode) switch
+        {
+            ("Allow", _) => "Proceed",
+            ("Deny", "Enforce") => "Block",
+            ("PendingApproval", "Enforce") => "Wait for approval",
+            ("Deny", _) => "Continue (recorded)",
+            ("PendingApproval", _) => "Continue (recorded)",
+            _ => "Continue (recorded)"
+        };
 }
 
 public sealed record DashboardLiveSnapshot(
@@ -266,9 +285,13 @@ public sealed record DashboardLiveSnapshot(
     IReadOnlyCollection<DashboardLiveDecision> Decisions,
     IReadOnlyCollection<DashboardActiveIdentity> Identities)
 {
+    public IReadOnlyCollection<DashboardTopCapability> TopCapabilities { get; init; } = [];
+
     public static DashboardLiveSnapshot Empty { get; } = new(
         "LogOnly", 0, 0, 0, 0, 0, 0, null, DateTimeOffset.UtcNow, [], []);
 }
+
+public sealed record DashboardTopCapability(string Capability, long TotalRequests);
 
 public sealed record DashboardLiveDecision(
     string Id,

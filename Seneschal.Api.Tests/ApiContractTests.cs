@@ -135,7 +135,8 @@ public sealed class ApiContractTests :
             "owner",
             "lifecycle",
             "documentationUrl",
-            "tags");
+            "tags",
+            "technology");
     }
 
     [Fact]

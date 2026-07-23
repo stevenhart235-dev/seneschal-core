@@ -20,6 +20,7 @@ capabilities:
     tags: [database, destructive, production]
 
   - name: azure.keyvault.secret.read
+    technology: azure
     displayName: Read Azure Key Vault Secret
     description: Read a secret from an Azure Key Vault.
     owner: Cloud Security
@@ -30,6 +31,7 @@ capabilities:
     tags: [azure, key-vault, secret]
 
   - name: infrastructure.production.apply
+    technology: terraform
     displayName: Apply Production Infrastructure
     description: Apply reviewed infrastructure changes to production.
     owner: Cloud Platform
@@ -40,6 +42,7 @@ capabilities:
     tags: [terraform, opentofu, infrastructure, production]
 
   - name: infrastructure.production.destroy
+    technology: terraform
     displayName: Destroy Production Infrastructure
     description: Destroy infrastructure resources in a production environment.
     owner: Cloud Platform
@@ -50,6 +53,7 @@ capabilities:
     tags: [infrastructure, destructive, production]
 
   - name: production.deployment.execute
+    technology: github
     displayName: Execute Production Deployment
     description: Execute an application deployment in production.
     owner: Release Engineering
@@ -60,6 +64,7 @@ capabilities:
     tags: [deployment, cicd, production]
 
   - name: database.migration.execute
+    technology: custom
     displayName: Execute Database Migration
     description: Execute a schema or data migration against a production database.
     owner: Database Reliability Engineering
@@ -70,6 +75,7 @@ capabilities:
     tags: [database, migration, production]
 
   - name: payments.refund.create
+    technology: custom
     displayName: Create Payment Refund
     description: Create a refund for a merchant payment.
     owner: Payments Platform
@@ -80,6 +86,7 @@ capabilities:
     tags: [payments, refund, merchant]
 
   - name: production.release.approve
+    technology: custom
     displayName: Approve Production Release
     description: Request approval for an application release to production.
     owner: Release Engineering

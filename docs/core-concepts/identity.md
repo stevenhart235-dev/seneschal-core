@@ -125,7 +125,11 @@ Examples:
 | Property | Description |
 |----------|-------------|
 | Description | Additional context |
+| DisplayName | Operator-facing name; the stable identity identifier remains unchanged |
 | Owner | Responsible team or individual |
+| Application | Descriptive application relationship used for governance context |
+| Environment | Primary operating environment |
+| Technology | Primary technology associated with the identity |
 | Labels | Searchable tags |
 | Metadata | Arbitrary key/value data |
 | CreatedAt | Creation timestamp |
@@ -231,6 +235,26 @@ Future versions of Seneschal may support:
 - Identity Trust Levels
 
 These features are intentionally outside the scope of Version 1.
+
+## YAML configuration
+
+Identity metadata is optional. Existing entries containing only `name`,
+`description`, and `type` remain valid.
+
+```yaml
+identities:
+  - name: github-release-worker
+    displayName: GitHub Release Worker
+    owner: Release Engineering
+    application: Release Pipeline
+    environment: Production
+    technology: GitHub
+    description: Automated production deployment workflow.
+    type: Service
+```
+
+`application` is descriptive metadata. It does not create a first-class
+Application resource, route, or ownership model.
 
 ---
 

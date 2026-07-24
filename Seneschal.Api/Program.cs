@@ -434,8 +434,12 @@ static Seneschal.Core.Models.Identity ToCoreIdentity(
     {
         Id = identity.Name,
         Type = identityType,
-        Owner = identity.Description,
-        Environment = string.Empty
+        DisplayName = identity.DisplayName,
+        Owner = identity.Owner ?? identity.Description ?? string.Empty,
+        Application = identity.Application,
+        Environment = identity.Environment ?? string.Empty,
+        Technology = identity.Technology,
+        Description = identity.Description
     };
 }
 

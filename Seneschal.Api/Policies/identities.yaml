@@ -42,3 +42,30 @@ identities:
   - name: terraform-production
     description: Terraform and OpenTofu production apply workflow
     type: Service
+
+  - name: github-release-worker
+    displayName: GitHub Release Worker
+    owner: Release Engineering
+    application: Release Pipeline
+    environment: Production
+    technology: GitHub
+    description: Automated production deployment workflow.
+    type: Service
+
+  - name: terraform-cloud
+    displayName: Terraform Cloud
+    owner: Cloud Platform
+    application: Terraform Cloud
+    environment: Production
+    technology: Terraform
+    description: Automated production infrastructure workflow.
+    type: Service
+
+  - name: support-ai
+    displayName: Support Assistant
+    owner: Customer Support Engineering
+    application: Support Assistant
+    environment: Production
+    technology: OpenAI
+    description: AI-assisted customer support workflow.
+    type: Agent

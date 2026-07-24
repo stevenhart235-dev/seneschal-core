@@ -48,6 +48,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         AddLoadFinding(findings, "Identities", identities.Count);
         AddLoadFinding(findings, "Policies", policies.Count);
         ValidateRuntimeSettings(findings, runtimeSettings);
+        ValidateIdentityMetadata(findings, identities);
         ValidatePolicyReferences(findings, capabilities, identities, policies);
         ValidatePolicyDecisions(findings, policies);
         ValidateDuplicatePolicies(findings, policies);
@@ -57,6 +58,48 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         {
             Findings = findings
         };
+    }
+
+    private static void ValidateIdentityMetadata(
+        ICollection<ConfigurationValidationFinding> findings,
+        IReadOnlyCollection<ApiIdentity> identities)
+    {
+        foreach (var identity in identities)
+        {
+            ValidateOptionalIdentityValue(
+                findings, identity, "displayName", identity.DisplayName);
+            ValidateOptionalIdentityValue(
+                findings, identity, "owner", identity.Owner);
+            ValidateOptionalIdentityValue(
+                findings, identity, "application", identity.Application);
+            ValidateOptionalIdentityValue(
+                findings, identity, "environment", identity.Environment);
+            ValidateOptionalIdentityValue(
+                findings, identity, "technology", identity.Technology);
+            ValidateOptionalIdentityValue(
+                findings, identity, "description", identity.Description);
+        }
+    }
+
+    private static void ValidateOptionalIdentityValue(
+        ICollection<ConfigurationValidationFinding> findings,
+        ApiIdentity identity,
+        string property,
+        string? value)
+    {
+        if (value is null || !string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        findings.Add(new ConfigurationValidationFinding
+        {
+            Severity = "Warning",
+            Category = "IdentityMetadata",
+            Message =
+                $"Identity '{identity.Name}' has a blank optional '{property}' value.",
+            RelatedObjectId = identity.Name
+        });
     }
 
     private static void AddLoadFinding(

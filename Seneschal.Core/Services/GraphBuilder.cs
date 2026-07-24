@@ -54,6 +54,21 @@ public sealed class GraphBuilder
 
         foreach (var identity in identities)
         {
+            var displayName = string.IsNullOrWhiteSpace(identity.DisplayName)
+                ? identity.Id
+                : identity.DisplayName;
+            var metadata = new Dictionary<string, string>
+            {
+                ["domainId"] = identity.Id,
+                ["identityType"] = identity.Type.ToString()
+            };
+            AddIfPresent(metadata, "displayName", identity.DisplayName);
+            AddIfPresent(metadata, "owner", identity.Owner);
+            AddIfPresent(metadata, "application", identity.Application);
+            AddIfPresent(metadata, "environment", identity.Environment);
+            AddIfPresent(metadata, "technology", identity.Technology);
+            AddIfPresent(metadata, "description", identity.Description);
+
             AddNode(
                 nodes,
                 new GovernanceEntityReference
@@ -61,14 +76,8 @@ public sealed class GraphBuilder
                     Type = GovernanceEntityType.Identity,
                     Id = identity.Id
                 },
-                identity.Id,
-                new Dictionary<string, string>
-                {
-                    ["domainId"] = identity.Id,
-                    ["identityType"] = identity.Type.ToString(),
-                    ["owner"] = identity.Owner,
-                    ["environment"] = identity.Environment
-                });
+                displayName,
+                metadata);
         }
 
         foreach (var policy in policies)
@@ -171,6 +180,17 @@ public sealed class GraphBuilder
         return string.IsNullOrWhiteSpace(entity.Scope)
             ? $"{type}:{entity.Id}"
             : $"{type}:{entity.Scope}:{entity.Id}";
+    }
+
+    private static void AddIfPresent(
+        IDictionary<string, string> metadata,
+        string key,
+        string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            metadata[key] = value;
+        }
     }
 
     private static string ToLabel(GovernanceRelationshipType type)

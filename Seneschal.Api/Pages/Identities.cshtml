@@ -27,13 +27,37 @@
                 </div>
                 <div class="table-scroll" tabindex="0" role="region" aria-label="Configured identities">
                     <table class="audit-table">
-                        <thead><tr><th scope="col">Identity</th><th scope="col">Type</th><th scope="col">Description</th><th scope="col">Activity</th></tr></thead>
+                        <thead><tr><th scope="col">Identity</th><th scope="col">Type</th><th scope="col">Governance context</th><th scope="col">Description</th><th scope="col">Activity</th></tr></thead>
                         <tbody>
                         @foreach (var identity in Model.Identities)
                         {
                             <tr>
-                                <td><strong>@identity.Name</strong></td>
+                                <td>
+                                    <strong>@(identity.DisplayName ?? identity.Name)</strong>
+                                    @if (!string.IsNullOrWhiteSpace(identity.DisplayName))
+                                    {
+                                        <span class="code">@identity.Name</span>
+                                    }
+                                </td>
                                 <td>@identity.Type</td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(identity.Owner))
+                                    {
+                                        <span><strong>Owner:</strong> @identity.Owner</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(identity.Application))
+                                    {
+                                        <span><strong>Application:</strong> @identity.Application</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(identity.Environment))
+                                    {
+                                        <span><strong>Environment:</strong> @identity.Environment</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(identity.Technology))
+                                    {
+                                        <span><strong>Technology:</strong> @identity.Technology</span>
+                                    }
+                                </td>
                                 <td>@identity.Description</td>
                                 <td><a href="/identity-activity?identityId=@Uri.EscapeDataString(identity.Name)">View activity</a></td>
                             </tr>

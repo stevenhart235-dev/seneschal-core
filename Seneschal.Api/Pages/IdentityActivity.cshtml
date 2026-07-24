@@ -95,19 +95,49 @@
                 else if (Model.SelectedIdentity is not null)
                 {
                     var identity = Model.SelectedIdentity;
+                    var definition = Model.SelectedIdentityDefinition;
                     <section class="panel identity-detail-panel investigation-actions-panel">
                         <div class="dashboard-section-header">
                             <div>
-                                <h2>@identity.IdentityId</h2>
+                                <h2>@(definition?.DisplayName ?? identity.IdentityId)</h2>
+                                @if (!string.IsNullOrWhiteSpace(definition?.DisplayName))
+                                {
+                                    <span class="code">@identity.IdentityId</span>
+                                }
                                 <p class="muted">
-                                    Runtime activity summary for the selected
-                                    identity.
+                                    @(definition?.Description ?? "Runtime activity summary for the selected identity.")
                                 </p>
                             </div>
                             <a class="button-link" href="/audit?identityId=@Uri.EscapeDataString(identity.IdentityId)">
                                 Open Filtered Audit Trail
                             </a>
                         </div>
+
+                        @if (definition is not null &&
+                            (!string.IsNullOrWhiteSpace(definition.Owner) ||
+                             !string.IsNullOrWhiteSpace(definition.Application) ||
+                             !string.IsNullOrWhiteSpace(definition.Environment) ||
+                             !string.IsNullOrWhiteSpace(definition.Technology)))
+                        {
+                            <dl class="evidence-list">
+                                @if (!string.IsNullOrWhiteSpace(definition.Owner))
+                                {
+                                    <div><dt>Owner</dt><dd>@definition.Owner</dd></div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(definition.Application))
+                                {
+                                    <div><dt>Application</dt><dd>@definition.Application</dd></div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(definition.Environment))
+                                {
+                                    <div><dt>Environment</dt><dd>@definition.Environment</dd></div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(definition.Technology))
+                                {
+                                    <div><dt>Technology</dt><dd>@definition.Technology</dd></div>
+                                }
+                            </dl>
+                        }
 
                         <section class="dashboard-grid activity-metric-grid">
                             <article class="dashboard-card activity-card">

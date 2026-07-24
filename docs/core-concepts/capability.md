@@ -39,28 +39,25 @@ A Capability:
 
 ---
 
-# Required Properties
+# Configuration properties
 
-| Property | Description |
+The YAML catalog uses `name` as the stable capability identifier.
+
+| Property | Expectation |
 |-----------|-------------|
-| Id | Globally unique identifier |
-| Name | Unique capability name |
-| Category | Logical grouping |
-| Risk | Default risk classification |
-| Status | Current lifecycle state |
+| `name` | Required, globally unique, and stable after policies or audit records reference it |
+| `displayName` | Operator-facing name |
+| `description` | Concise explanation of the governed operation |
+| `owner` | Accountable team |
+| `risk` | `Low`, `Medium`, `High`, or `Critical` |
+| `technology` | Explicit Technology Explorer classification key |
+| `category` | Logical grouping within the technology |
+| `lifecycle` | Current catalog state, normally `Active` or `Restricted` |
+| `documentationUrl` | Optional reference material |
+| `tags` | Optional searchable and classification metadata |
 
----
-
-# Optional Properties
-
-| Property | Description |
-|-----------|-------------|
-| Description | Human-readable explanation |
-| Owner | Responsible team |
-| Labels | Searchable tags |
-| Metadata | Arbitrary key/value pairs |
-| Version | Capability version |
-| Documentation | Reference material |
+Legacy records with fewer fields remain valid. Enterprise catalog entries
+should supply all operator-facing metadata.
 
 ---
 
@@ -121,31 +118,23 @@ Capability names should be globally unique and descriptive.
 Recommended format:
 
 ```
-domain.action
+technology.resource.action
 ```
 
 Examples:
 
 ```
-payments.refund
-payments.capture
-payments.void
-
-database.query
-database.update
-
-storage.read
-storage.delete
-
-secrets.read
-secrets.write
-
-deployment.restart
-deployment.rollback
-
-filesystem.read
-filesystem.write
+azure.keyvault.secret.read
+github.workflow.dispatch
+terraform.apply.production
+kubernetes.pod.logs.read
+openai.model.invoke
+postgres.schema.migrate
 ```
+
+Compatibility identifiers that predate this convention remain stable. Avoid
+creating a second identifier when an existing capability already represents
+the same governed operation.
 
 ---
 
@@ -153,19 +142,32 @@ filesystem.write
 
 Capabilities may be classified by risk.
 
-Suggested defaults:
-
-Low
-
-Medium
-
-High
-
-Critical
+| Level | Meaning | Example |
+|---|---|---|
+| Low | Read-only or routine operation with limited impact | Read pod logs or invoke an approved model |
+| Medium | Operational change with bounded impact | Scale a deployment or dispatch a workflow |
+| High | Sensitive access or material production change | Read a production secret or migrate a schema |
+| Critical | Destructive or exceptional privileged action | Destroy production infrastructure or activate break glass |
 
 Risk classifications provide guidance for policy authors but do not determine authorization outcomes.
 
 Policies remain the ultimate source of truth.
+
+## Technology classification
+
+`technology` should use a key recognized by the Technology Explorer:
+`azure`, `github`, `terraform`, `kubernetes`, `openai`, `postgresql`,
+`slack`, `m365`, or `custom`.
+
+Explicit metadata takes precedence over identifier and tag heuristics.
+Omitting technology is appropriate only for intentional legacy or
+Unclassified examples.
+
+## Ownership
+
+Every enterprise capability should name one accountable team. Ownership is
+descriptive governance context; it does not grant permission or alter policy
+evaluation.
 
 ---
 

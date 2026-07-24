@@ -94,8 +94,8 @@ public sealed class TechnologyPageTests : IClassFixture<ApiApplicationFactory>
         Assert.Contains("Configured · not observed", html);
         Assert.Contains("0 applications observed", html);
         Assert.Contains("0 runtime evaluations", html);
-        Assert.Contains("1 capability", html);
-        Assert.DoesNotContain("1 capabilities", html);
+        Assert.Contains("8 configured capabilities", html);
+        Assert.Contains("8 capabilities", html);
         Assert.DoesNotContain("No applications observed", html);
         Assert.True(html.IndexOf("Configured · not observed", StringComparison.Ordinal) <
             html.IndexOf("<h2>Capabilities</h2>", StringComparison.Ordinal));
@@ -122,8 +122,7 @@ public sealed class TechnologyPageTests : IClassFixture<ApiApplicationFactory>
             html.IndexOf("<h2>Capabilities</h2>", StringComparison.Ordinal));
         Assert.Contains("1 application", html);
         Assert.DoesNotContain("1 applications", html);
-        Assert.Contains("1 capability", html);
-        Assert.DoesNotContain("1 capabilities", html);
+        Assert.Contains("6 capabilities", html);
         Assert.Contains("GitHub delivery and automation activity under governance.", html);
         Assert.DoesNotContain("Everything Seneschal knows", html);
         Assert.Contains("href=\"/audit/", html);
@@ -146,7 +145,7 @@ public sealed class TechnologyPageTests : IClassFixture<ApiApplicationFactory>
     public async Task TechnologyIconMappingAndLicenseAreLocalAndRecorded()
     {
         using var client = _factory.CreateClient();
-        foreach (var key in new[] { "azure", "github", "terraform", "kubernetes", "postgresql", "aws", "openai", "custom", "unclassified" })
+        foreach (var key in new[] { "azure", "github", "terraform", "kubernetes", "postgresql", "aws", "openai", "slack", "m365", "custom", "unclassified" })
         {
             var path = TechnologyIconCatalog.PathFor(key);
             Assert.StartsWith("/technology-icons/", path);

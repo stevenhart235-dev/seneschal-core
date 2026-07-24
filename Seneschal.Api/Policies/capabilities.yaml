@@ -95,3 +95,492 @@ capabilities:
     lifecycle: Preview
     documentationUrl: https://github.com/stevenhart235-dev/seneschal-core/blob/main/labs/multi-application-adoption/README.md
     tags: [approval, release, production]
+
+  # Azure
+  - name: azure.keyvault.secret.write
+    technology: azure
+    displayName: Write Azure Key Vault Secret
+    description: Create or update a secret in Azure Key Vault.
+    owner: Security Engineering
+    risk: Critical
+    category: Secrets
+    lifecycle: Active
+    tags: [azure, key-vault, secret, write]
+
+  - name: azure.managedidentity.create
+    technology: azure
+    displayName: Create Azure Managed Identity
+    description: Create a managed identity for an Azure workload.
+    owner: Platform Engineering
+    risk: High
+    category: Identity
+    lifecycle: Active
+    tags: [azure, managed-identity, identity]
+
+  - name: azure.storage.key.rotate
+    technology: azure
+    displayName: Rotate Azure Storage Key
+    description: Rotate an access key for an Azure Storage account.
+    owner: Security Engineering
+    risk: High
+    category: Secrets
+    lifecycle: Active
+    tags: [azure, storage, key-rotation]
+
+  - name: azure.resourcegroup.delete
+    technology: azure
+    displayName: Delete Azure Resource Group
+    description: Delete a production Azure resource group and its resources.
+    owner: Platform Engineering
+    risk: Critical
+    category: Infrastructure
+    lifecycle: Restricted
+    tags: [azure, resource-group, destructive, production]
+
+  - name: azure.roleassignment.create
+    technology: azure
+    displayName: Create Azure Role Assignment
+    description: Assign an Azure role to a principal at a governed scope.
+    owner: Security Engineering
+    risk: High
+    category: Identity
+    lifecycle: Active
+    tags: [azure, rbac, role-assignment]
+
+  - name: azure.appconfig.write
+    technology: azure
+    displayName: Write Azure App Configuration
+    description: Change application configuration stored in Azure App Configuration.
+    owner: Platform Engineering
+    risk: Medium
+    category: Configuration
+    lifecycle: Active
+    tags: [azure, app-configuration, write]
+
+  - name: azure.containerapp.revision.activate
+    technology: azure
+    displayName: Activate Azure Container App Revision
+    description: Activate a reviewed Azure Container Apps revision.
+    owner: Release Engineering
+    risk: High
+    category: Deployment
+    lifecycle: Active
+    tags: [azure, container-apps, deployment, production]
+
+  # GitHub
+  - name: github.branch.protected.merge
+    technology: github
+    displayName: Merge Protected GitHub Branch
+    description: Merge an approved pull request into a protected branch.
+    owner: Developer Experience
+    risk: High
+    category: Source Control
+    lifecycle: Active
+    tags: [github, branch-protection, merge]
+
+  - name: github.pullrequest.approve
+    technology: github
+    displayName: Approve GitHub Pull Request
+    description: Submit an approval review for a GitHub pull request.
+    owner: Developer Experience
+    risk: Medium
+    category: Source Control
+    lifecycle: Active
+    tags: [github, pull-request, approval]
+
+  - name: github.workflow.dispatch
+    technology: github
+    displayName: Dispatch GitHub Workflow
+    description: Manually dispatch an approved GitHub Actions workflow.
+    owner: Release Engineering
+    risk: Medium
+    category: Automation
+    lifecycle: Active
+    tags: [github, workflow, automation]
+
+  - name: github.repository.secret.read
+    technology: github
+    displayName: Read GitHub Repository Secret
+    description: Read protected secret material associated with a repository.
+    owner: Security Engineering
+    risk: High
+    category: Secrets
+    lifecycle: Restricted
+    tags: [github, repository, secret, read]
+
+  - name: github.repository.secret.write
+    technology: github
+    displayName: Write GitHub Repository Secret
+    description: Create or update protected repository secret material.
+    owner: Security Engineering
+    risk: Critical
+    category: Secrets
+    lifecycle: Restricted
+    tags: [github, repository, secret, write]
+
+  # Terraform and OpenTofu
+  - name: terraform.plan
+    technology: terraform
+    displayName: Create Terraform Plan
+    description: Generate a Terraform or OpenTofu execution plan.
+    owner: Platform Engineering
+    risk: Low
+    category: Infrastructure
+    lifecycle: Active
+    tags: [terraform, opentofu, plan]
+
+  - name: terraform.apply.development
+    technology: terraform
+    displayName: Apply Development Infrastructure
+    description: Apply reviewed infrastructure changes to development.
+    owner: Platform Engineering
+    risk: Medium
+    category: Infrastructure
+    lifecycle: Active
+    tags: [terraform, opentofu, apply, development]
+
+  - name: terraform.destroy.development
+    technology: terraform
+    displayName: Destroy Development Infrastructure
+    description: Destroy Terraform-managed development infrastructure.
+    owner: Platform Engineering
+    risk: High
+    category: Infrastructure
+    lifecycle: Active
+    tags: [terraform, opentofu, destroy, development]
+
+  - name: terraform.network.create
+    technology: terraform
+    displayName: Create Terraform Network
+    description: Create a reviewed virtual network through Terraform or OpenTofu.
+    owner: Platform Engineering
+    risk: High
+    category: Networking
+    lifecycle: Active
+    tags: [terraform, opentofu, network]
+
+  - name: terraform.identity.assign
+    technology: terraform
+    displayName: Assign Terraform Workload Identity
+    description: Assign a managed identity to Terraform-managed infrastructure.
+    owner: Security Engineering
+    risk: High
+    category: Identity
+    lifecycle: Active
+    tags: [terraform, opentofu, identity, assignment]
+
+  - name: terraform.state.read
+    technology: terraform
+    displayName: Read Terraform State
+    description: Read governed Terraform or OpenTofu state data.
+    owner: Platform Engineering
+    risk: Medium
+    category: Infrastructure
+    lifecycle: Active
+    tags: [terraform, opentofu, state, read]
+
+  # Kubernetes and AKS
+  - name: kubernetes.deployment.scale
+    technology: kubernetes
+    displayName: Scale Kubernetes Deployment
+    description: Change the replica count of a Kubernetes deployment.
+    owner: Platform Engineering
+    risk: Medium
+    category: Workload
+    lifecycle: Active
+    tags: [kubernetes, aks, deployment, scale]
+
+  - name: kubernetes.deployment.restart
+    technology: kubernetes
+    displayName: Restart Kubernetes Deployment
+    description: Trigger a rolling restart of a Kubernetes deployment.
+    owner: Platform Engineering
+    risk: Medium
+    category: Workload
+    lifecycle: Active
+    tags: [kubernetes, aks, deployment, restart]
+
+  - name: kubernetes.pod.exec
+    technology: kubernetes
+    displayName: Execute Command in Kubernetes Pod
+    description: Open an interactive command session in a running pod.
+    owner: Platform Engineering
+    risk: High
+    category: Privileged Access
+    lifecycle: Restricted
+    tags: [kubernetes, aks, pod, exec]
+
+  - name: kubernetes.pod.logs.read
+    technology: kubernetes
+    displayName: Read Kubernetes Pod Logs
+    description: Read operational logs from a Kubernetes pod.
+    owner: Platform Engineering
+    risk: Low
+    category: Observability
+    lifecycle: Active
+    tags: [kubernetes, aks, pod, logs, read]
+
+  - name: kubernetes.namespace.create
+    technology: kubernetes
+    displayName: Create Kubernetes Namespace
+    description: Create an isolated Kubernetes namespace.
+    owner: Platform Engineering
+    risk: Medium
+    category: Cluster Administration
+    lifecycle: Active
+    tags: [kubernetes, aks, namespace, create]
+
+  - name: kubernetes.namespace.delete
+    technology: kubernetes
+    displayName: Delete Kubernetes Namespace
+    description: Delete a Kubernetes namespace and all contained resources.
+    owner: Platform Engineering
+    risk: Critical
+    category: Cluster Administration
+    lifecycle: Restricted
+    tags: [kubernetes, aks, namespace, destructive]
+
+  - name: kubernetes.secret.read
+    technology: kubernetes
+    displayName: Read Kubernetes Secret
+    description: Read secret material stored in a Kubernetes namespace.
+    owner: Security Engineering
+    risk: High
+    category: Secrets
+    lifecycle: Restricted
+    tags: [kubernetes, aks, secret, read]
+
+  - name: kubernetes.clusterrolebinding.create
+    technology: kubernetes
+    displayName: Create Kubernetes Cluster Role Binding
+    description: Bind a principal to a cluster-scoped Kubernetes role.
+    owner: Security Engineering
+    risk: Critical
+    category: Identity
+    lifecycle: Restricted
+    tags: [kubernetes, aks, rbac, cluster-role-binding]
+
+  # OpenAI
+  - name: openai.model.invoke
+    technology: openai
+    displayName: Invoke Approved OpenAI Model
+    description: Invoke an approved OpenAI model for a governed workload.
+    owner: AI Platform
+    risk: Low
+    category: AI Inference
+    lifecycle: Active
+    tags: [openai, model, inference]
+
+  - name: openai.knowledge.upload
+    technology: openai
+    displayName: Upload OpenAI Knowledge
+    description: Upload governed knowledge content for an AI workload.
+    owner: AI Platform
+    risk: High
+    category: AI Knowledge
+    lifecycle: Active
+    tags: [openai, knowledge, upload]
+
+  - name: openai.production-secret.read
+    technology: openai
+    displayName: Read Production Secret Through AI Tool
+    description: Request production secret material through an AI tool.
+    owner: Security Engineering
+    risk: Critical
+    category: Privileged AI
+    lifecycle: Restricted
+    tags: [openai, secret, production, privileged]
+
+  - name: openai.customer-data.process
+    technology: openai
+    displayName: Process Customer Data with OpenAI
+    description: Process governed customer data with an approved OpenAI model.
+    owner: AI Platform
+    risk: High
+    category: AI Data Processing
+    lifecycle: Active
+    tags: [openai, customer-data, privacy]
+
+  - name: openai.tool.execute
+    technology: openai
+    displayName: Execute OpenAI Tool
+    description: Execute an approved external tool from an AI workflow.
+    owner: AI Platform
+    risk: High
+    category: AI Tools
+    lifecycle: Active
+    tags: [openai, tool, execution]
+
+  - name: openai.prompt.modify
+    technology: openai
+    displayName: Modify Production AI Prompt
+    description: Change a governed production prompt or system instruction.
+    owner: AI Platform
+    risk: High
+    category: AI Configuration
+    lifecycle: Restricted
+    tags: [openai, prompt, configuration, production]
+
+  # PostgreSQL
+  - name: postgres.schema.migrate
+    technology: postgresql
+    displayName: Migrate PostgreSQL Schema
+    description: Apply a reviewed schema migration to PostgreSQL.
+    owner: Data Platform
+    risk: High
+    category: Database Change
+    lifecycle: Active
+    tags: [postgresql, schema, migration, production]
+
+  - name: postgres.table.drop
+    technology: postgresql
+    displayName: Drop PostgreSQL Table
+    description: Drop a production PostgreSQL table and its stored data.
+    owner: Data Platform
+    risk: Critical
+    category: Database Change
+    lifecycle: Restricted
+    tags: [postgresql, table, destructive, production]
+
+  - name: postgres.production.read
+    technology: postgresql
+    displayName: Read Production PostgreSQL Data
+    description: Read governed records from a production PostgreSQL database.
+    owner: Data Platform
+    risk: Medium
+    category: Database Access
+    lifecycle: Active
+    tags: [postgresql, read, production]
+
+  - name: postgres.production.write
+    technology: postgresql
+    displayName: Write Production PostgreSQL Data
+    description: Create or update records in a production PostgreSQL database.
+    owner: Data Platform
+    risk: High
+    category: Database Access
+    lifecycle: Active
+    tags: [postgresql, write, production]
+
+  - name: postgres.backup.create
+    technology: postgresql
+    displayName: Create PostgreSQL Backup
+    description: Create a governed backup of a PostgreSQL database.
+    owner: Data Platform
+    risk: Medium
+    category: Database Recovery
+    lifecycle: Active
+    tags: [postgresql, backup, create]
+
+  - name: postgres.backup.restore
+    technology: postgresql
+    displayName: Restore PostgreSQL Backup
+    description: Restore a PostgreSQL database from a selected backup.
+    owner: Data Platform
+    risk: Critical
+    category: Database Recovery
+    lifecycle: Restricted
+    tags: [postgresql, backup, restore, production]
+
+  # Slack
+  - name: slack.security-alert.send
+    technology: slack
+    displayName: Send Slack Security Alert
+    description: Send an operational security alert to an approved Slack channel.
+    owner: Security Engineering
+    risk: Medium
+    category: Notification
+    lifecycle: Active
+    tags: [slack, security, alert]
+
+  - name: slack.channel.history.read
+    technology: slack
+    displayName: Read Slack Channel History
+    description: Read message history from an approved Slack channel.
+    owner: Customer Operations
+    risk: Medium
+    category: Collaboration
+    lifecycle: Active
+    tags: [slack, channel, history, read]
+
+  - name: slack.incident-channel.create
+    technology: slack
+    displayName: Create Slack Incident Channel
+    description: Create a dedicated Slack channel for incident coordination.
+    owner: Security Engineering
+    risk: Low
+    category: Incident Response
+    lifecycle: Active
+    tags: [slack, incident, channel, create]
+
+  - name: slack.message.send
+    technology: slack
+    displayName: Send Slack Message
+    description: Send an operational message to an approved Slack destination.
+    owner: Customer Operations
+    risk: Medium
+    category: Notification
+    lifecycle: Active
+    tags: [slack, message, send]
+
+  # Microsoft 365
+  - name: m365.mail.send
+    technology: m365
+    displayName: Send Microsoft 365 Mail
+    description: Send an email through an approved Microsoft 365 mailbox.
+    owner: Customer Operations
+    risk: Medium
+    category: Communication
+    lifecycle: Active
+    tags: [m365, mail, send]
+
+  - name: m365.mail.read
+    technology: m365
+    displayName: Read Microsoft 365 Mail
+    description: Read email from an approved Microsoft 365 mailbox.
+    owner: Customer Operations
+    risk: High
+    category: Communication
+    lifecycle: Active
+    tags: [m365, mail, read]
+
+  - name: m365.sharepoint.document.read
+    technology: m365
+    displayName: Read SharePoint Document
+    description: Read a governed document from Microsoft SharePoint.
+    owner: Customer Operations
+    risk: Medium
+    category: Documents
+    lifecycle: Active
+    tags: [m365, sharepoint, document, read]
+
+  - name: m365.sharepoint.document.write
+    technology: m365
+    displayName: Write SharePoint Document
+    description: Create or update a governed Microsoft SharePoint document.
+    owner: Customer Operations
+    risk: High
+    category: Documents
+    lifecycle: Active
+    tags: [m365, sharepoint, document, write]
+
+  # Custom Northwind governance actions
+  - name: breakglass.activate
+    technology: custom
+    displayName: Activate Emergency Break Glass
+    description: Activate a time-bounded emergency governance exception.
+    owner: Security Engineering
+    risk: Critical
+    category: Emergency Access
+    lifecycle: Restricted
+    tags: [custom, break-glass, emergency, privileged]
+
+  - name: fraud.rule.override
+    technology: custom
+    displayName: Override Fraud Rule
+    description: Override an automated fraud decision for a reviewed transaction.
+    owner: Finance Systems
+    risk: Critical
+    category: Fraud Operations
+    lifecycle: Restricted
+    tags: [custom, fraud, override, privileged]

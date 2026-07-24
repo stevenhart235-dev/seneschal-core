@@ -16,6 +16,8 @@ public sealed class TechnologyClassifier
             ["openai"] = Define("openai", "OpenAI", "OpenAI model and platform capabilities under governance."),
             ["aws"] = Define("aws", "AWS", "AWS platform capabilities and their runtime governance evidence."),
             ["postgresql"] = Define("postgresql", "PostgreSQL", "PostgreSQL data operations under governance."),
+            ["slack"] = Define("slack", "Slack", "Slack collaboration and operational notification capabilities under governance."),
+            ["m365"] = Define("m365", "Microsoft 365", "Microsoft 365 communication and document capabilities under governance."),
             ["custom"] = Define("custom", "Custom", "Customer-specific and internal platform capabilities under governance."),
             ["unclassified"] = Define("unclassified", "Unclassified", "Capabilities without explicit technology metadata.")
         };
@@ -67,7 +69,8 @@ public static class TechnologyIconCatalog
         {
             ["azure"] = "azure.svg", ["github"] = "github.svg", ["terraform"] = "terraform.svg",
             ["kubernetes"] = "kubernetes.svg", ["openai"] = "openai.svg", ["aws"] = "aws.svg",
-            ["postgresql"] = "postgresql.svg", ["custom"] = "custom.svg", ["unclassified"] = "unclassified.svg"
+            ["postgresql"] = "postgresql.svg", ["slack"] = "slack.svg", ["m365"] = "microsoft365.svg",
+            ["custom"] = "custom.svg", ["unclassified"] = "unclassified.svg"
         };
 
     public static string PathFor(string technologyKey) =>

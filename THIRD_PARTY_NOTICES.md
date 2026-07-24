@@ -36,4 +36,4 @@ The Technology Surface uses selected locally hosted SVG assets from **Simple Ico
 
 Simple Icons is provided under the **CC0 1.0 Universal** public-domain dedication. Attribution is not required by CC0; this notice records provenance and the pinned source version. License: https://github.com/simple-icons/simple-icons/blob/13.21.0/LICENSE.md. Simple Icons notes that inclusion of a brand mark does not imply that every underlying trademark is free of separate restrictions. The marks are shown neutrally for technology identification and do not imply partnership or endorsement.
 
-Azure, Kubernetes, PostgreSQL, Custom, and Unclassified use locally authored generic platform symbols rather than copied vendor marks.
+Azure, Kubernetes, PostgreSQL, Slack, Microsoft 365, Custom, and Unclassified use locally authored generic platform symbols rather than copied vendor marks.

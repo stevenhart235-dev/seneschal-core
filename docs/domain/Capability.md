@@ -16,30 +16,30 @@ Capabilities allow Seneschal to answer the question:
 
 By treating capabilities as first-class objects, organizations gain visibility into the actions available across their technology landscape and can apply consistent governance regardless of the underlying implementation.
 
-## Required Fields
+## Catalog Fields
 
-- `id`
-- `provider`
-- `category`
-- `risk`
-- `description`
+- `name` — stable unique identifier
+- `displayName` — operator-facing name
+- `description` — governed operation
+- `owner` — accountable team
+- `risk` — Low, Medium, High, or Critical
+- `technology` — explicit Technology Explorer classification
+- `category` — logical grouping
+- `lifecycle` — catalog state
+- `tags` — optional search and fallback-classification metadata
 
 ## Conceptual Shape
 
 ```yaml
-id: azure.keyvault.secret.read
-
-provider: azure
-
-category: secret-management
-
-risk: high
-
-description: Read a secret value from Azure Key Vault.
-
-tags:
-  - secrets
-  - production
+name: azure.keyvault.secret.read
+displayName: Read Azure Key Vault Secret
+description: Read a secret from an Azure Key Vault.
+owner: Security Engineering
+risk: High
+technology: azure
+category: Secrets
+lifecycle: Active
+tags: [azure, key-vault, secret]
 ```
 
 ## Examples

@@ -172,26 +172,28 @@ public sealed class ConfigurationValidator : IConfigurationValidator
 
         foreach (var policy in policies)
         {
-            if (!capabilityNames.Contains(policy.Capability))
+            foreach (var capability in policy.EffectiveCapabilities
+                .Where(capability => !capabilityNames.Contains(capability)))
             {
                 findings.Add(new ConfigurationValidationFinding
                 {
                     Severity = "Error",
                     Category = "PolicyReference",
                     Message =
-                        $"Policy '{policy.Name}' references unknown capability '{policy.Capability}'.",
+                        $"Policy '{policy.Name}' references unknown capability '{capability}'.",
                     RelatedObjectId = policy.Name
                 });
             }
 
-            if (!identityNames.Contains(policy.Identity))
+            foreach (var identity in policy.EffectiveIdentities
+                .Where(identity => !identityNames.Contains(identity)))
             {
                 findings.Add(new ConfigurationValidationFinding
                 {
                     Severity = "Error",
                     Category = "PolicyReference",
                     Message =
-                        $"Policy '{policy.Name}' references unknown identity '{policy.Identity}'.",
+                        $"Policy '{policy.Name}' references unknown identity '{identity}'.",
                     RelatedObjectId = policy.Name
                 });
             }
@@ -247,10 +249,10 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         IReadOnlyCollection<ApiPolicy> policies)
     {
         var referencedCapabilities = policies
-            .Select(policy => policy.Capability)
+            .SelectMany(policy => policy.EffectiveCapabilities)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var referencedIdentities = policies
-            .Select(policy => policy.Identity)
+            .SelectMany(policy => policy.EffectiveIdentities)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var capability in capabilities

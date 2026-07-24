@@ -65,20 +65,24 @@ public class PolicyLoader
     private IReadOnlyList<CorePolicy> ProjectCorePolicies()
     {
         var projectedPolicies = _policies
-            .Select((policy, index) => new CorePolicy
-            {
-                Id = policy.Name,
-                Name = policy.Name,
-                Effect = DecisionTypeMapper.ToCore(policy.Decision),
-                Reason = policy.Reason,
-                Priority = _policies.Count - index,
-                Conditions = new Dictionary<string, string>
+            .SelectMany((policy, index) =>
+                from identity in policy.EffectiveIdentities
+                from capability in policy.EffectiveCapabilities
+                from environment in policy.EffectiveEnvironments
+                select new CorePolicy
                 {
-                    ["identity.id"] = policy.Identity,
-                    ["capability.id"] = policy.Capability,
-                    ["resource.environment"] = policy.Environment
-                }
-            })
+                    Id = policy.Name,
+                    Name = policy.Name,
+                    Effect = DecisionTypeMapper.ToCore(policy.Decision),
+                    Reason = policy.Reason,
+                    Priority = _policies.Count - index,
+                    Conditions = new Dictionary<string, string>
+                    {
+                        ["identity.id"] = identity,
+                        ["capability.id"] = capability,
+                        ["resource.environment"] = environment
+                    }
+                })
             .ToList();
 
         projectedPolicies.Add(new CorePolicy

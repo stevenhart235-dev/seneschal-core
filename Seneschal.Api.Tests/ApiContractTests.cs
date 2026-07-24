@@ -108,9 +108,17 @@ public sealed class ApiContractTests :
         AssertProperties(
             policy,
             "name",
+            "displayName",
+            "description",
+            "owner",
+            "severity",
+            "rationale",
             "identity",
+            "identities",
             "capability",
+            "capabilities",
             "environment",
+            "environments",
             "decision",
             "reason");
     }

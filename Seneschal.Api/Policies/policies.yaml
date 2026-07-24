@@ -1,5 +1,12 @@
 policies:
+  # Compatibility IDs are retained in `name`; `displayName` carries the
+  # enterprise catalog label shown to operators.
   - name: Developers can deploy to dev
+    displayName: Development Deployment Access
+    description: Permits registered developers to deploy applications in the development environment.
+    owner: Release Engineering
+    severity: low
+    rationale: Development delivery should remain self-service while production delivery stays separately governed.
     identity: Developer
     capability: DeployApplication
     environment: dev
@@ -7,6 +14,11 @@ policies:
     reason: Developer is allowed to deploy applications to dev
 
   - name: Developers cannot delete production databases
+    displayName: Production Database Protection
+    description: Prevents developer identities from deleting production databases.
+    owner: Data Platform
+    severity: critical
+    rationale: Destructive production data operations require a controlled administrative path.
     identity: Developer
     capability: DeleteProductionDatabase
     environment: prod
@@ -14,6 +26,11 @@ policies:
     reason: Developers cannot delete production databases
 
   - name: Support secret reads require approval
+    displayName: Production Secret Access
+    description: Requires human approval before support personnel can read production secrets.
+    owner: Security Engineering
+    severity: high
+    rationale: Production credentials must be disclosed only for a reviewed operational need.
     identity: SupportAgent
     capability: azure.keyvault.secret.read
     environment: prod
@@ -21,6 +38,11 @@ policies:
     reason: Reading production secrets requires approval
 
   - name: Platform engineers can deploy to dev
+    displayName: Platform Development Access
+    description: Permits platform engineers to deploy applications in development.
+    owner: Platform Engineering
+    severity: low
+    rationale: Platform engineering needs a low-friction environment for validating delivery changes.
     identity: PlatformEngineer
     capability: DeployApplication
     environment: dev
@@ -28,6 +50,11 @@ policies:
     reason: Platform engineers are allowed to deploy applications to dev
 
   - name: Platform agent can apply production infrastructure
+    displayName: Infrastructure Change Control
+    description: Permits the approved platform automation identity to apply production infrastructure changes.
+    owner: Platform Engineering
+    severity: high
+    rationale: Routine production infrastructure changes must originate from registered automation.
     identity: platform-agent
     capability: infrastructure.production.apply
     environment: production
@@ -35,6 +62,11 @@ policies:
     reason: Platform agent is approved to apply production infrastructure changes
 
   - name: Platform agent cannot destroy production infrastructure
+    displayName: Infrastructure Protection
+    description: Blocks production infrastructure destruction by routine platform automation.
+    owner: Platform Engineering
+    severity: critical
+    rationale: Destructive infrastructure operations belong to an explicit emergency break-glass process.
     identity: platform-agent
     capability: infrastructure.production.destroy
     environment: production
@@ -42,6 +74,11 @@ policies:
     reason: Destructive production infrastructure changes require manual break-glass approval
 
   - name: Deployment worker can deploy to production
+    displayName: Production Deployment Governance
+    description: Permits the registered deployment worker to execute approved production releases.
+    owner: Release Engineering
+    severity: high
+    rationale: Production deployments must originate from the controlled release pipeline.
     identity: deployment-worker
     capability: production.deployment.execute
     environment: production
@@ -49,6 +86,11 @@ policies:
     reason: Deployment worker is approved to execute production deployments
 
   - name: Migration worker cannot migrate production database
+    displayName: Database Migration Protection
+    description: Blocks the legacy migration worker from changing production database schemas.
+    owner: Data Platform
+    severity: critical
+    rationale: The legacy worker does not participate in the reviewed database change-control path.
     identity: migration-worker
     capability: database.migration.execute
     environment: production
@@ -56,6 +98,11 @@ policies:
     reason: Database migrations are blocked for the migration worker in this lab
 
   - name: Refund worker can create production refunds
+    displayName: Financial Operations Protection
+    description: Permits the registered refund service to create production refunds.
+    owner: Security Engineering
+    severity: high
+    rationale: Financial operations must originate from a narrowly scoped service identity.
     identity: refund-worker
     capability: payments.refund.create
     environment: production
@@ -63,6 +110,11 @@ policies:
     reason: Refund worker is approved to create production refunds
 
   - name: Release approval worker requires production approval
+    displayName: Weekend Release Control
+    description: Requires a human decision before the release approval worker authorizes production delivery.
+    owner: Release Engineering
+    severity: high
+    rationale: Exceptional production release timing requires an accountable reviewer.
     identity: release-approval-worker
     capability: production.release.approve
     environment: production
@@ -70,6 +122,11 @@ policies:
     reason: Production release approval requires a human approval decision
 
   - name: GitHub Actions can deploy checkout API to production
+    displayName: Protected Branch Deployment
+    description: Permits the registered GitHub Actions workflow to deploy the checkout service.
+    owner: Release Engineering
+    severity: high
+    rationale: Protected production delivery is limited to reviewed repository automation.
     identity: github-actions-production
     capability: production.deployment.execute
     environment: production
@@ -77,8 +134,63 @@ policies:
     reason: GitHub Actions production workflow is approved to deploy checkout-api
 
   - name: Terraform can apply production infrastructure
+    displayName: Terraform Production Apply
+    description: Permits the registered Terraform workflow to apply reviewed production infrastructure.
+    owner: Platform Engineering
+    severity: high
+    rationale: Production infrastructure changes must be applied through managed infrastructure automation.
     identity: terraform-production
     capability: infrastructure.production.apply
     environment: production
     decision: allow
     reason: Terraform production workflow is approved to apply production infrastructure
+
+  - name: Northwind production freeze
+    displayName: Production Freeze
+    description: Requires approval before the Northwind release worker deploys during a production governance window.
+    owner: Release Engineering
+    severity: critical
+    rationale: Production freeze periods require an explicit, reviewable exception before release activity continues.
+    identities:
+      - github-release-worker
+      - argocd-production
+    capabilities:
+      - production.deployment.execute
+    environments:
+      - production
+    decision: requires_approval
+    reason: Production deployment requires approval while release controls are active
+
+  - name: Northwind privileged AI operations
+    displayName: Privileged AI Operations
+    description: Blocks AI assistants from reading production credentials through privileged secret interfaces.
+    owner: AI Platform
+    severity: critical
+    rationale: AI workloads may process approved business data but must not acquire infrastructure credentials.
+    identities:
+      - support-ai
+      - fraud-analysis-ai
+    capabilities:
+      - azure.keyvault.secret.read
+      - openai.production-secret.read
+    environments:
+      - production
+    decision: deny
+    reason: AI identities cannot read production infrastructure secrets
+
+  - name: Northwind customer data observation
+    displayName: Customer Data Protection
+    description: Observes expected AI processing of customer and fraud data without blocking normal workflows.
+    owner: AI Platform
+    severity: medium
+    rationale: Normal AI data processing should be visible and attributable before stricter controls are introduced.
+    identities:
+      - support-ai
+      - fraud-analysis-ai
+    capabilities:
+      - openai.customer-data.process
+      - openai.model.invoke
+    environments:
+      - production
+    decision: log_only
+    reason: Approved AI customer-data processing is recorded for governance review

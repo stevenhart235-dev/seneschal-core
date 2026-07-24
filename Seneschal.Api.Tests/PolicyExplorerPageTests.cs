@@ -59,7 +59,13 @@ public sealed class PolicyExplorerPageTests :
         Assert.Contains("<h1>Policy Explorer</h1>", html);
         Assert.Contains("class=\"active\" href=\"/policies\"", html);
         Assert.Contains("Policy Profile", html);
+        Assert.Contains("Development Deployment Access", html);
         Assert.Contains("Developers can deploy to dev", html);
+        Assert.Contains("<dt>Owner</dt>", html);
+        Assert.Contains("<dd>Release Engineering</dd>", html);
+        Assert.Contains("<dt>Severity</dt>", html);
+        Assert.Contains("<dd>low</dd>", html);
+        Assert.Contains("<strong>Rationale:</strong>", html);
         Assert.Contains("decision-badge decision-allow", html);
         Assert.Contains("Runtime mode: LogOnly", html);
         Assert.Contains("Priority: 4", html);

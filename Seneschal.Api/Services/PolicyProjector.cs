@@ -25,48 +25,59 @@ public sealed class PolicyProjector
             Type = GovernanceEntityType.Policy,
             Id = policy.Name
         };
-        var identityReference = new GovernanceEntityReference
-        {
-            Type = GovernanceEntityType.Identity,
-            Id = policy.Identity
-        };
-        var capabilityReference = new GovernanceEntityReference
-        {
-            Type = GovernanceEntityType.Capability,
-            Id = policy.Capability
-        };
+        var identityReferences = policy.EffectiveIdentities.Select(identity =>
+            new GovernanceEntityReference
+            {
+                Type = GovernanceEntityType.Identity,
+                Id = identity
+            }).ToList();
+        var capabilityReferences = policy.EffectiveCapabilities.Select(capability =>
+            new GovernanceEntityReference
+            {
+                Type = GovernanceEntityType.Capability,
+                Id = capability
+            }).ToList();
 
-        yield return CreateRelationship(
-            index,
-            "policy-capability",
-            policyReference,
-            capabilityReference,
-            GovernanceRelationshipType.PolicyAppliesToCapability);
-
-        yield return CreateRelationship(
-            index,
-            "policy-identity",
-            policyReference,
-            identityReference,
-            GovernanceRelationshipType.PolicyAppliesToIdentity);
-
-        yield return CreateRelationship(
-            index,
-            "identity-capability",
-            identityReference,
-            capabilityReference,
-            GovernanceRelationshipType.IdentityAssignedCapability);
-
-        if (!string.IsNullOrWhiteSpace(policy.Environment))
+        foreach (var capabilityReference in capabilityReferences)
         {
             yield return CreateRelationship(
                 index,
-                "policy-resource",
+                $"policy-capability-{capabilityReference.Id}",
+                policyReference,
+                capabilityReference,
+                GovernanceRelationshipType.PolicyAppliesToCapability);
+        }
+
+        foreach (var identityReference in identityReferences)
+        {
+            yield return CreateRelationship(
+                index,
+                $"policy-identity-{identityReference.Id}",
+                policyReference,
+                identityReference,
+                GovernanceRelationshipType.PolicyAppliesToIdentity);
+
+            foreach (var capabilityReference in capabilityReferences)
+            {
+                yield return CreateRelationship(
+                    index,
+                    $"identity-capability-{identityReference.Id}-{capabilityReference.Id}",
+                    identityReference,
+                    capabilityReference,
+                    GovernanceRelationshipType.IdentityAssignedCapability);
+            }
+        }
+
+        foreach (var environment in policy.EffectiveEnvironments)
+        {
+            yield return CreateRelationship(
+                index,
+                $"policy-resource-{environment}",
                 policyReference,
                 new GovernanceEntityReference
                 {
                     Type = GovernanceEntityType.Resource,
-                    Id = policy.Environment,
+                    Id = environment,
                     Scope = "environment"
                 },
                 GovernanceRelationshipType.PolicyAppliesToResource);

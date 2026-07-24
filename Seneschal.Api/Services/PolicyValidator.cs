@@ -25,14 +25,16 @@ public class PolicyValidator
 
         foreach (var policy in policies)
         {
-            if (!identityNames.Contains(policy.Identity))
+            foreach (var identity in policy.EffectiveIdentities
+                .Where(identity => !identityNames.Contains(identity)))
             {
-                errors.Add($"Policy '{policy.Name}' references unknown identity '{policy.Identity}'.");
+                errors.Add($"Policy '{policy.Name}' references unknown identity '{identity}'.");
             }
 
-            if (!capabilityNames.Contains(policy.Capability))
+            foreach (var capability in policy.EffectiveCapabilities
+                .Where(capability => !capabilityNames.Contains(capability)))
             {
-                errors.Add($"Policy '{policy.Name}' references unknown capability '{policy.Capability}'.");
+                errors.Add($"Policy '{policy.Name}' references unknown capability '{capability}'.");
             }
 
             try
@@ -47,7 +49,7 @@ public class PolicyValidator
                     "warn, log_only, requires_approval.");
             }
 
-            if (string.IsNullOrWhiteSpace(policy.Environment))
+            if (policy.EffectiveEnvironments.Count == 0)
             {
                 errors.Add($"Policy '{policy.Name}' is missing environment.");
             }

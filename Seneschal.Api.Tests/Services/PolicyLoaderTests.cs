@@ -20,8 +20,10 @@ public sealed class PolicyLoaderTests :
     {
         var policies = _loader.GetPolicies();
 
-        Assert.Equal(12, policies.Count);
+        Assert.Equal(15, policies.Count);
         Assert.Equal("Developers can deploy to dev", policies[0].Name);
+        Assert.Equal("Development Deployment Access", policies[0].DisplayName);
+        Assert.Equal("Release Engineering", policies[0].Owner);
         Assert.Equal("allow", policies[0].Decision);
     }
 
@@ -53,8 +55,87 @@ public sealed class PolicyLoaderTests :
             .ToList();
 
         Assert.Equal(
-            [12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
-            projectedPolicies.Select(policy => policy.Priority));
+            [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
+            projectedPolicies
+                .Select(policy => policy.Priority)
+                .Distinct()
+                .OrderDescending());
+    }
+
+    [Fact]
+    public void GetPolicies_LoadsBalancedEnterpriseCatalog()
+    {
+        var policies = _loader.GetPolicies();
+
+        Assert.Equal(15, policies.Count);
+        Assert.All(policies, policy =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(policy.DisplayName));
+            Assert.False(string.IsNullOrWhiteSpace(policy.Description));
+            Assert.False(string.IsNullOrWhiteSpace(policy.Owner));
+            Assert.False(string.IsNullOrWhiteSpace(policy.Severity));
+            Assert.False(string.IsNullOrWhiteSpace(policy.Rationale));
+            Assert.NotEmpty(policy.EffectiveIdentities);
+            Assert.NotEmpty(policy.EffectiveCapabilities);
+            Assert.NotEmpty(policy.EffectiveEnvironments);
+        });
+
+        Assert.Equal(
+            ["allow", "deny", "log_only", "requires_approval"],
+            policies
+                .Select(policy => policy.Decision)
+                .Distinct()
+                .Order(StringComparer.Ordinal));
+        Assert.Equal(
+            ["AI Platform", "Data Platform", "Platform Engineering",
+                "Release Engineering", "Security Engineering"],
+            policies
+                .Select(policy => policy.Owner)
+                .Distinct()
+                .Order(StringComparer.Ordinal));
+        Assert.Equal(
+            ["critical", "high", "low", "medium"],
+            policies
+                .Select(policy => policy.Severity)
+                .Distinct()
+                .Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void GetPolicies_RetainsLegacyPolicyIds()
+    {
+        var policyIds = _loader.GetPolicies()
+            .Select(policy => policy.Name)
+            .ToHashSet(StringComparer.Ordinal);
+
+        Assert.Contains("Developers can deploy to dev", policyIds);
+        Assert.Contains("Developers cannot delete production databases", policyIds);
+        Assert.Contains("Support secret reads require approval", policyIds);
+        Assert.Contains("Platform engineers can deploy to dev", policyIds);
+        Assert.Contains("Platform agent can apply production infrastructure", policyIds);
+        Assert.Contains("Platform agent cannot destroy production infrastructure", policyIds);
+        Assert.Contains("Deployment worker can deploy to production", policyIds);
+        Assert.Contains("Migration worker cannot migrate production database", policyIds);
+        Assert.Contains("Refund worker can create production refunds", policyIds);
+        Assert.Contains("Release approval worker requires production approval", policyIds);
+        Assert.Contains("GitHub Actions can deploy checkout API to production", policyIds);
+        Assert.Contains("Terraform can apply production infrastructure", policyIds);
+    }
+
+    [Fact]
+    public void GetCorePolicies_ExpandsEnterpriseTargetListsToExactConditions()
+    {
+        var policies = _loader.GetCorePolicies()
+            .Where(policy => policy.Id == "Northwind privileged AI operations")
+            .ToList();
+
+        Assert.Equal(4, policies.Count);
+        Assert.All(policies, policy =>
+            Assert.Equal(DecisionType.Deny, policy.Effect));
+        Assert.Contains(policies, policy =>
+            policy.Conditions["identity.id"] == "support-ai" &&
+            policy.Conditions["capability.id"] == "openai.production-secret.read" &&
+            policy.Conditions["resource.environment"] == "production");
     }
 
     [Fact]

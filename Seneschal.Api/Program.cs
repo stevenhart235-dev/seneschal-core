@@ -393,8 +393,7 @@ app.MapGet(
                     "default-deny",
                     StringComparison.OrdinalIgnoreCase)),
             apiPolicies
-                .Where(policy => !string.IsNullOrWhiteSpace(policy.Environment))
-                .Select(policy => policy.Environment)
+                .SelectMany(policy => policy.EffectiveEnvironments)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Select(environment => new Seneschal.Core.Models.Resource
                 {

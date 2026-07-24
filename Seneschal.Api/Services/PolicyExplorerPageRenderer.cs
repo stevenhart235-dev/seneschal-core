@@ -152,7 +152,9 @@ public static class PolicyExplorerPageRenderer
         html.AppendLine("                        <div>");
         html.AppendLine("                            <p class=\"muted capability-eyebrow\">Policy Profile</p>");
         html.Append("                            <h2>")
-            .Append(Encode(card.Policy.Name))
+            .Append(Encode(string.IsNullOrWhiteSpace(card.Policy.DisplayName)
+                ? card.Policy.Name
+                : card.Policy.DisplayName))
             .AppendLine("</h2>");
         html.Append("                            <p class=\"code capability-id\">")
             .Append(Encode(card.Policy.Name))
@@ -164,8 +166,24 @@ public static class PolicyExplorerPageRenderer
         html.AppendLine("                        </div>");
         html.AppendLine("                    </div>");
         html.Append("                    <p class=\"policy-reason\">")
-            .Append(Encode(card.Policy.Reason))
+            .Append(Encode(string.IsNullOrWhiteSpace(card.Policy.Description)
+                ? card.Policy.Reason
+                : card.Policy.Description))
             .AppendLine("</p>");
+        if (!string.IsNullOrWhiteSpace(card.Policy.Owner) ||
+            !string.IsNullOrWhiteSpace(card.Policy.Severity))
+        {
+            html.AppendLine("                    <dl class=\"metadata-grid compact-metadata-grid\">");
+            AppendCondition(html, "Owner", card.Policy.Owner);
+            AppendCondition(html, "Severity", card.Policy.Severity);
+            html.AppendLine("                    </dl>");
+        }
+        if (!string.IsNullOrWhiteSpace(card.Policy.Rationale))
+        {
+            html.Append("                    <p class=\"muted\"><strong>Rationale:</strong> ")
+                .Append(Encode(card.Policy.Rationale))
+                .AppendLine("</p>");
+        }
         html.Append("                    <p class=\"muted\">Priority: ")
             .Append(card.Priority)
             .AppendLine("</p>");
@@ -192,9 +210,9 @@ public static class PolicyExplorerPageRenderer
         html.AppendLine("                    <section class=\"policy-profile-section\">");
         html.AppendLine("                        <h3>Conditions</h3>");
         html.AppendLine("                        <dl class=\"metadata-grid compact-metadata-grid policy-condition-grid\">");
-        AppendCondition(html, "Identity", card.Policy.Identity);
-        AppendCondition(html, "Capability", card.Policy.Capability);
-        AppendCondition(html, "Environment", card.Policy.Environment);
+        AppendCondition(html, "Identity", string.Join(", ", card.Policy.EffectiveIdentities));
+        AppendCondition(html, "Capability", string.Join(", ", card.Policy.EffectiveCapabilities));
+        AppendCondition(html, "Environment", string.Join(", ", card.Policy.EffectiveEnvironments));
         AppendCondition(html, "Effect", card.Policy.Decision);
         html.AppendLine("                        </dl>");
         html.AppendLine("                    </section>");

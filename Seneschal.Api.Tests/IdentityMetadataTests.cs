@@ -96,8 +96,6 @@ public sealed class IdentityMetadataTests :
             await response.Content.ReadAsStreamAsync());
         var enriched = document.RootElement.EnumerateArray().Single(item =>
             item.GetProperty("name").GetString() == "github-release-worker");
-        var legacy = document.RootElement.EnumerateArray().Single(item =>
-            item.GetProperty("name").GetString() == "PlatformEngineer");
 
         Assert.Equal(
             "GitHub Release Worker",
@@ -109,14 +107,19 @@ public sealed class IdentityMetadataTests :
             "Release Pipeline",
             enriched.GetProperty("application").GetString());
         Assert.Equal(
-            "Production",
+            "Shared",
             enriched.GetProperty("environment").GetString());
         Assert.Equal(
             "GitHub",
             enriched.GetProperty("technology").GetString());
-        Assert.False(legacy.TryGetProperty("displayName", out _));
-        Assert.False(legacy.TryGetProperty("application", out _));
-        Assert.False(legacy.TryGetProperty("technology", out _));
+        Assert.All(
+            document.RootElement.EnumerateArray(),
+            identity =>
+            {
+                Assert.True(identity.TryGetProperty("displayName", out _));
+                Assert.True(identity.TryGetProperty("application", out _));
+                Assert.True(identity.TryGetProperty("technology", out _));
+            });
     }
 
     [Fact]
@@ -129,7 +132,7 @@ public sealed class IdentityMetadataTests :
         Assert.Contains("github-release-worker", explorer);
         Assert.Contains("Owner:</strong> Release Engineering", explorer);
         Assert.Contains("Application:</strong> Release Pipeline", explorer);
-        Assert.Contains("Environment:</strong> Production", explorer);
+        Assert.Contains("Environment:</strong> Shared", explorer);
         Assert.Contains("Technology:</strong> GitHub", explorer);
         Assert.Contains(
             "/identity-activity?identityId=github-release-worker",
@@ -152,7 +155,7 @@ public sealed class IdentityMetadataTests :
         Assert.Contains("<h2>GitHub Release Worker</h2>", activity);
         Assert.Contains("<dt>Owner</dt><dd>Release Engineering</dd>", activity);
         Assert.Contains("<dt>Application</dt><dd>Release Pipeline</dd>", activity);
-        Assert.Contains("<dt>Environment</dt><dd>Production</dd>", activity);
+        Assert.Contains("<dt>Environment</dt><dd>Shared</dd>", activity);
         Assert.Contains("<dt>Technology</dt><dd>GitHub</dd>", activity);
         Assert.Contains(
             "/audit?identityId=github-release-worker",
@@ -181,7 +184,7 @@ public sealed class IdentityMetadataTests :
             "Release Pipeline",
             metadata.GetProperty("application").GetString());
         Assert.Equal(
-            "Production",
+            "Shared",
             metadata.GetProperty("environment").GetString());
         Assert.Equal(
             "GitHub",

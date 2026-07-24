@@ -152,6 +152,11 @@ public sealed class ApiContractTests :
         AssertProperties(
             identity,
             "name",
+            "displayName",
+            "owner",
+            "application",
+            "environment",
+            "technology",
             "description",
             "type");
     }

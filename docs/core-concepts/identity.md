@@ -256,6 +256,54 @@ identities:
 `application` is descriptive metadata. It does not create a first-class
 Application resource, route, or ownership model.
 
+## Identifier naming
+
+New workload identities should use stable lowercase kebab-case identifiers:
+
+```text
+payments-api
+github-release-worker
+database-migration-worker
+incident-response-bot
+```
+
+An identifier is an integration and audit contract. Do not rename it after
+policies, API keys, audit records, or scripts reference it. Older identifiers
+that predate this convention remain supported for compatibility.
+
+## Metadata semantics
+
+- `displayName` is the concise operator-facing name. It does not replace the
+  stable identifier.
+- `owner` names the accountable team, not an individual operator.
+- `application` groups related identities descriptively. Multiple identities
+  may share one application. It does not create an Application resource.
+- `environment` describes the identity's primary operating context. Use
+  consistent operator-facing values such as `Production`, `Staging`,
+  `Development`, `Shared`, `Corporate`, and `Security`.
+- `technology` names one primary technology using the same operator-facing
+  vocabulary as the Technology Surface, such as `Azure`, `GitHub`,
+  `Terraform/OpenTofu`, `Kubernetes/AKS`, `OpenAI`, `PostgreSQL`, `Slack`,
+  `Microsoft 365`, or `Custom`.
+- `description` explains what the identity does and why it exists.
+
+An identity may interact with several technologies, but configuration records
+only its primary technology. Describe broader responsibilities in
+`description`; do not encode comma-separated technology lists.
+
+## Ownership expectations
+
+Every enterprise identity should have one accountable team. Ownership supplies
+governance and investigation context but does not grant permissions or change
+policy evaluation.
+
+## Legacy compatibility
+
+The sample catalog retains older IDs such as `Developer`, `PlatformEngineer`,
+`migration-worker`, and `github-actions-production` because policies, API
+tests, integration keys, demo scripts, and documentation reference them.
+Operator-facing metadata may be enriched without changing those stable IDs.
+
 ---
 
 # Non-Goals

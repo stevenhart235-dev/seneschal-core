@@ -49,6 +49,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         AddLoadFinding(findings, "Policies", policies.Count);
         ValidateRuntimeSettings(findings, runtimeSettings);
         ValidateIdentityMetadata(findings, identities);
+        ValidateDuplicateIdentities(findings, identities);
         ValidatePolicyReferences(findings, capabilities, identities, policies);
         ValidatePolicyDecisions(findings, policies);
         ValidateDuplicatePolicies(findings, policies);
@@ -58,6 +59,25 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         {
             Findings = findings
         };
+    }
+
+    private static void ValidateDuplicateIdentities(
+        ICollection<ConfigurationValidationFinding> findings,
+        IReadOnlyCollection<ApiIdentity> identities)
+    {
+        foreach (var duplicateIdentity in identities
+            .GroupBy(identity => identity.Name, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1))
+        {
+            findings.Add(new ConfigurationValidationFinding
+            {
+                Severity = "Error",
+                Category = "IdentityIdentity",
+                Message =
+                    $"Duplicate identity id '{duplicateIdentity.Key}' detected.",
+                RelatedObjectId = duplicateIdentity.Key
+            });
+        }
     }
 
     private static void ValidateIdentityMetadata(

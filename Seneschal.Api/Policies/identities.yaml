@@ -1,71 +1,245 @@
 identities:
+  # Legacy identifiers retained for policy, API, integration, and demo compatibility.
   - name: PlatformEngineer
-    description: Platform engineering operator
+    displayName: Platform Engineer Workstation
+    owner: Platform Engineering
+    application: Platform Automation
+    environment: Corporate
+    technology: Azure
+    description: Human platform engineering workstation used for reviewed operational changes.
     type: Human
 
   - name: Developer
-    description: Application developer
+    displayName: Developer Laptop
+    owner: Developer Experience
+    application: Developer Workstation
+    environment: Corporate
+    technology: GitHub
+    description: Corporate developer workstation used for source control and approved development operations.
     type: Human
 
   - name: FinanceAgent
-    description: Finance automation agent
+    displayName: Finance Assistant
+    owner: Finance Systems
+    application: Finance Assistant
+    environment: Production
+    technology: OpenAI
+    description: AI-assisted finance workflow for reconciliation and reviewed operational analysis.
     type: Agent
 
   - name: SupportAgent
-    description: Support automation agent
+    displayName: Support Operations Agent
+    owner: Customer Operations
+    application: Support Operations
+    environment: Staging
+    technology: Microsoft 365
+    description: Support automation identity retained for legacy approval and integration examples.
     type: Agent
 
   - name: platform-agent
-    description: Autonomous platform operations agent
+    displayName: Platform Automation
+    owner: Platform Engineering
+    application: Platform Automation
+    environment: Shared
+    technology: Azure
+    description: Autonomous platform operations agent for routine shared-services maintenance.
     type: Agent
 
   - name: deployment-worker
-    description: Multi-application lab deployment worker
+    displayName: Azure DevOps Pipeline
+    owner: Release Engineering
+    application: Release Pipeline
+    environment: Staging
+    technology: Azure
+    description: Legacy deployment worker representing an Azure-hosted staging release pipeline.
     type: Service
 
   - name: migration-worker
-    description: Multi-application lab database migration worker
+    displayName: Database Migration Worker
+    owner: Data Platform
+    application: Database Platform
+    environment: Production
+    technology: PostgreSQL
+    description: Applies reviewed PostgreSQL schema and data migrations in production.
     type: Service
 
   - name: refund-worker
-    description: Multi-application lab refund worker
+    displayName: Payment Worker
+    owner: Payments Engineering
+    application: Payment Processing
+    environment: Production
+    technology: Custom
+    description: Processes reviewed payment refunds and other asynchronous payment operations.
     type: Service
 
   - name: release-approval-worker
-    description: Multi-application lab production release approval worker
+    displayName: Release Approval Worker
+    owner: Release Engineering
+    application: Release Governance
+    environment: Shared
+    technology: Custom
+    description: Correlates human approval decisions with controlled production release requests.
     type: Service
 
   - name: github-actions-production
-    description: GitHub Actions production deployment workflow
+    displayName: GitHub Actions Production
+    owner: Release Engineering
+    application: Release Pipeline
+    environment: Shared
+    technology: GitHub
+    description: Legacy GitHub Actions identity used by the production deployment integration.
     type: Service
 
   - name: terraform-production
-    description: Terraform and OpenTofu production apply workflow
+    displayName: Terraform Production Runner
+    owner: Platform Engineering
+    application: Infrastructure Platform
+    environment: Production
+    technology: Terraform/OpenTofu
+    description: Legacy production runner for reviewed Terraform and OpenTofu infrastructure applies.
     type: Service
 
+  # Northwind Financial operating identities.
   - name: github-release-worker
     displayName: GitHub Release Worker
     owner: Release Engineering
     application: Release Pipeline
-    environment: Production
+    environment: Shared
     technology: GitHub
-    description: Automated production deployment workflow.
+    description: Automated GitHub workflow that coordinates reviewed production deployments.
     type: Service
 
   - name: terraform-cloud
     displayName: Terraform Cloud
-    owner: Cloud Platform
-    application: Terraform Cloud
-    environment: Production
-    technology: Terraform
-    description: Automated production infrastructure workflow.
+    owner: Platform Engineering
+    application: Infrastructure Platform
+    environment: Shared
+    technology: Terraform/OpenTofu
+    description: Shared infrastructure automation identity for Terraform and OpenTofu plans and applies.
     type: Service
 
   - name: support-ai
     displayName: Support Assistant
-    owner: Customer Support Engineering
+    owner: AI Platform
     application: Support Assistant
     environment: Production
     technology: OpenAI
-    description: AI-assisted customer support workflow.
+    description: AI assistant that helps customer operations resolve support cases using approved knowledge.
+    type: Agent
+
+  - name: payments-api
+    displayName: Payments API
+    owner: Payments Engineering
+    application: Payments API
+    environment: Production
+    technology: Azure
+    description: Customer payment service responsible for governed authorization and capture operations.
+    type: Service
+
+  - name: checkout-api
+    displayName: Checkout API
+    owner: Payments Engineering
+    application: Checkout API
+    environment: Production
+    technology: Kubernetes/AKS
+    description: Customer-facing checkout service running as a production AKS workload.
+    type: Service
+
+  - name: customer-portal
+    displayName: Customer Portal
+    owner: Customer Operations
+    application: Customer Portal
+    environment: Production
+    technology: Azure
+    description: Customer-facing portal for account, transaction, and payment support workflows.
+    type: Service
+
+  - name: fraud-detection-worker
+    displayName: Fraud Detection Worker
+    owner: Security Engineering
+    application: Fraud Detection
+    environment: Production
+    technology: PostgreSQL
+    description: Evaluates payment signals and records automated fraud-detection outcomes.
+    type: Service
+
+  - name: notification-service
+    displayName: Notification Service
+    owner: Customer Operations
+    application: Notification Platform
+    environment: Shared
+    technology: Slack
+    description: Delivers approved operational and customer-service notifications.
+    type: Service
+
+  - name: api-gateway
+    displayName: API Gateway
+    owner: Site Reliability Engineering
+    application: API Gateway
+    environment: Production
+    technology: Azure
+    description: Production gateway identity that fronts Northwind customer and payment APIs.
+    type: Service
+
+  - name: argocd-production
+    displayName: Argo CD Production
+    owner: Platform Engineering
+    application: Argo CD
+    environment: Production
+    technology: Kubernetes/AKS
+    description: Reconciles approved application revisions into production AKS clusters.
+    type: Service
+
+  - name: backup-automation
+    displayName: Backup Automation
+    owner: Data Platform
+    application: Database Platform
+    environment: Production
+    technology: PostgreSQL
+    description: Creates and verifies governed backups for production PostgreSQL services.
+    type: Service
+
+  - name: fraud-analysis-ai
+    displayName: Fraud Analysis Assistant
+    owner: AI Platform
+    application: Fraud Analysis
+    environment: Production
+    technology: OpenAI
+    description: AI assistant that analyzes fraud cases using approved transaction context.
+    type: Agent
+
+  - name: database-administrator
+    displayName: Database Administrator
+    owner: Data Platform
+    application: Database Platform
+    environment: Corporate
+    technology: PostgreSQL
+    description: Human database administrator identity for reviewed production data operations.
+    type: Human
+
+  - name: breakglass-operator
+    displayName: Break-Glass Operator
+    owner: Security Engineering
+    application: Security Operations
+    environment: Security
+    technology: Custom
+    description: Restricted human identity used for explicitly approved emergency access.
+    type: Human
+
+  - name: security-automation
+    displayName: Security Automation
+    owner: Security Engineering
+    application: Security Operations
+    environment: Security
+    technology: Slack
+    description: Automates security notifications and routine response coordination.
+    type: Service
+
+  - name: incident-response-bot
+    displayName: Incident Response Bot
+    owner: Site Reliability Engineering
+    application: Security Operations
+    environment: Security
+    technology: Slack
+    description: Coordinates incident channels and publishes approved operational updates.
     type: Agent

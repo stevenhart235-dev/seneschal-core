@@ -77,7 +77,10 @@ public sealed class PortalRoutingTests : IClassFixture<ApiApplicationFactory>
         Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
         Assert.Contains("<h1>Identities</h1>", html);
         Assert.Contains("PlatformEngineer", html);
-        Assert.Contains("Platform engineering operator", html);
+        Assert.Contains("Platform Engineer Workstation", html);
+        Assert.Contains(
+            "Human platform engineering workstation used for reviewed operational changes.",
+            html);
         Assert.Contains("/identity-activity?identityId=PlatformEngineer", html);
         Assert.False(html.TrimStart().StartsWith("[", StringComparison.Ordinal));
         Assert.Contains("class=\"active\"", html);

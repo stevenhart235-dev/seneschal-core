@@ -249,6 +249,7 @@ dotnet test
 ## Documentation
 
 - [Getting started](docs/getting-started.md)
+- [Container usage](docs/container.md)
 - [ASP.NET Core quickstart](docs/quickstart/aspnet-core-quickstart.md)
 - [Customer onboarding](docs/product/customer-onboarding.md)
 - [Operator investigation workflow](docs/product/operator-navigation-spine.md)

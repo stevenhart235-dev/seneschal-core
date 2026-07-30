@@ -1,0 +1,153 @@
+# Run Seneschal in a container
+
+Seneschal's API and Razor Pages portal run together in the
+`Seneschal.Api` ASP.NET Core process. The image is intended for the current
+single-instance application; orchestration and demo workloads belong in the
+separate `seneschal-demo-lab` repository.
+
+## Build and run
+
+Build from the repository root:
+
+```powershell
+docker build --tag seneschal-core:dev .
+```
+
+Run the container with host port `5077` mapped to container port `8080`:
+
+```powershell
+docker run --detach `
+  --name seneschal-core `
+  --publish 5077:8080 `
+  seneschal-core:dev
+```
+
+Open the portal at `http://localhost:5077/dashboard`. The API, portal, static
+assets, and health endpoints all use the same HTTP listener. TLS termination,
+if required, should occur outside this container.
+
+The image health check calls the existing lightweight `GET /health` endpoint.
+`GET /ready` additionally reports whether the built-in catalog and policy
+configuration loaded.
+
+## Configuration
+
+The image contains the product's checked-in `appsettings.json`, Razor Pages,
+static web assets, and these non-secret or development/sample YAML defaults:
+
+- `Policies/capabilities.yaml`
+- `Policies/identities.yaml`
+- `Policies/policies.yaml`
+- `Policies/integration-keys.yaml`
+
+The checked-in integration keys are explicitly development/sample values. Do
+not use them as production credentials.
+
+Normal ASP.NET Core environment-variable configuration is supported. In
+particular:
+
+| Environment variable | Purpose |
+|---|---|
+| `ASPNETCORE_ENVIRONMENT` | Selects the ASP.NET Core environment. |
+| `ASPNETCORE_URLS` | Overrides the listener; the image default is `http://0.0.0.0:8080`. |
+| `Logging__LogLevel__Default` | Overrides the default application log level. |
+| `Seneschal__Demo__NorthwindHistory__Enabled` | Enables the optional process-local Northwind history seed. |
+| `Seneschal__Demo__NorthwindHistory__SeedVersion` | Overrides the deterministic seed identifier. |
+| `Seneschal__Configuration__CapabilitiesPath` | Selects an alternate capabilities YAML file. |
+| `Seneschal__Configuration__IdentitiesPath` | Selects an alternate identities YAML file. |
+| `Seneschal__Configuration__PoliciesPath` | Selects an alternate policies YAML file. |
+| `Seneschal__Configuration__IntegrationKeysPath` | Selects an alternate integration-key YAML file. |
+
+For example, enable the Northwind history without changing the image:
+
+```powershell
+docker run --detach `
+  --name seneschal-core `
+  --publish 5077:8080 `
+  --env Seneschal__Demo__NorthwindHistory__Enabled=true `
+  seneschal-core:dev
+```
+
+No bind mount is required for the built-in defaults. To supply a deployment API
+key without placing it in the image, create an integration-key YAML file
+outside the repository, mount it read-only, and select it through configuration:
+
+```powershell
+docker run --detach `
+  --name seneschal-core `
+  --publish 5077:8080 `
+  --mount type=bind,source=C:\secure\integration-keys.yaml,target=/config/integration-keys.yaml,readonly `
+  --env Seneschal__Configuration__IntegrationKeysPath=/config/integration-keys.yaml `
+  seneschal-core:dev
+```
+
+The same read-only mount pattern can override the other YAML files. The
+container process runs as the non-root .NET `app` user, so mounted files must be
+readable by that user.
+
+An optional volume at `/home/app/.aspnet/DataProtection-Keys` can retain
+ASP.NET Core Data Protection keys across container replacement. It is not
+required to start Seneschal, and it does not persist Seneschal audit or
+governance state.
+
+## Evaluate a request
+
+Supply the API key at runtime through the `X-Seneschal-Api-Key` header. Keep the
+key in a secret manager or a local environment variable rather than embedding
+it in a Dockerfile, image, command history, or committed file:
+
+```powershell
+$headers = @{
+  'X-Seneschal-Api-Key' = $env:SENESCHAL_API_KEY
+}
+
+$body = @{
+  identity = 'refund-worker'
+  capability = 'payments.refund.create'
+  context = @{
+    environment = 'production'
+    resource = 'payment-ledger'
+  }
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://localhost:5077/evaluate `
+  -Headers $headers `
+  -ContentType 'application/json' `
+  -Body $body
+```
+
+The selected key must authorize the request identity, capability, and
+environment. Decisions are visible through `GET /audit` and the portal Audit
+Trail.
+
+## Stop and remove
+
+```powershell
+docker stop seneschal-core
+docker rm seneschal-core
+```
+
+## Persistence and runtime writes
+
+The application does not currently write product data to the filesystem.
+Audit events, activity projections, metrics, approvals, incidents, governance
+mode, and governance windows are process-local in-memory state. They reset
+whenever the process or container restarts. With the Northwind seed enabled,
+the deterministic baseline is regenerated relative to the new startup time.
+
+There is no application data directory to mount. The non-root process can write
+ASP.NET Core Data Protection keys under
+`/home/app/.aspnet/DataProtection-Keys` and can use the container's standard
+writable temporary directory (`/tmp`) for framework or operating-system needs.
+Neither path contains Seneschal audit or governance state. Mounting YAML
+configuration preserves only configuration, not runtime state.
+
+The current stores and mutable governance controls assume one process. Multiple
+replicas would have independent decisions, audit histories, approvals,
+incidents, and governance state. Durable shared storage, multi-instance
+coordination, secret distribution, TLS/ingress, deployment manifests, demo
+workloads, and lifecycle orchestration remain responsibilities outside this
+image and, where appropriate for the demonstration environment, belong in
+`seneschal-demo-lab`.

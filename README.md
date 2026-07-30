@@ -52,7 +52,7 @@ outcomes changed over time. Open a **Decision Trace** to see the policy,
 runtime mode, reason, and effective action behind one decision. Finish in the
 **Audit Trail** to filter and correlate the retained operational evidence.
 
-![Technology Explorer showing governed platforms and their operational posture](docs/images/technology-explorer.png)
+![Technology Explorer](docs/images/technology-explorer.png)
 
 ## What you can do
 

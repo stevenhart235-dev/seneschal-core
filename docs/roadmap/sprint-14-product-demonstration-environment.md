@@ -487,6 +487,13 @@ buildable.
 - Add fixed-time, stable-ID, idempotency, distribution-range, and ordering
   tests.
 
+Implementation note: the baseline loader is selected with
+`Seneschal:Demo:NorthwindHistory:Enabled`, captures one injectable UTC startup
+anchor, and writes directly to the existing audit and activity stores. It does
+not pass seeded history through evaluation, approval, incident, or
+governance-window services. IDs use the seed version, workload key, and
+deterministic ordinal. See `docs/demos/northwind-history.md`.
+
 ### Commit 6 — Approval scenario records
 
 - Add Friday Production Freeze and Database Migration Approval sequences.
@@ -614,4 +621,3 @@ These questions remain because the current repository does not answer them:
    transition from unconditional infrastructure Deny to break-glass approval
    without a presenter-controlled profile change? This must be proven with
    evaluator tests before the scenario is promised.
-

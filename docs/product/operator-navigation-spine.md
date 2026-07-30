@@ -1,28 +1,36 @@
 # Operator navigation spine
 
-Seneschal's customer-facing investigation model is:
+Seneschal's primary customer-facing investigation workflow is:
 
 ```text
-Overview
-  → Technology
-  → Application
-  → Capability
-  → Decision
-  → Policy
-  → Audit
+Dashboard
+  → Technology Explorer
+  → Capability Activity
+  → Decision Trace
+  → Audit Trail
 ```
 
-| Level | Operator question | Current route |
+| Stage | Operator question | Current route |
 |---|---|---|
-| Overview | Where should I begin? | `/dashboard`, `/monitor` |
-| Technology | Which governed platforms are present and where is attention concentrated? | `/technologies`, `/technologies/{technologyKey}` |
-| Application | Which workload used the technology and capabilities? | `/identity-activity?identityId=...` |
-| Capability | What governed action was requested and what happened? | `/capability-explorer?capabilityId=...`, `/capability-activity?capabilityId=...` |
-| Decision | Why was this individual request allowed, denied, or held for approval? | `/audit/{decisionId}` |
-| Policy | Which configured policy contributed to the outcome? | `/policies` and filtered audit evidence |
-| Audit | Can the runtime result be filtered and proven? | `/audit?...` |
+| Dashboard | Where should I begin, and what needs attention? | `/dashboard` |
+| Technology Explorer | Which governed platforms are present and where is activity concentrated? | `/technologies`, `/technologies/{technologyKey}` |
+| Capability Activity | Who used this governed operation, and what happened over time? | `/capability-activity?capabilityId=...` |
+| Decision Trace | Why was this individual request allowed, denied, or held for approval? | `/audit/{decisionId}` |
+| Audit Trail | Can the runtime result be filtered, correlated, and supported with evidence? | `/audit?...` |
 
-Technology is a customer-facing projection over real capability catalog, activity, and retained audit data. It is not currently an integration registry or automated discovery system. Application is contextual presentation of the existing identity domain model when an identity represents a workload; underlying identity data and routes remain unchanged. Capability remains Seneschal's first-class governance object. Decision Trace explains one runtime outcome, while Audit Trail provides retained evidence across outcomes.
+Live Monitor, Technology Detail, Capability Explorer, Identity Activity,
+Incidents, and Policies are supporting pivots rather than a separate hierarchy.
+They let an operator enter or branch from the primary workflow without changing
+its central question: what capability was used, under what governance context,
+and with what result?
+
+Technology is a customer-facing projection over real capability catalog,
+activity, and retained audit data. It is not currently an integration registry
+or automated discovery system. Application is contextual presentation of the
+existing identity domain model when an identity represents a workload;
+underlying identity data and routes remain unchanged. Capability remains
+Seneschal's first-class governance object. Decision Trace explains one runtime
+outcome, while Audit Trail provides retained Audit Evidence across outcomes.
 
 ## Classification strategy
 

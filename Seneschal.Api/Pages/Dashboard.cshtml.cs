@@ -17,6 +17,7 @@ public sealed class DashboardModel : PageModel
     private readonly PolicyLoader _policyLoader;
     private readonly IGovernanceModeStore _governanceModeStore;
     private readonly IGovernanceWindowStore _governanceWindowStore;
+    private readonly TechnologyActivityService _technologyActivityService;
 
     public static readonly TimeSpan ActiveThreshold = TimeSpan.FromSeconds(20);
 
@@ -28,7 +29,8 @@ public sealed class DashboardModel : PageModel
         IdentityLoader identityLoader,
         PolicyLoader policyLoader,
         IGovernanceModeStore governanceModeStore,
-        IGovernanceWindowStore governanceWindowStore)
+        IGovernanceWindowStore governanceWindowStore,
+        TechnologyActivityService technologyActivityService)
     {
         _capabilityCatalog = capabilityCatalog;
         _governanceGraph = governanceGraph;
@@ -38,6 +40,7 @@ public sealed class DashboardModel : PageModel
         _policyLoader = policyLoader;
         _governanceModeStore = governanceModeStore;
         _governanceWindowStore = governanceWindowStore;
+        _technologyActivityService = technologyActivityService;
     }
 
     public int TotalCapabilities { get; private set; }
@@ -68,6 +71,7 @@ public sealed class DashboardModel : PageModel
     public bool AuditEventsAvailable { get; private set; }
     public DashboardLiveSnapshot Live { get; private set; } = DashboardLiveSnapshot.Empty;
     public GovernanceWindow GovernanceWindow { get; private set; } = null!;
+    public IReadOnlyList<TechnologyActivity> Technologies { get; private set; } = [];
 
     public bool HasRuntimeActivity => TotalRuntimeDecisions > 0;
     public bool ShowFirstRunExperience => TotalRuntimeDecisions < 3;
@@ -78,6 +82,16 @@ public sealed class DashboardModel : PageModel
             new CapabilityCatalogQuery(),
             cancellationToken);
         GovernanceWindow = _governanceWindowStore.GetWindow();
+        Technologies = (await _technologyActivityService.GetTechnologiesAsync(
+                cancellationToken))
+            .OrderByDescending(technology =>
+                technology.DenyCount + technology.PendingApprovalCount > 0)
+            .ThenByDescending(technology =>
+                technology.DenyCount + technology.PendingApprovalCount)
+            .ThenByDescending(technology => technology.EvaluationCount)
+            .ThenBy(technology => technology.DisplayName)
+            .Take(5)
+            .ToList();
         var relationships = await _governanceGraph.QueryAsync(
             new GovernanceRelationshipQuery(),
             cancellationToken);

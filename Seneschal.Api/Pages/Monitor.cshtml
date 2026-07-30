@@ -21,19 +21,12 @@
             <a class="table-link" href="/dashboard">Open Dashboard</a>
         </header>
 
-        <section class="monitor-posture @(Model.CanonicalRuntimeMode == "Enforce" ? "is-enforcing" : "is-monitoring")" aria-labelledby="monitor-posture-title">
-            <div class="monitor-posture-primary">
-                <span class="monitor-eyebrow">Operational status</span>
-                <div class="monitor-health-line"><span class="monitor-health-dot" aria-hidden="true"></span><strong id="monitor-posture-title">@(Model.SeneschalHealthy ? "Healthy" : "Configuration requires attention")</strong></div>
-                <div class="monitor-mode-line"><span>@(Model.CanonicalRuntimeMode == "Enforce" ? "Enforcement active" : "Monitoring active")</span><small>Canonical mode: <b>@Model.CanonicalRuntimeMode</b></small></div>
-                <p>@Model.OperationalSummary</p>
-            </div>
-            <dl class="monitor-posture-context">
-                <div><dt>Governance windows</dt><dd>@(Model.GovernanceWindow.Enabled ? $"{Model.GovernanceWindow.Name} · {Model.GovernanceWindow.Mode}" : "None active")</dd></div>
-                <div><dt>Last successful evaluation</dt><dd>@if (Model.LastEvaluationUtc is null) { <span>No evaluations observed</span> } else { <time data-relative-time datetime="@Model.LastEvaluationUtc.Value.ToString("O")">@Model.LastEvaluationUtc.Value.ToString("u")</time> }</dd></div>
-                <div><dt>Polling</dt><dd id="monitor-polling-status"><span class="live-indicator" aria-hidden="true"></span> Current · every 3 seconds</dd></div>
-                <div class="monitor-posture-links"><dt>Controls</dt><dd><a href="/governance">Runtime Governance</a><a href="/governance-windows">Governance Windows</a></dd></div>
-            </dl>
+        <section class="monitor-status-strip @(Model.CanonicalRuntimeMode == "Enforce" ? "is-enforcing" : "is-monitoring")" aria-label="Current operational status">
+            <article><span>Operational health</span><strong><i class="monitor-health-dot" aria-hidden="true"></i>@(Model.SeneschalHealthy ? "Healthy" : "Needs attention")</strong></article>
+            <article><span>Runtime mode</span><strong>@Model.CanonicalRuntimeMode</strong><small>@(Model.CanonicalRuntimeMode == "Enforce" ? "Enforcement active" : "Monitoring active")</small></article>
+            <article><span>Polling state</span><strong id="monitor-polling-status"><i class="live-indicator" aria-hidden="true"></i> Current · 3s</strong></article>
+            <article><span>Last successful evaluation</span><strong>@if (Model.LastEvaluationUtc is null) { <span>No evaluations observed</span> } else { <time data-relative-time datetime="@Model.LastEvaluationUtc.Value.ToString("O")">@Model.LastEvaluationUtc.Value.ToString("u")</time> }</strong></article>
+            <article><span>Governance window</span><strong>@(Model.GovernanceWindow.Enabled ? Model.GovernanceWindow.Name : "None active")</strong><small>@(Model.GovernanceWindow.Enabled ? Model.GovernanceWindow.Mode : "No active window")</small></article>
         </section>
 
         <section class="monitor-metrics" aria-label="Live runtime metrics">
@@ -46,9 +39,9 @@
             <article><span>Active capabilities</span><strong>@Model.ActiveCapabilityCount</strong></article>
         </section>
 
-        <div class="monitor-workspace">
-            <section class="panel monitor-stream" aria-labelledby="decision-stream-title">
+        <section class="panel monitor-stream monitor-stream-hero" aria-labelledby="decision-stream-title">
                 <header class="monitor-section-header"><div><h2 id="decision-stream-title">Live decision stream</h2><p>Most recent runtime evaluations, newest first.</p></div><a href="/audit">Open Audit Trail</a></header>
+                <div class="monitor-stream-columns" aria-hidden="true"><span>Time</span><span>Identity / application</span><span>Capability</span><span>Decision</span><span>Effective action</span><span>Correlation</span><span>Investigation</span></div>
                 @if (Model.RecentEvaluations.Count == 0)
                 {
                     <div class="empty-state"><strong>No runtime evaluations observed</strong><p>Decision activity appears here when an integrated application calls Seneschal.</p></div>
@@ -62,37 +55,21 @@
                         var effective = EffectiveResult(item.Decision, item.EnforcementMode);
                         <li class="monitor-event-row">
                             <time data-relative-time datetime="@item.TimestampUtc.ToString("O")">@item.TimestampUtc.ToString("u")</time>
-                            <div class="monitor-event-subject"><a href="/identity-activity?identityId=@Uri.EscapeDataString(item.IdentityId)">@item.IdentityId</a><a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(item.CapabilityId)" aria-label="View capability profile for @item.CapabilityId">@item.CapabilityId</a></div>
-                            <div class="monitor-event-outcome"><span class="decision-badge decision-@DecisionClass(item.Decision)">@decision</span><span class="effective-result effective-@EffectiveClass(effective)">→ @effective</span></div>
+                            <div class="monitor-event-identity"><a href="/identity-activity?identityId=@Uri.EscapeDataString(item.IdentityId)">@item.IdentityId</a></div>
+                            <div class="monitor-event-capability"><a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(item.CapabilityId)" aria-label="View capability profile for @item.CapabilityId">@item.CapabilityId</a></div>
+                            <span class="decision-badge decision-@DecisionClass(item.Decision)">@decision</span>
+                            <span class="effective-result effective-@EffectiveClass(effective)">@effective</span>
                             <div class="monitor-event-context">
                                 @if (!string.IsNullOrWhiteSpace(item.GovernanceWindowName)) { <span class="window-participation">Window: @item.GovernanceWindowName (@item.GovernanceWindowMode)</span> }
                                 @if (!string.IsNullOrWhiteSpace(item.ApprovalOperationId)) { <code title="Application operation ID">@item.ApprovalOperationId</code> }
+                                @if (string.IsNullOrWhiteSpace(item.GovernanceWindowName) && string.IsNullOrWhiteSpace(item.ApprovalOperationId)) { <span>—</span> }
                             </div>
                             <a class="monitor-trace-link" href="/capability-activity?capabilityId=@Uri.EscapeDataString(item.CapabilityId)&amp;identity=@Uri.EscapeDataString(item.IdentityId)&amp;environment=@Uri.EscapeDataString(item.Environment)&amp;runtimeMode=@Uri.EscapeDataString(item.EnforcementMode.ToString())">Investigate Capability Activity</a>
                         </li>
                     }
                     </ol>
                 }
-            </section>
-
-            <aside class="monitor-side-column">
-                <section class="panel monitor-attention" aria-labelledby="attention-title">
-                    <header class="monitor-section-header"><div><h2 id="attention-title">Attention</h2><p>Current signals worth reviewing.</p></div></header>
-                    <a class="monitor-attention-item @(Model.CurrentPendingApprovalCount > 0 ? "has-attention" : "")" href="/approvals"><span>Pending approvals</span><strong>@Model.CurrentPendingApprovalCount</strong><small>@(Model.CurrentPendingApprovalCount > 0 ? "Awaiting human resolution" : "No requests waiting")</small></a>
-                    <a class="monitor-attention-item @(Model.MostDeniedCapability is not null ? "has-critical" : "")" href="@(Model.MostDeniedCapability is null ? "/capability-activity" : $"/capability-activity?capabilityId={Uri.EscapeDataString(Model.MostDeniedCapability.CapabilityId)}")"><span>Most denied capability</span><strong>@(Model.MostDeniedCapability?.DeniedCount ?? 0)</strong><small>@(Model.MostDeniedCapability?.CapabilityId ?? "No denied capability observed")</small></a>
-                    <a class="monitor-attention-item" href="@(Model.MostActiveIdentity is null ? "/identity-activity" : $"/identity-activity?identityId={Uri.EscapeDataString(Model.MostActiveIdentity.IdentityId)}")"><span>Most active identity</span><strong>@(Model.MostActiveIdentity?.TotalRequests ?? 0)</strong><small>@(Model.MostActiveIdentity?.IdentityId ?? "No identity activity observed")</small></a>
-                    <a class="monitor-attention-item @(Model.GovernanceWindow.Enabled ? "has-attention" : "")" href="/governance-windows"><span>Active governance windows</span><strong>@(Model.GovernanceWindow.Enabled ? 1 : 0)</strong><small>@(Model.GovernanceWindow.Enabled ? $"{Model.GovernanceWindow.Name} · {Model.GovernanceWindow.Mode}" : "None active")</small></a>
-                    <div class="monitor-incidents"><div><span>Recent incidents</span><a href="/incidents">View all</a></div>@if (Model.RecentIncidents.Count == 0) { <p>No incidents recorded.</p> } else { <ul>@foreach (var incident in Model.RecentIncidents) { <li><a href="/incidents/@Uri.EscapeDataString(incident.Id)">@incident.Title</a><small>@incident.LastSeenUtc.ToString("u")</small></li> }</ul> }</div>
-                </section>
-
-                <section class="panel monitor-runtime-health" aria-labelledby="runtime-health-title">
-                    <header class="monitor-section-header"><div><h2 id="runtime-health-title">Runtime health</h2><p>Observed runtime responsiveness.</p></div></header>
-                    <div class="runtime-health-state"><span class="monitor-health-dot" aria-hidden="true"></span><div><strong>@(Model.SeneschalHealthy ? "Seneschal is responding" : "Configuration requires attention")</strong><small>@(Model.EvaluationsFlowing ? "Evaluations are flowing" : Model.LastEvaluationUtc is null ? "Waiting for evaluation traffic" : "No evaluation in the last 20 seconds")</small></div></div>
-                    <dl><div><dt>Observed latency</dt><dd>@Model.RecentAverageLatencyMs.ToString("0.##") ms average</dd></div><div><dt>Current range</dt><dd>@Model.RecentMinimumLatencyMs–@Model.RecentMaximumLatencyMs ms</dd></div><div><dt>Polling evidence</dt><dd id="monitor-health-polling">Current</dd></div></dl>
-                    <a href="/diagnostics">Open Diagnostics</a>
-                </section>
-            </aside>
-        </div>
+        </section>
         <noscript><p class="warning-panel">Live refresh requires JavaScript. Reload this page to update operational state.</p></noscript>
         <footer class="app-footer">Seneschal v0.2.1-alpha</footer>
     </main>

@@ -1,26 +1,12 @@
 @page "/dashboard"
 @model Seneschal.Api.Pages.DashboardModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @{
     Layout = null;
     var total = Math.Max(1, Model.TotalRuntimeDecisions);
     var allowPercent = Model.AllowedRuntimeDecisions * 100d / total;
     var denyPercent = Model.DeniedRuntimeDecisions * 100d / total;
     var pendingPercent = Model.PendingApprovalRuntimeDecisions * 100d / total;
-    var queueDecisions = Model.Live.Decisions
-        .Where(item => item.Decision is "Deny" or "PendingApproval")
-        .Take(5)
-        .ToList();
-
-    string DecisionLabel(string decision) =>
-        decision == "PendingApproval" ? "Pending Approval" : decision;
-
-    string DecisionClass(string decision) =>
-        decision.ToLowerInvariant() switch
-        {
-            "pendingapproval" => "pending",
-            "deny" => "deny",
-            _ => "allow"
-        };
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -28,7 +14,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Seneschal Dashboard</title>
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles.css" asp-append-version="true" />
 </head>
 <body>
 <div class="app-shell">
@@ -36,10 +22,10 @@
     <main class="container demo-dashboard">
         <header class="demo-dashboard-header">
             <div>
-                <div class="breadcrumb">Overview</div>
+                <nav class="breadcrumb" aria-label="Breadcrumb">Overview</nav>
                 <h1>Dashboard</h1>
             </div>
-            <div class="demo-dashboard-live" aria-label="Dashboard live status">
+            <div class="dashboard-status-group" aria-label="Dashboard live status">
                 <span class="live-indicator" id="dashboard-live-state"><span aria-hidden="true"></span><strong id="dashboard-live-status-label">Connecting</strong></span>
                 <span class="demo-runtime-mode" id="governance-posture-mode">@Model.Live.CurrentMode</span>
                 <span id="dashboard-refresh-status" class="visually-hidden">Polling active</span>
@@ -48,6 +34,50 @@
             </div>
         </header>
 
+        <section class="dashboard-technology-posture" aria-labelledby="technology-posture-title">
+            <header class="dashboard-section-header">
+                <div>
+                    <span>Investigation starting points</span>
+                    <h2 id="technology-posture-title">Technology Posture</h2>
+                </div>
+                <a href="/technologies">Explore all technologies</a>
+            </header>
+            <div class="dashboard-technology-grid">
+                @foreach (var technology in Model.Technologies)
+                {
+                    var requiresAttention = technology.DenyCount + technology.PendingApprovalCount > 0;
+                    var state = technology.EvaluationCount == 0
+                        ? "Configured · not observed"
+                        : requiresAttention
+                            ? "Attention required"
+                            : "Healthy";
+                    var stateClass = requiresAttention
+                        ? "dashboard-technology-card--attention"
+                        : technology.EvaluationCount > 0
+                            ? "dashboard-technology-card--healthy"
+                            : "dashboard-technology-card--unobserved";
+                    <a class="dashboard-technology-card @stateClass"
+                       href="/technologies/@Uri.EscapeDataString(technology.Key)"
+                       aria-label="Investigate @technology.DisplayName technology">
+                        <div class="dashboard-technology-card__header">
+                            <span class="dashboard-technology-card__icon">
+                                <img src="@technology.IconPath" alt="" width="32" height="32" />
+                            </span>
+                            <span class="dashboard-technology-card__identity">
+                                <strong>@technology.DisplayName</strong>
+                                <span>@state</span>
+                            </span>
+                        </div>
+                        <dl class="dashboard-technology-card__metrics">
+                            <div><dt>Denied</dt><dd class="metric-deny">@technology.DenyCount</dd></div>
+                            <div><dt>Pending</dt><dd class="metric-pending">@technology.PendingApprovalCount</dd></div>
+                            <div><dt>Evaluations</dt><dd>@technology.EvaluationCount</dd></div>
+                        </dl>
+                    </a>
+                }
+            </div>
+        </section>
+
         <section class="demo-metric-strip" aria-label="Current runtime metrics">
             <article><span>Active capabilities</span><strong id="live-capability-count">@Model.Live.ActiveCapabilityCount</strong></article>
             <article><span>Denied decisions</span><strong class="metric-deny" id="attention-deny-count">@Model.DeniedRuntimeDecisions</strong></article>
@@ -55,86 +85,6 @@
             <article><span>Active windows</span><strong>@(Model.GovernanceWindow.Enabled ? 1 : 0)</strong></article>
             <article><span>Recent evaluations</span><strong id="live-total-decisions">@Model.Live.TotalDecisions</strong></article>
         </section>
-
-        <div class="demo-dashboard-workspace">
-            <section class="demo-console-panel demo-feed-panel" aria-labelledby="operational-feed-title">
-                <header class="demo-panel-header">
-                    <h2 id="operational-feed-title">Operational Feed</h2>
-                    <a href="/monitor">Open Live Monitor</a>
-                </header>
-                <div class="demo-feed-columns" aria-hidden="true">
-                    <span>Time</span><span>Identity</span><span>Capability</span><span>Decision</span><span>Effective action</span><span></span>
-                </div>
-                <div class="demo-dashboard-empty @(Model.Live.Decisions.Count == 0 ? "" : "is-hidden")" id="live-decision-empty">
-                        <strong>No evaluations recorded</strong>
-                        <span>Waiting for runtime activity.</span>
-                </div>
-                <ol class="demo-feed" id="live-decision-feed">
-                    @foreach (var decision in Model.Live.Decisions.Take(7))
-                    {
-                        <li data-event-id="@decision.Id">
-                            <details class="demo-feed-event">
-                                <summary>
-                                    <time datetime="@decision.TimestampUtc.ToString("O")" data-relative-time="@decision.TimestampUtc.ToString("O")">@decision.TimestampUtc.ToString("u")</time>
-                                    <a href="/identity-activity?identityId=@Uri.EscapeDataString(decision.Identity)">@decision.Identity</a>
-                                    <a href="/capability-activity?capabilityId=@Uri.EscapeDataString(decision.Capability)">@decision.Capability</a>
-                                    <span class="decision-badge decision-@DecisionClass(decision.Decision)">@DecisionLabel(decision.Decision)</span>
-                                    <strong>@Seneschal.Api.Pages.DashboardModel.DisplayEffectiveAction(decision.Decision, decision.Mode)</strong>
-                                    <span class="demo-feed-chevron" aria-hidden="true"></span>
-                                </summary>
-                                <dl>
-                                    <div><dt>Reason</dt><dd>@decision.Reason</dd></div>
-                                    <div><dt>Effective action</dt><dd>@decision.EffectiveAction</dd></div>
-                                    <div><dt>Runtime mode</dt><dd>@decision.Mode</dd></div>
-                                    <div><dt>Environment</dt><dd>@decision.Environment</dd></div>
-                                    <div><dt>Matched policy</dt><dd>@(decision.MatchedPolicy ?? "No matched policy recorded")</dd></div>
-                                </dl>
-                            </details>
-                        </li>
-                    }
-                </ol>
-            </section>
-
-            <aside class="demo-console-panel demo-queue-panel" aria-labelledby="investigation-queue-title">
-                <header class="demo-panel-header">
-                    <h2 id="investigation-queue-title">Investigation Queue</h2>
-                    <span><strong id="investigation-queue-count">@(queueDecisions.Count + (Model.GovernanceWindow.Enabled ? 1 : 0))</strong> items</span>
-                </header>
-                <ol class="demo-investigation-queue" id="dashboard-investigation-queue">
-                    @foreach (var item in queueDecisions)
-                    {
-                        var pending = item.Decision == "PendingApproval";
-                        var href = pending
-                            ? "/approvals"
-                            : $"/capability-activity?capabilityId={Uri.EscapeDataString(item.Capability)}&decision=Deny&identity={Uri.EscapeDataString(item.Identity)}";
-                        <li>
-                            <a href="@href">
-                                <span class="decision-badge decision-@DecisionClass(item.Decision)">@DecisionLabel(item.Decision)</span>
-                                <strong>@item.Capability</strong>
-                                <small>@item.Identity · @Seneschal.Api.Pages.DashboardModel.DisplayEffectiveAction(item.Decision, item.Mode)</small>
-                                <time datetime="@item.TimestampUtc.ToString("O")" data-relative-time="@item.TimestampUtc.ToString("O")">@item.TimestampUtc.ToString("u")</time>
-                            </a>
-                        </li>
-                    }
-                    @if (Model.GovernanceWindow.Enabled)
-                    {
-                        <li data-window-item>
-                            <a href="/governance-windows">
-                                <span class="status-badge">@Model.GovernanceWindow.Mode</span>
-                                <strong>@Model.GovernanceWindow.Name</strong>
-                                <small>Active Governance Window</small>
-                                <span>Review</span>
-                            </a>
-                        </li>
-                    }
-                </ol>
-                <div class="demo-dashboard-empty @(queueDecisions.Count == 0 && !Model.GovernanceWindow.Enabled ? "" : "is-hidden")" id="investigation-queue-empty">
-                        <strong>Queue clear</strong>
-                        <span>No recent denied or pending decisions.</span>
-                </div>
-                <footer><a href="/incidents">View incidents</a><a href="/approvals">View approvals</a></footer>
-            </aside>
-        </div>
 
         <section class="demo-supporting-grid" aria-label="Supporting runtime information">
             <article class="demo-console-panel demo-runtime-summary">

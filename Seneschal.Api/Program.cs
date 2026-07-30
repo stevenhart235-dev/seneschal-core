@@ -57,12 +57,24 @@ builder.Services.AddSingleton<ICapabilityExplorer, CapabilityExplorer>();
 builder.Services.AddSingleton<GraphBuilder>();
 builder.Services.AddSingleton<TechnologyClassifier>();
 builder.Services.AddSingleton<TechnologyActivityService>();
+builder.Services.AddSingleton(new NorthwindHistorySeedOptions
+{
+    Enabled = builder.Configuration.GetValue<bool>(
+        "Seneschal:Demo:NorthwindHistory:Enabled"),
+    SeedVersion = builder.Configuration[
+        "Seneschal:Demo:NorthwindHistory:SeedVersion"] ?? "s14-c6-v1"
+});
+builder.Services.AddSingleton<INorthwindHistoryClock, SystemNorthwindHistoryClock>();
+builder.Services.AddSingleton<NorthwindHistorySeeder>();
 
 var app = builder.Build();
 
 app.UseStaticFiles();
 
 app.Services.GetRequiredService<PolicyValidator>();
+await app.Services
+    .GetRequiredService<NorthwindHistorySeeder>()
+    .SeedAsync();
 
 app.MapGet("/", () => Results.Redirect("/dashboard"));
 

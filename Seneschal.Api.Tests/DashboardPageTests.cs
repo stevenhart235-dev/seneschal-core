@@ -35,6 +35,9 @@ public sealed class DashboardPageTests :
         var html = await response.Content.ReadAsStringAsync();
 
         Assert.Contains("<h1>Dashboard</h1>", html);
+        Assert.Matches(
+            "href=\"/styles\\.css\\?v=[^\"]+\"",
+            html);
         Assert.Equal(1, html.Split("aria-label=\"Dashboard live status\"").Length - 1);
         Assert.Contains("id=\"dashboard-live-status-label\">Connecting</strong>", html);
         Assert.DoesNotContain(">Unavailable</strong>", html);
@@ -57,13 +60,39 @@ public sealed class DashboardPageTests :
         Assert.Contains("Pending approvals", html);
         Assert.Contains("Active windows", html);
         Assert.Contains("Recent evaluations", html);
-        Assert.Contains("demo-dashboard-workspace", html);
-        Assert.Contains("Operational Feed", html);
-        Assert.Contains("Investigation Queue", html);
+        Assert.Contains("Technology Posture", html);
+        Assert.Contains("dashboard-technology-grid", html);
+        Assert.Contains("dashboard-technology-card", html);
+        Assert.Contains("dashboard-technology-card__icon", html);
+        Assert.Contains("dashboard-technology-card__header", html);
+        Assert.Contains("dashboard-technology-card__identity", html);
+        Assert.Contains("dashboard-technology-card__metrics", html);
+        var technologyCardCount = html.Split(
+            "class=\"dashboard-technology-card ",
+            StringSplitOptions.None).Length - 1;
+        Assert.InRange(technologyCardCount, 1, 5);
+        Assert.Equal(
+            technologyCardCount,
+            html.Split(
+                "class=\"dashboard-technology-card__metrics\"",
+                StringSplitOptions.None).Length - 1);
+        Assert.DoesNotContain("class=\"technology-card", html);
+        Assert.DoesNotContain("class=\"technology-grid", html);
+        Assert.Contains("href=\"/technologies/azure\"", html);
+        Assert.Contains("src=\"/technology-icons/azure.svg\"", html);
+        Assert.Contains("width=\"32\" height=\"32\"", html);
+        Assert.Contains("<dt>Denied</dt>", html);
+        Assert.Contains("<dt>Pending</dt>", html);
+        Assert.Contains("<dt>Evaluations</dt>", html);
+        Assert.Contains("Explore all technologies", html);
+        Assert.DoesNotContain(
+            "Azure capabilities and their runtime governance evidence.",
+            html);
+        Assert.DoesNotContain("Operational Feed", html);
+        Assert.DoesNotContain("Investigation Queue", html);
         Assert.Contains("Top Capabilities", html);
-        Assert.Equal(1, html.Split("id=\"live-decision-feed\"").Length - 1);
-        Assert.Equal(1, html.Split("id=\"live-decision-empty\"").Length - 1);
-        Assert.Equal(1, html.Split("id=\"dashboard-investigation-queue\"").Length - 1);
+        Assert.DoesNotContain("id=\"live-decision-feed\"", html);
+        Assert.DoesNotContain("id=\"dashboard-investigation-queue\"", html);
         Assert.Contains("Runtime Summary", html);
         Assert.DoesNotContain("Operational posture", html);
         Assert.DoesNotContain("dashboard-posture-panel", html);
@@ -116,10 +145,11 @@ public sealed class DashboardPageTests :
 
         var html = await response.Content.ReadAsStringAsync();
 
-        Assert.Contains("No evaluations recorded", html);
-        Assert.Contains("Waiting for runtime activity", html);
-        Assert.Contains("Open Live Monitor", html);
-        Assert.Contains("Queue clear", html);
+        Assert.Contains("Technology Posture", html);
+        Assert.Contains("not observed", html);
+        Assert.Contains("Explore all technologies", html);
+        Assert.DoesNotContain("Operational Feed", html);
+        Assert.DoesNotContain("Investigation Queue", html);
         Assert.DoesNotContain("Operational posture", html);
         Assert.DoesNotContain("Governance coverage", html);
         Assert.DoesNotContain("First-Run Guide", html);
@@ -155,10 +185,10 @@ public sealed class DashboardPageTests :
 
         Assert.Contains("Recent evaluations", html);
         Assert.Contains("Decision Distribution", html);
-        Assert.Contains("Operational Feed", html);
+        Assert.Contains("Technology Posture", html);
         Assert.Contains("Top Capabilities", html);
         Assert.Contains(capability, html);
-        Assert.Contains(identity, html);
+        Assert.DoesNotContain("Operational Feed", html);
     }
 
     [Fact]
@@ -191,8 +221,9 @@ public sealed class DashboardPageTests :
         var html = await response.Content.ReadAsStringAsync();
 
         Assert.DoesNotContain("First-Run Guide", html);
-        Assert.Contains("Operational Feed", html);
-        Assert.Contains("Investigation Queue", html);
+        Assert.Contains("Technology Posture", html);
+        Assert.DoesNotContain("Operational Feed", html);
+        Assert.DoesNotContain("Investigation Queue", html);
         Assert.Contains("Top Capabilities", html);
     }
 
@@ -226,11 +257,9 @@ public sealed class DashboardPageTests :
 
         Assert.Contains("Runtime Governance", html);
         Assert.Contains("LogOnly", html);
-        Assert.Contains("Operational Feed", html);
-        Assert.Contains(identity, html);
-        Assert.Contains(">Continue (recorded)</strong>", html);
-        Assert.Contains("Recorded; caller may continue", html);
-        Assert.DoesNotContain("Executed", html);
+        Assert.Contains("Technology Posture", html);
+        Assert.DoesNotContain("Operational Feed", html);
+        Assert.DoesNotContain(identity, html);
     }
 
     [Fact]
@@ -308,8 +337,8 @@ public sealed class DashboardPageTests :
         var script = File.ReadAllText(Path.Combine(
             apiDirectory, "wwwroot", "dashboard-live.js"));
 
-        Assert.Contains("requiredElement(\"#live-decision-feed\")", script);
-        Assert.Contains("requiredElement(\"#dashboard-investigation-queue\")", script);
+        Assert.DoesNotContain("#live-decision-feed", script);
+        Assert.DoesNotContain("#dashboard-investigation-queue", script);
         Assert.Contains("requiredElement(\"#top-capability-list\")", script);
         Assert.Contains("let requestInFlight = false", script);
         Assert.Contains("if (document.hidden || requestInFlight) return", script);
@@ -321,7 +350,34 @@ public sealed class DashboardPageTests :
         Assert.Contains("refresh();", script);
         Assert.Contains("#dashboard-live-status-label\").textContent = \"Live\"", script);
         Assert.Contains("#dashboard-live-status-label\").textContent = \"Unavailable\"", script);
-        Assert.Contains("element(\"details\", \"demo-feed-event\")", script);
+        Assert.DoesNotContain("demo-feed-event", script);
+    }
+
+    [Fact]
+    public void DashboardTechnologyCards_UseBoundedDashboardOnlyIconSizing()
+    {
+        var apiDirectory = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "..", "Seneschal.Api"));
+        var styles = File.ReadAllText(Path.Combine(
+            apiDirectory, "wwwroot", "styles.css"));
+
+        Assert.Contains(".dashboard-technology-grid", styles);
+        Assert.Contains("grid-template-columns: repeat(5, minmax(0, 1fr))", styles);
+        Assert.Contains(".dashboard-technology-card__icon", styles);
+        Assert.Contains("height: 40px", styles);
+        Assert.Contains("width: 40px", styles);
+        Assert.Contains(".dashboard-technology-card__icon img", styles);
+        Assert.Contains("max-height: 30px", styles);
+        Assert.Contains("max-width: 30px", styles);
+        Assert.Contains("min-height: 118px", styles);
+        Assert.Contains(".dashboard-technology-card:link", styles);
+        Assert.Contains("text-decoration: none", styles);
+        Assert.Contains(".dashboard-status-group", styles);
+        Assert.Contains("display: flex", styles);
+        Assert.Contains("flex-wrap: wrap", styles);
+        Assert.Contains("@media (max-width: 1150px)", styles);
+        Assert.Contains("@media (max-width: 900px)", styles);
+        Assert.Contains("@media (max-width: 680px)", styles);
     }
 
     [Fact]
@@ -339,12 +395,10 @@ public sealed class DashboardPageTests :
         Assert.Equal("requires_approval", result.Decision);
 
         var html = await _client.GetStringAsync("/dashboard");
-        Assert.Contains("release-approval-worker", html);
         Assert.Contains("Pending Approval", html);
-        Assert.Contains(">Continue (recorded)</strong>", html);
-        Assert.Contains("Recorded; caller may continue", html);
         Assert.Contains("href=\"/approvals\"", html);
-        Assert.Contains("demo-investigation-queue", html);
+        Assert.DoesNotContain("demo-investigation-queue", html);
+        Assert.Contains("Technology Posture", html);
         Assert.Contains("Decision Distribution", html);
         Assert.Contains("distribution-pending", html);
 

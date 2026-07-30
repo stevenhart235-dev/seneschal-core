@@ -42,8 +42,9 @@ public sealed class DashboardDesignLabTests : IClassFixture<ApiApplicationFactor
         using var client = _factory.CreateClient();
         var html = await client.GetStringAsync("/dashboard");
 
-        Assert.Contains("Operational Feed", html);
-        Assert.Contains("Investigation Queue", html);
+        Assert.Contains("Technology Posture", html);
+        Assert.DoesNotContain("Operational Feed", html);
+        Assert.DoesNotContain("Investigation Queue", html);
         Assert.DoesNotContain("href=\"/dashboard1\"", html);
         Assert.DoesNotContain("href=\"/dashboard2\"", html);
         Assert.DoesNotContain("href=\"/dashboard3\"", html);

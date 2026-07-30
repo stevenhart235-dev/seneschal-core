@@ -16,7 +16,7 @@ public sealed class TechnologyPageTests : IClassFixture<ApiApplicationFactory>
     public TechnologyPageTests(ApiApplicationFactory factory) => _factory = factory;
 
     [Fact]
-    public async Task ExplorerAndKnownDetailRoutesRenderWithoutPrimaryNavigationEntry()
+    public async Task ExplorerAndKnownDetailRoutesRenderWithPrimaryNavigationEntry()
     {
         using var client = _factory.CreateClient();
         var index = await client.GetStringAsync("/technologies");
@@ -26,11 +26,13 @@ public sealed class TechnologyPageTests : IClassFixture<ApiApplicationFactory>
         Assert.Contains("Technology Explorer", index);
         Assert.Contains("href=\"/technologies/azure\"", index);
         Assert.Contains("Azure", detail);
-        Assert.Contains("Applications", detail);
+        Assert.Contains("Technology runtime summary", detail);
         Assert.Contains("Capabilities", detail);
         Assert.Contains("Recent decisions", detail);
-        Assert.DoesNotContain("href=\"/technologies\"", dashboard);
-        Assert.DoesNotContain("href=\"/technologies\"", await client.GetStringAsync("/dashboard1"));
+        Assert.Contains("href=\"/technologies\"", dashboard);
+        Assert.Contains("<span>Technologies</span>", dashboard);
+        Assert.Contains("class=\"active\" href=\"/technologies\"", index);
+        Assert.Contains("class=\"active\" href=\"/technologies\"", detail);
     }
 
     [Fact]

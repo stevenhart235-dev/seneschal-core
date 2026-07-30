@@ -26,14 +26,16 @@ public sealed class MonitorPageTests : IClassFixture<ApiApplicationFactory>
         Assert.Contains("<title>Live Monitor</title>", html);
         Assert.Contains("<h1>Live Monitor</h1>", html);
         Assert.Contains("Watch current evaluations, runtime health, and events requiring attention.", html);
-        Assert.Contains("Operational status", html);
+        Assert.Contains("Current operational status", html);
         Assert.Contains("Healthy", html);
-        Assert.Contains("Canonical mode: <b>LogOnly</b>", html);
+        Assert.Contains("Runtime mode", html);
+        Assert.Contains(">LogOnly</strong>", html);
+        Assert.Contains("Polling state", html);
         Assert.Contains("None active", html);
         Assert.Contains("No evaluations observed", html);
         Assert.Contains("No runtime evaluations observed", html);
-        Assert.Contains("No requests waiting", html);
-        Assert.Contains("No incidents recorded", html);
+        Assert.DoesNotContain("<h2 id=\"attention-title\">Attention</h2>", html);
+        Assert.DoesNotContain("Runtime health", html);
         Assert.Contains("Live refresh requires JavaScript", html);
     }
 
@@ -47,10 +49,8 @@ public sealed class MonitorPageTests : IClassFixture<ApiApplicationFactory>
         var html = await GetMonitor(client);
 
         Assert.Contains(posture, html);
-        Assert.Contains($"Canonical mode: <b>{mode}</b>", html);
-        Assert.Contains(mode == EnforcementMode.Enforce
-            ? "denied and pending decisions may block callers"
-            : "recorded without blocking", html);
+        Assert.Contains($">{mode}</strong>", html);
+        Assert.Contains(posture, html);
     }
 
     [Fact]
@@ -63,8 +63,8 @@ public sealed class MonitorPageTests : IClassFixture<ApiApplicationFactory>
 
         Assert.Contains("Production Freeze", html);
         Assert.Contains("Enforce", html);
-        Assert.Contains("Active governance windows", html);
-        Assert.Contains("href=\"/governance-windows\"", html);
+        Assert.Contains("Governance window", html);
+        Assert.DoesNotContain("Active governance windows", html);
     }
 
     [Fact]
@@ -85,6 +85,17 @@ public sealed class MonitorPageTests : IClassFixture<ApiApplicationFactory>
         var html = await GetMonitor(client);
 
         Assert.Contains("Live decision stream", html);
+        Assert.Contains("monitor-stream-hero", html);
+        Assert.Contains("monitor-stream-columns", html);
+        Assert.Contains("Identity / application", html);
+        Assert.Contains("Effective action", html);
+        Assert.Contains("Correlation", html);
+        Assert.True(
+            html.IndexOf("monitor-status-strip", StringComparison.Ordinal) <
+            html.IndexOf("monitor-metrics", StringComparison.Ordinal));
+        Assert.True(
+            html.IndexOf("monitor-metrics", StringComparison.Ordinal) <
+            html.IndexOf("monitor-stream-hero", StringComparison.Ordinal));
         Assert.Contains("Pending Approval", html);
         Assert.Contains("Caller should pause and retry", html);
         Assert.Contains("Window: Freeze &lt;window&gt; (Enforce)", html);
@@ -99,7 +110,7 @@ public sealed class MonitorPageTests : IClassFixture<ApiApplicationFactory>
     }
 
     [Fact]
-    public async Task AttentionLinksToPendingApprovalsAndRuntimeDrilldowns()
+    public async Task MonitorOmitsDashboardOwnedAttentionSummaries()
     {
         var approvals = new InMemoryApprovalStore();
         approvals.GetOrCreate("worker", "capability", "production", "resource",
@@ -109,12 +120,12 @@ public sealed class MonitorPageTests : IClassFixture<ApiApplicationFactory>
         using var client = CreateClient(events: [denied], approvals: approvals);
         var html = await GetMonitor(client);
 
-        Assert.Contains("Pending approvals", html);
-        Assert.Contains("Awaiting human resolution", html);
-        Assert.Contains("href=\"/approvals\"", html);
-        Assert.Contains("Most denied capability", html);
+        Assert.DoesNotContain("<h2 id=\"attention-title\">Attention</h2>", html);
+        Assert.DoesNotContain("Awaiting human resolution", html);
+        Assert.DoesNotContain("Most denied capability", html);
+        Assert.DoesNotContain("Most active identity", html);
+        Assert.DoesNotContain("Recent incidents", html);
         Assert.Contains("dangerous.capability", html);
-        Assert.Contains("Most active identity", html);
         Assert.Contains("denied-worker", html);
     }
 
@@ -126,7 +137,7 @@ public sealed class MonitorPageTests : IClassFixture<ApiApplicationFactory>
 
         Assert.Contains("id=\"monitor-console\"", html);
         Assert.Contains("id=\"monitor-polling-status\"", html);
-        Assert.Contains("id=\"monitor-health-polling\"", html);
+        Assert.DoesNotContain("id=\"monitor-health-polling\"", html);
         Assert.Contains("src=\"/monitor-live.js\"", html);
         var script = await client.GetStringAsync("/monitor-live.js");
         Assert.Contains("const intervalMs = 3000", script);

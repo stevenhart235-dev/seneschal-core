@@ -53,6 +53,8 @@ particular:
 | `Logging__LogLevel__Default` | Overrides the default application log level. |
 | `Seneschal__Demo__NorthwindHistory__Enabled` | Enables the optional process-local Northwind history seed. |
 | `Seneschal__Demo__NorthwindHistory__SeedVersion` | Overrides the deterministic seed identifier. |
+| `Seneschal__Persistence__Provider` | Selects `InMemory` (default) or opt-in `PostgreSql` persistence. |
+| `ConnectionStrings__SeneschalPostgreSql` | Supplies the connection string when PostgreSQL is selected. |
 | `Seneschal__Configuration__CapabilitiesPath` | Selects an alternate capabilities YAML file. |
 | `Seneschal__Configuration__IdentitiesPath` | Selects an alternate identities YAML file. |
 | `Seneschal__Configuration__PoliciesPath` | Selects an alternate policies YAML file. |
@@ -131,23 +133,25 @@ docker rm seneschal-core
 
 ## Persistence and runtime writes
 
-The application does not currently write product data to the filesystem.
-Audit events, activity projections, metrics, approvals, incidents, governance
-mode, and governance windows are process-local in-memory state. They reset
-whenever the process or container restarts. With the Northwind seed enabled,
-the deterministic baseline is regenerated relative to the new startup time.
+The default profile does not write product data to the filesystem. Audit
+events, activity projections, metrics, approvals, incidents, governance mode,
+and governance windows are process-local and reset when the process restarts.
+The opt-in PostgreSQL provider durably stores evaluation evidence and the
+minimal approval state required for the evaluation transaction; see the
+[PostgreSQL setup guide](postgresql-persistence.md). With the Northwind seed
+enabled, its deterministic baseline is regenerated relative to startup time.
 
-There is no application data directory to mount. The non-root process can write
-ASP.NET Core Data Protection keys under
+The application has no product-data directory to mount. The non-root process
+can write ASP.NET Core Data Protection keys under
 `/home/app/.aspnet/DataProtection-Keys` and can use the container's standard
 writable temporary directory (`/tmp`) for framework or operating-system needs.
 Neither path contains Seneschal audit or governance state. Mounting YAML
 configuration preserves only configuration, not runtime state.
 
-The current stores and mutable governance controls assume one process. Multiple
-replicas would have independent decisions, audit histories, approvals,
-incidents, and governance state. Durable shared storage, multi-instance
-coordination, secret distribution, TLS/ingress, deployment manifests, demo
-workloads, and lifecycle orchestration remain responsibilities outside this
-image and, where appropriate for the demonstration environment, belong in
-`seneschal-demo-lab`.
+The default in-memory stores and remaining mutable governance controls assume
+one process. PostgreSQL can share evaluation evidence and approval state, but
+multiple replicas would still have independent incidents, projections, runtime
+mode, and governance-window state. Multi-instance coordination for that state,
+secret distribution, TLS/ingress, deployment manifests, demo workloads, and
+lifecycle orchestration remain outside this image and, where appropriate for
+the demonstration environment, belong in `seneschal-demo-lab`.

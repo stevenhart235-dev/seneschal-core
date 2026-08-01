@@ -5,6 +5,7 @@ using Seneschal.Core.Exceptions;
 using Seneschal.Core.Interfaces;
 using Seneschal.Core.Repositories;
 using Seneschal.Core.Services;
+using Seneschal.Persistence.PostgreSql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,11 +16,7 @@ builder.Services.AddSingleton<
     Seneschal.Core.Services.PolicyEvaluator>();
 builder.Services.AddSingleton<CoreDecisionService>();
 builder.Services.AddSingleton<PolicyValidator>();
-builder.Services.AddSingleton<InMemoryAuditEventStore>();
-builder.Services.AddSingleton<IAuditEventStore>(
-    services => services.GetRequiredService<InMemoryAuditEventStore>());
-builder.Services.AddSingleton<IAuditSink>(
-    services => services.GetRequiredService<IAuditEventStore>());
+builder.Services.AddSeneschalPersistence(builder.Configuration);
 builder.Services.AddSingleton<IActivityStore, InMemoryActivityStore>();
 builder.Services.AddSingleton<IDecisionExporter, NullDecisionExporter>();
 builder.Services.AddSingleton<IDecisionMetrics, InMemoryDecisionMetrics>();
@@ -29,22 +26,6 @@ builder.Services.AddSingleton(new RuntimeSettings
 });
 builder.Services.AddSingleton<IGovernanceModeStore, InMemoryGovernanceModeStore>();
 builder.Services.AddSingleton<IGovernanceWindowStore, InMemoryGovernanceWindowStore>();
-builder.Services.AddSingleton<InMemoryApprovalStore>();
-builder.Services.AddSingleton<IApprovalStore>(
-    services => services.GetRequiredService<InMemoryApprovalStore>());
-builder.Services.AddSingleton<IEvaluationCommitCoordinator>(services =>
-{
-    var evidenceStore = services.GetRequiredService<IAuditEventStore>();
-    var approvalStore = services.GetRequiredService<IApprovalStore>();
-
-    return evidenceStore is InMemoryAuditEventStore inMemoryEvidence &&
-        approvalStore is InMemoryApprovalStore inMemoryApprovals
-            ? new InMemoryEvaluationCommitCoordinator(
-                inMemoryEvidence,
-                inMemoryApprovals)
-            : new CompatibilityEvaluationCommitCoordinator(
-                evidenceStore);
-});
 builder.Services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
 builder.Services.AddSingleton<IntegrationApiKeyLoader>();
 builder.Services.AddSingleton<IntegrationApiKeyAuthorizer>();
@@ -89,6 +70,7 @@ var app = builder.Build();
 
 app.UseStaticFiles();
 
+await app.Services.ValidateSeneschalPersistenceAsync();
 app.Services.GetRequiredService<PolicyValidator>();
 await app.Services
     .GetRequiredService<NorthwindHistorySeeder>()

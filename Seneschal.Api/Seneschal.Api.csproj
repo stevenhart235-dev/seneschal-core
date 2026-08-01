@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Seneschal.Core\Seneschal.Core.csproj" />
+    <ProjectReference Include="..\Seneschal.Persistence.PostgreSql\Seneschal.Persistence.PostgreSql.csproj" />
   </ItemGroup>
 
   <ItemGroup>

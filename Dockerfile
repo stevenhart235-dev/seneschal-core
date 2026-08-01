@@ -4,10 +4,12 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 COPY Seneschal.Core/Seneschal.Core.csproj Seneschal.Core/
+COPY Seneschal.Persistence.PostgreSql/Seneschal.Persistence.PostgreSql.csproj Seneschal.Persistence.PostgreSql/
 COPY Seneschal.Api/Seneschal.Api.csproj Seneschal.Api/
 RUN dotnet restore Seneschal.Api/Seneschal.Api.csproj
 
 COPY Seneschal.Core/ Seneschal.Core/
+COPY Seneschal.Persistence.PostgreSql/ Seneschal.Persistence.PostgreSql/
 COPY Seneschal.Api/ Seneschal.Api/
 RUN dotnet publish Seneschal.Api/Seneschal.Api.csproj \
     --configuration Release \

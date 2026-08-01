@@ -25,6 +25,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Seneschal.Samples.Protected
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Seneschal.Samples.CapabilityControlDemo", "Seneschal.Samples.CapabilityControlDemo\Seneschal.Samples.CapabilityControlDemo.csproj", "{BEB2E2F9-0FD1-4D11-BCC7-AE4A29A05933}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Seneschal.Persistence.PostgreSql", "Seneschal.Persistence.PostgreSql\Seneschal.Persistence.PostgreSql.csproj", "{72F3F872-95EB-4F55-AA85-70DCDC27E7CE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Seneschal.Persistence.PostgreSql.Tests", "Seneschal.Persistence.PostgreSql.Tests\Seneschal.Persistence.PostgreSql.Tests.csproj", "{C356908C-5736-4466-8EA1-E8C577629D09}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -167,6 +171,30 @@ Global
 		{BEB2E2F9-0FD1-4D11-BCC7-AE4A29A05933}.Release|x64.Build.0 = Release|Any CPU
 		{BEB2E2F9-0FD1-4D11-BCC7-AE4A29A05933}.Release|x86.ActiveCfg = Release|Any CPU
 		{BEB2E2F9-0FD1-4D11-BCC7-AE4A29A05933}.Release|x86.Build.0 = Release|Any CPU
+		{72F3F872-95EB-4F55-AA85-70DCDC27E7CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{72F3F872-95EB-4F55-AA85-70DCDC27E7CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{72F3F872-95EB-4F55-AA85-70DCDC27E7CE}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{72F3F872-95EB-4F55-AA85-70DCDC27E7CE}.Debug|x64.Build.0 = Debug|Any CPU
+		{72F3F872-95EB-4F55-AA85-70DCDC27E7CE}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{72F3F872-95EB-4F55-AA85-70DCDC27E7CE}.Debug|x86.Build.0 = Debug|Any CPU
+		{72F3F872-95EB-4F55-AA85-70DCDC27E7CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{72F3F872-95EB-4F55-AA85-70DCDC27E7CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{72F3F872-95EB-4F55-AA85-70DCDC27E7CE}.Release|x64.ActiveCfg = Release|Any CPU
+		{72F3F872-95EB-4F55-AA85-70DCDC27E7CE}.Release|x64.Build.0 = Release|Any CPU
+		{72F3F872-95EB-4F55-AA85-70DCDC27E7CE}.Release|x86.ActiveCfg = Release|Any CPU
+		{72F3F872-95EB-4F55-AA85-70DCDC27E7CE}.Release|x86.Build.0 = Release|Any CPU
+		{C356908C-5736-4466-8EA1-E8C577629D09}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C356908C-5736-4466-8EA1-E8C577629D09}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C356908C-5736-4466-8EA1-E8C577629D09}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C356908C-5736-4466-8EA1-E8C577629D09}.Debug|x64.Build.0 = Debug|Any CPU
+		{C356908C-5736-4466-8EA1-E8C577629D09}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C356908C-5736-4466-8EA1-E8C577629D09}.Debug|x86.Build.0 = Debug|Any CPU
+		{C356908C-5736-4466-8EA1-E8C577629D09}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C356908C-5736-4466-8EA1-E8C577629D09}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C356908C-5736-4466-8EA1-E8C577629D09}.Release|x64.ActiveCfg = Release|Any CPU
+		{C356908C-5736-4466-8EA1-E8C577629D09}.Release|x64.Build.0 = Release|Any CPU
+		{C356908C-5736-4466-8EA1-E8C577629D09}.Release|x86.ActiveCfg = Release|Any CPU
+		{C356908C-5736-4466-8EA1-E8C577629D09}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

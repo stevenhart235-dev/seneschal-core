@@ -1,4 +1,5 @@
 using Seneschal.Core.Enums;
+using Seneschal.Core.Exceptions;
 using Seneschal.Core.Interfaces;
 using Seneschal.Core.Models;
 
@@ -9,6 +10,8 @@ public sealed class InMemoryApprovalStore : IApprovalStore
     private readonly Dictionary<string, ApprovalRecord> _records =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly object _gate = new();
+
+    internal object SyncRoot => _gate;
 
     public ApprovalLookupResult GetOrCreate(
         string identityId, string capabilityId, string environment,
@@ -111,6 +114,80 @@ public sealed class InMemoryApprovalStore : IApprovalStore
     public IReadOnlyCollection<ApprovalRecord> GetAll()
     {
         lock (_gate) return _records.Values.ToList();
+    }
+
+    internal ApprovalMutation? PrepareMutationNoLock(
+        ApprovalMutation? mutation)
+    {
+        if (mutation is null)
+        {
+            return null;
+        }
+
+        var target = mutation.Record;
+        if (_records.TryGetValue(target.Id, out var existing) &&
+            existing == target)
+        {
+            return null;
+        }
+
+        if (mutation.Kind == ApprovalMutationKind.Create)
+        {
+            if (existing is not null)
+            {
+                throw new EvaluationCommitException(
+                    $"Approval '{target.Id}' already exists with different content.");
+            }
+
+            var scope = ScopeKey(
+                target.IdentityId,
+                target.CapabilityId,
+                target.Environment,
+                target.ResourceId,
+                target.OperationId);
+            var conflictingScope = _records.Values.Any(record =>
+                record.Status != ApprovalStatus.Consumed &&
+                ScopeKey(
+                    record.IdentityId,
+                    record.CapabilityId,
+                    record.Environment,
+                    record.ResourceId,
+                    record.OperationId).Equals(
+                        scope,
+                        StringComparison.OrdinalIgnoreCase));
+
+            if (conflictingScope)
+            {
+                throw new EvaluationCommitException(
+                    "Approval scope changed before the evaluation could commit.");
+            }
+
+            return mutation;
+        }
+
+        if (mutation.Kind == ApprovalMutationKind.Consume)
+        {
+            if (existing is null ||
+                existing.Status != mutation.ExpectedStatus ||
+                target.Status != ApprovalStatus.Consumed)
+            {
+                throw new EvaluationCommitException(
+                    $"Approval '{target.Id}' could not be consumed atomically.");
+            }
+
+            return mutation;
+        }
+
+        throw new EvaluationCommitException(
+            $"Unsupported approval mutation '{mutation.Kind}'.");
+    }
+
+    internal void ApplyMutationNoLock(ApprovalMutation? mutation)
+    {
+        if (mutation is not null)
+        {
+            _records[mutation.Record.Id] = mutation.Record;
+        }
     }
 
     private static string ScopeKey(string identity, string capability,

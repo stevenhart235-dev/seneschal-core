@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using Seneschal.Api.Mappers;
+using Seneschal.Core.Exceptions;
 using Seneschal.Core.Enums;
 using Seneschal.Core.Interfaces;
 using Seneschal.Core.Models;
+using Seneschal.Core.Repositories;
 using ApiDecisionRequest = Seneschal.Api.Models.DecisionRequest;
 using ApiDecisionResult = Seneschal.Api.Models.DecisionResult;
 using CorePolicyEvaluator = Seneschal.Core.Interfaces.IPolicyEvaluator;
@@ -18,7 +20,7 @@ public sealed class CoreDecisionService
     private readonly PolicyLoader _policyLoader;
     private readonly CorePolicyEvaluator _policyEvaluator;
     private readonly IGovernanceModeStore _governanceModeStore;
-    private readonly IAuditSink? _auditSink;
+    private readonly IEvaluationCommitCoordinator _evaluationCommitCoordinator;
     private readonly IActivityStore? _activityStore;
     private readonly IDecisionExporter? _decisionExporter;
     private readonly IDecisionMetrics? _decisionMetrics;
@@ -36,12 +38,14 @@ public sealed class CoreDecisionService
         IDecisionMetrics? decisionMetrics = null,
         IGovernanceIncidentStore? governanceIncidentStore = null,
         IGovernanceWindowStore? governanceWindowStore = null,
-        IApprovalStore? approvalStore = null)
+        IApprovalStore? approvalStore = null,
+        IEvaluationCommitCoordinator? evaluationCommitCoordinator = null)
     {
         _policyLoader = policyLoader;
         _policyEvaluator = policyEvaluator;
         _governanceModeStore = governanceModeStore;
-        _auditSink = auditSink;
+        _evaluationCommitCoordinator = evaluationCommitCoordinator ??
+            CreateCompatibilityCommitCoordinator(auditSink, approvalStore);
         _activityStore = activityStore;
         _decisionExporter = decisionExporter;
         _decisionMetrics = decisionMetrics;
@@ -77,7 +81,10 @@ public sealed class CoreDecisionService
             _governanceModeStore.GetMode());
         var policyDecision = coreResult.Decision;
         var policyReason = coreResult.Reason;
-        var approvalEvaluation = EvaluateApproval(coreRequest, ref coreResult);
+        var approvalEvaluation = PlanApproval(
+            coreRequest,
+            ref coreResult,
+            out var approvalMutation);
         var windowEvaluation = EvaluateGovernanceWindow(
             coreRequest.Capability.Id,
             ref coreResult);
@@ -103,7 +110,8 @@ public sealed class CoreDecisionService
             windowEvaluation,
             policyDecision,
             policyReason,
-            approvalEvaluation);
+            approvalEvaluation,
+            approvalMutation);
 
         return DecisionResultMapper.ToApi(
             coreResult,
@@ -159,17 +167,9 @@ public sealed class CoreDecisionService
         GovernanceWindowEvaluation? windowEvaluation,
         DecisionType policyDecision,
         string policyReason,
-        ApprovalEvaluation? approvalEvaluation)
+        ApprovalEvaluation? approvalEvaluation,
+        ApprovalMutation? approvalMutation)
     {
-        if (_auditSink is null &&
-            _activityStore is null &&
-            _decisionExporter is null &&
-            _decisionMetrics is null &&
-            _governanceIncidentStore is null)
-        {
-            return;
-        }
-
         var auditEvent = new AuditEvent
         {
             Id = result.DecisionId,
@@ -177,10 +177,13 @@ public sealed class CoreDecisionService
             TimestampUtc = result.Timestamp,
             IdentityId = request.Identity.Id,
             CapabilityId = request.Capability.Id,
+            RequestedAction = request.Intent.Action,
+            RequestContext = new Dictionary<string, string>(request.Context),
             ResourceId = request.Resource.Id,
             Environment = request.Resource.Environment ?? string.Empty,
             Decision = result.Decision,
             EnforcementMode = result.Mode,
+            EffectiveAction = EffectiveActionFor(result),
             MatchedPolicies = result.MatchedPolicies,
             Obligations = result.Obligations,
             Reason = result.Reason,
@@ -207,61 +210,84 @@ public sealed class CoreDecisionService
             ,ApprovalCorrelationMode = approvalEvaluation?.Record.CorrelationMode.ToString()
         };
 
-        _auditSink?.WriteAsync(auditEvent).GetAwaiter().GetResult();
-        _activityStore?.RecordAsync(auditEvent).GetAwaiter().GetResult();
+        _evaluationCommitCoordinator.CommitAsync(new EvaluationCommit
+        {
+            Evidence = auditEvent,
+            ApprovalMutation = approvalMutation
+        }).GetAwaiter().GetResult();
+
+        TryRecordActivity(auditEvent);
         TryExport(auditEvent);
         TryRecordMetrics(auditEvent);
         TryRecordIncident(auditEvent);
     }
 
-    private ApprovalEvaluation? EvaluateApproval(
+    private ApprovalEvaluation? PlanApproval(
         DecisionRequest request,
-        ref DecisionResult result)
+        ref DecisionResult result,
+        out ApprovalMutation? mutation)
     {
+        mutation = null;
         if (_approvalStore is null || result.Decision != DecisionType.RequireApproval)
             return null;
 
         var reason = request.Context.GetValueOrDefault("reason", request.Intent.Reason);
-        var lookup = _approvalStore.GetOrCreate(
+        var operationId = string.IsNullOrWhiteSpace(request.OperationId)
+            ? null
+            : request.OperationId.Trim();
+        var record = _approvalStore.Find(
             request.Identity.Id,
             request.Capability.Id,
             request.Resource.Environment ?? string.Empty,
             request.Resource.Id,
-            reason,
-            request.Timestamp,
-            request.OperationId);
-
-        var record = lookup.Record;
-        var action = record.Status == ApprovalStatus.Pending
-            ? lookup.Created ? "Requested" : "Reused"
+            operationId);
+        var action = record?.Status == ApprovalStatus.Pending
+            ? "Reused"
             : "Used";
-        if (record.Status == ApprovalStatus.Approved)
+
+        if (record is null)
         {
-            var consumed = _approvalStore.Consume(
-                record.Id, result.DecisionId, result.Timestamp);
-            if (consumed is not null)
+            record = new ApprovalRecord
             {
-                record = consumed;
-                action = "Consumed";
-                result = result with
-                {
-                    Decision = DecisionType.Allow,
-                    Reason = $"Approved through single-use human approval {record.Id}."
-                };
-            }
-            else
+                Id = Guid.NewGuid().ToString("N"),
+                IdentityId = request.Identity.Id,
+                CapabilityId = request.Capability.Id,
+                Environment = request.Resource.Environment ?? string.Empty,
+                ResourceId = request.Resource.Id,
+                OperationId = operationId,
+                CorrelationMode = operationId is null
+                    ? ApprovalCorrelationMode.LegacyContext
+                    : ApprovalCorrelationMode.Operation,
+                RequestReason = reason,
+                RequestedAt = request.Timestamp
+            };
+            mutation = new ApprovalMutation
             {
-                lookup = _approvalStore.GetOrCreate(
-                    request.Identity.Id,
-                    request.Capability.Id,
-                    request.Resource.Environment ?? string.Empty,
-                    request.Resource.Id,
-                    reason,
-                    request.Timestamp,
-                    request.OperationId);
-                record = lookup.Record;
-                action = lookup.Created ? "Requested" : "Reused";
-            }
+                Kind = ApprovalMutationKind.Create,
+                Record = record
+            };
+            action = "Requested";
+        }
+        else if (record.Status == ApprovalStatus.Approved)
+        {
+            record = record with
+            {
+                Status = ApprovalStatus.Consumed,
+                ConsumedAt = result.Timestamp,
+                ConsumedByDecisionId = result.DecisionId
+            };
+            mutation = new ApprovalMutation
+            {
+                Kind = ApprovalMutationKind.Consume,
+                Record = record,
+                ExpectedStatus = ApprovalStatus.Approved
+            };
+            action = "Consumed";
+            result = result with
+            {
+                Decision = DecisionType.Allow,
+                Reason = $"Approved through single-use human approval {record.Id}."
+            };
         }
         else if (record.Status == ApprovalStatus.Rejected)
         {
@@ -291,6 +317,56 @@ public sealed class CoreDecisionService
         };
 
         return new ApprovalEvaluation(record, action);
+    }
+
+    private static string EffectiveActionFor(DecisionResult result)
+    {
+        if (result.Mode == EnforcementMode.LogOnly &&
+            result.Decision != DecisionType.Allow)
+        {
+            return "logged_only";
+        }
+
+        return DecisionTypeMapper.ToApi(result.Decision);
+    }
+
+    private void TryRecordActivity(AuditEvent auditEvent)
+    {
+        if (_activityStore is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _activityStore.RecordAsync(auditEvent).GetAwaiter().GetResult();
+        }
+        catch
+        {
+            // Activity is a recomputable projection. Its failure cannot undo
+            // committed evaluation evidence.
+        }
+    }
+
+    private static IEvaluationCommitCoordinator CreateCompatibilityCommitCoordinator(
+        IAuditSink? auditSink,
+        IApprovalStore? approvalStore)
+    {
+        var inMemoryEvidence = auditSink as InMemoryAuditEventStore ??
+            new InMemoryAuditEventStore();
+        var inMemoryApprovals = approvalStore as InMemoryApprovalStore ??
+            new InMemoryApprovalStore();
+
+        if ((auditSink is null or InMemoryAuditEventStore) &&
+            (approvalStore is null or InMemoryApprovalStore))
+        {
+            return new InMemoryEvaluationCommitCoordinator(
+                inMemoryEvidence,
+                inMemoryApprovals);
+        }
+
+        return new CompatibilityEvaluationCommitCoordinator(
+            auditSink ?? inMemoryEvidence);
     }
 
     internal static ExecutionGuidance ResolveExecutionGuidance(

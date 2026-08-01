@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Seneschal.Core.Exceptions;
 using Seneschal.Core.Interfaces;
 using Seneschal.Core.Models;
 
@@ -5,19 +7,34 @@ namespace Seneschal.Core.Repositories;
 
 public sealed class InMemoryAuditEventStore : IAuditEventStore
 {
-    private readonly List<AuditEvent> _events = new();
+    private static readonly JsonSerializerOptions SerializerOptions = new();
+
+    private readonly List<StoredEvidence> _events = new();
+    private readonly Dictionary<string, StoredEvidence> _eventsById =
+        new(StringComparer.OrdinalIgnoreCase);
     private readonly object _gate = new();
+    private readonly Func<AuditEvent, Exception?>? _appendFailure;
+
+    public InMemoryAuditEventStore(
+        Func<AuditEvent, Exception?>? appendFailure = null)
+    {
+        _appendFailure = appendFailure;
+    }
+
+    internal object SyncRoot => _gate;
 
     public Task WriteAsync(
         AuditEvent auditEvent,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(auditEvent);
+        ArgumentException.ThrowIfNullOrWhiteSpace(auditEvent.Id);
         cancellationToken.ThrowIfCancellationRequested();
 
         lock (_gate)
         {
-            _events.Add(auditEvent);
+            var pendingAppend = PrepareAppendNoLock(auditEvent);
+            ApplyAppendNoLock(pendingAppend);
         }
 
         return Task.CompletedTask;
@@ -33,8 +50,9 @@ public sealed class InMemoryAuditEventStore : IAuditEventStore
         {
             return Task.FromResult<IReadOnlyCollection<AuditEvent>>(
                 _events
-                    .OrderByDescending(auditEvent => auditEvent.TimestampUtc)
+                    .OrderByDescending(item => item.TimestampUtc)
                     .Take(count)
+                    .Select(Deserialize)
                     .ToList());
         }
     }
@@ -49,11 +67,67 @@ public sealed class InMemoryAuditEventStore : IAuditEventStore
         lock (_gate)
         {
             return Task.FromResult(
-                _events.FirstOrDefault(auditEvent =>
-                    string.Equals(
-                        auditEvent.Id,
-                        id,
-                        StringComparison.OrdinalIgnoreCase)));
+                _eventsById.TryGetValue(id, out var stored)
+                    ? Deserialize(stored)
+                    : null);
         }
     }
+
+    internal PendingEvidenceAppend? PrepareAppendNoLock(AuditEvent auditEvent)
+    {
+        var injectedFailure = _appendFailure?.Invoke(auditEvent);
+        if (injectedFailure is not null)
+        {
+            throw injectedFailure;
+        }
+
+        var json = JsonSerializer.Serialize(auditEvent, SerializerOptions);
+
+        if (_eventsById.TryGetValue(auditEvent.Id, out var existing))
+        {
+            if (string.Equals(existing.Json, json, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            throw new EvaluationEvidenceConflictException(auditEvent.Id);
+        }
+
+        return new PendingEvidenceAppend(
+            auditEvent.Id,
+            auditEvent.TimestampUtc,
+            json);
+    }
+
+    internal void ApplyAppendNoLock(PendingEvidenceAppend? pendingAppend)
+    {
+        if (pendingAppend is null)
+        {
+            return;
+        }
+
+        var stored = new StoredEvidence(
+            pendingAppend.Id,
+            pendingAppend.TimestampUtc,
+            pendingAppend.Json);
+        _events.Add(stored);
+        _eventsById.Add(stored.Id, stored);
+    }
+
+    private static AuditEvent Deserialize(StoredEvidence stored)
+    {
+        return JsonSerializer.Deserialize<AuditEvent>(
+            stored.Json,
+            SerializerOptions)!;
+    }
+
+    internal sealed record PendingEvidenceAppend(
+        string Id,
+        DateTimeOffset TimestampUtc,
+        string Json);
+
+    private sealed record StoredEvidence(
+        string Id,
+        DateTimeOffset TimestampUtc,
+        string Json);
 }

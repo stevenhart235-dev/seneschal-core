@@ -1,6 +1,7 @@
 using Seneschal.Api.Mappers;
 using Seneschal.Api.Models;
 using Seneschal.Api.Services;
+using Seneschal.Core.Exceptions;
 using Seneschal.Core.Interfaces;
 using Seneschal.Core.Repositories;
 using Seneschal.Core.Services;
@@ -14,7 +15,9 @@ builder.Services.AddSingleton<
     Seneschal.Core.Services.PolicyEvaluator>();
 builder.Services.AddSingleton<CoreDecisionService>();
 builder.Services.AddSingleton<PolicyValidator>();
-builder.Services.AddSingleton<IAuditEventStore, InMemoryAuditEventStore>();
+builder.Services.AddSingleton<InMemoryAuditEventStore>();
+builder.Services.AddSingleton<IAuditEventStore>(
+    services => services.GetRequiredService<InMemoryAuditEventStore>());
 builder.Services.AddSingleton<IAuditSink>(
     services => services.GetRequiredService<IAuditEventStore>());
 builder.Services.AddSingleton<IActivityStore, InMemoryActivityStore>();
@@ -26,7 +29,22 @@ builder.Services.AddSingleton(new RuntimeSettings
 });
 builder.Services.AddSingleton<IGovernanceModeStore, InMemoryGovernanceModeStore>();
 builder.Services.AddSingleton<IGovernanceWindowStore, InMemoryGovernanceWindowStore>();
-builder.Services.AddSingleton<IApprovalStore, InMemoryApprovalStore>();
+builder.Services.AddSingleton<InMemoryApprovalStore>();
+builder.Services.AddSingleton<IApprovalStore>(
+    services => services.GetRequiredService<InMemoryApprovalStore>());
+builder.Services.AddSingleton<IEvaluationCommitCoordinator>(services =>
+{
+    var evidenceStore = services.GetRequiredService<IAuditEventStore>();
+    var approvalStore = services.GetRequiredService<IApprovalStore>();
+
+    return evidenceStore is InMemoryAuditEventStore inMemoryEvidence &&
+        approvalStore is InMemoryApprovalStore inMemoryApprovals
+            ? new InMemoryEvaluationCommitCoordinator(
+                inMemoryEvidence,
+                inMemoryApprovals)
+            : new CompatibilityEvaluationCommitCoordinator(
+                evidenceStore);
+});
 builder.Services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
 builder.Services.AddSingleton<IntegrationApiKeyLoader>();
 builder.Services.AddSingleton<IntegrationApiKeyAuthorizer>();
@@ -98,9 +116,21 @@ app.MapPost("/evaluate", (
             statusCode: authorization.StatusCode);
     }
 
-    var result = decisionService.Evaluate(request);
+    try
+    {
+        var result = decisionService.Evaluate(request);
 
-    return Results.Ok(result);
+        return Results.Ok(result);
+    }
+    catch (EvaluationCommitException)
+    {
+        return Results.Json(
+            new
+            {
+                reason = "The governance decision could not be committed. Retry the request."
+            },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
 });
 
 app.MapGet("/health", () =>

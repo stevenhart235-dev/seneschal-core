@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using ApiDecisionRequest = Seneschal.Api.Models.DecisionRequest;
 using Seneschal.Api.Services;
+using Seneschal.Core.Exceptions;
 using Seneschal.Core.Interfaces;
 using Seneschal.Core.Models;
 using Seneschal.Core.Repositories;
@@ -125,6 +126,156 @@ public sealed class CoreDecisionServiceTests :
             auditEvent.MatchedPolicies);
         Assert.Empty(auditEvent.Obligations);
         Assert.True(auditEvent.EvaluationDurationMs >= 0);
+        Assert.Equal("DeployApplication", auditEvent.RequestedAction);
+        Assert.Equal("contract-test-resource", auditEvent.RequestContext["resource"]);
+        Assert.Equal("allow", auditEvent.EffectiveAction);
+    }
+
+    [Fact]
+    public async Task Evaluate_DeniedDecisionCommitsEvidence()
+    {
+        var auditStore = new InMemoryAuditEventStore();
+        var service = new CoreDecisionService(
+            new PolicyLoader(),
+            new CorePolicyEvaluator(),
+            CreateModeStore(),
+            auditStore);
+
+        var result = service.Evaluate(CreateRequest(
+            "Developer",
+            "DeleteProductionDatabase",
+            "prod"));
+
+        var evidence = Assert.Single(await auditStore.GetRecentAsync());
+        Assert.Equal("deny", result.Decision);
+        Assert.Equal(Seneschal.Core.Enums.DecisionType.Deny, evidence.Decision);
+        Assert.Equal("logged_only", evidence.EffectiveAction);
+    }
+
+    [Fact]
+    public void Evaluate_EvidenceFailurePreventsCompletedDecision()
+    {
+        var auditStore = new InMemoryAuditEventStore(_ =>
+            new InvalidOperationException("Evidence provider failed."));
+        var approvals = new InMemoryApprovalStore();
+        var coordinator = new InMemoryEvaluationCommitCoordinator(
+            auditStore,
+            approvals);
+        var service = new CoreDecisionService(
+            new PolicyLoader(),
+            new CorePolicyEvaluator(),
+            CreateModeStore(),
+            auditStore,
+            approvalStore: approvals,
+            evaluationCommitCoordinator: coordinator);
+
+        Assert.Throws<EvaluationCommitException>(() => service.Evaluate(
+            CreateRequest("Developer", "DeployApplication", "dev")));
+    }
+
+    [Fact]
+    public void Evaluate_ApprovalCreationDoesNotMutateWhenEvidenceFails()
+    {
+        var auditStore = new InMemoryAuditEventStore(_ =>
+            new InvalidOperationException("Evidence provider failed."));
+        var approvals = new InMemoryApprovalStore();
+        var service = new CoreDecisionService(
+            new PolicyLoader(),
+            new CorePolicyEvaluator(),
+            CreateModeStore(),
+            auditStore,
+            approvalStore: approvals,
+            evaluationCommitCoordinator:
+                new InMemoryEvaluationCommitCoordinator(auditStore, approvals));
+
+        Assert.Throws<EvaluationCommitException>(() => service.Evaluate(
+            CreateRequest(
+                "SupportAgent",
+                "azure.keyvault.secret.read",
+                "prod")));
+        Assert.Empty(approvals.GetAll());
+    }
+
+    [Fact]
+    public async Task Evaluate_CompatibilityCoordinatorRejectsApprovalBeforeWritingEvidence()
+    {
+        var auditStore = new InMemoryAuditEventStore();
+        var approvals = new DelegatingApprovalStore();
+        var service = new CoreDecisionService(
+            new PolicyLoader(),
+            new CorePolicyEvaluator(),
+            CreateModeStore(),
+            auditStore,
+            approvalStore: approvals);
+
+        Assert.Throws<EvaluationCommitException>(() => service.Evaluate(
+            CreateRequest(
+                "SupportAgent",
+                "azure.keyvault.secret.read",
+                "prod")));
+        Assert.Empty(await auditStore.GetRecentAsync());
+        Assert.Empty(approvals.GetAll());
+    }
+
+    [Fact]
+    public void Evaluate_CompatibilityCoordinatorRejectsNonIdempotentAuditSink()
+    {
+        var auditSink = new InMemoryAuditSink();
+        var service = new CoreDecisionService(
+            new PolicyLoader(),
+            new CorePolicyEvaluator(),
+            CreateModeStore(),
+            auditSink);
+
+        Assert.Throws<EvaluationCommitException>(() => service.Evaluate(
+            CreateRequest("Developer", "DeployApplication", "dev")));
+        Assert.Empty(auditSink.Events);
+    }
+
+    [Fact]
+    public async Task Evaluate_ApprovalConsumptionDoesNotMutateWhenEvidenceFails()
+    {
+        var approvals = new InMemoryApprovalStore();
+        var committedEvidence = new InMemoryAuditEventStore();
+        var initialService = new CoreDecisionService(
+            new PolicyLoader(),
+            new CorePolicyEvaluator(),
+            CreateModeStore(),
+            committedEvidence,
+            approvalStore: approvals,
+            evaluationCommitCoordinator: new InMemoryEvaluationCommitCoordinator(
+                committedEvidence,
+                approvals));
+        var request = CreateRequest(
+            "SupportAgent",
+            "azure.keyvault.secret.read",
+            "prod");
+        initialService.Evaluate(request);
+        var approval = Assert.Single(approvals.GetAll());
+        approvals.Resolve(
+            approval.Id,
+            Seneschal.Core.Enums.ApprovalStatus.Approved,
+            "reviewer",
+            DateTimeOffset.UtcNow);
+
+        var failingEvidence = new InMemoryAuditEventStore(_ =>
+            new InvalidOperationException("Evidence provider failed."));
+        var failingService = new CoreDecisionService(
+            new PolicyLoader(),
+            new CorePolicyEvaluator(),
+            CreateModeStore(),
+            failingEvidence,
+            approvalStore: approvals,
+            evaluationCommitCoordinator: new InMemoryEvaluationCommitCoordinator(
+                failingEvidence,
+                approvals));
+
+        Assert.Throws<EvaluationCommitException>(() =>
+            failingService.Evaluate(request));
+        Assert.Equal(
+            Seneschal.Core.Enums.ApprovalStatus.Approved,
+            Assert.Single(approvals.GetAll()).Status);
+        Assert.Single(await committedEvidence.GetRecentAsync());
     }
 
     [Fact]
@@ -230,6 +381,26 @@ public sealed class CoreDecisionServiceTests :
         Assert.Equal("allow", result.Decision);
         Assert.Single(await auditStore.GetRecentAsync());
         Assert.Single((await activityStore.GetSnapshotAsync()).Capabilities);
+    }
+
+    [Fact]
+    public async Task Evaluate_ActivityFailureDoesNotInvalidateCommittedEvidence()
+    {
+        var auditStore = new InMemoryAuditEventStore();
+        var service = new CoreDecisionService(
+            new PolicyLoader(),
+            new CorePolicyEvaluator(),
+            CreateModeStore(),
+            auditStore,
+            new ThrowingActivityStore());
+
+        var result = service.Evaluate(CreateRequest(
+            "Developer",
+            "DeployApplication",
+            "dev"));
+
+        Assert.Equal("allow", result.Decision);
+        Assert.Single(await auditStore.GetRecentAsync());
     }
 
     [Fact]
@@ -419,6 +590,50 @@ public sealed class CoreDecisionServiceTests :
         {
             throw new InvalidOperationException("Metrics failed.");
         }
+    }
+
+    private sealed class ThrowingActivityStore : IActivityStore
+    {
+        public Task RecordAsync(
+            AuditEvent decisionEvent,
+            CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("Activity projection failed.");
+        }
+
+        public Task<ActivitySnapshot> GetSnapshotAsync(
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new ActivitySnapshot());
+        }
+    }
+
+    private sealed class DelegatingApprovalStore : IApprovalStore
+    {
+        private readonly InMemoryApprovalStore _inner = new();
+
+        public ApprovalLookupResult GetOrCreate(
+            string identityId, string capabilityId, string environment,
+            string resourceId, string requestReason, DateTimeOffset requestedAt,
+            string? operationId = null) => _inner.GetOrCreate(
+                identityId, capabilityId, environment, resourceId,
+                requestReason, requestedAt, operationId);
+
+        public ApprovalRecord? Find(
+            string identityId, string capabilityId, string environment,
+            string resourceId, string? operationId = null) => _inner.Find(
+                identityId, capabilityId, environment, resourceId, operationId);
+
+        public ApprovalRecord? Resolve(
+            string approvalId, Seneschal.Core.Enums.ApprovalStatus status,
+            string resolvedBy, DateTimeOffset resolvedAt) => _inner.Resolve(
+                approvalId, status, resolvedBy, resolvedAt);
+
+        public ApprovalRecord? Consume(
+            string approvalId, string decisionId, DateTimeOffset consumedAt) =>
+            _inner.Consume(approvalId, decisionId, consumedAt);
+
+        public IReadOnlyCollection<ApprovalRecord> GetAll() => _inner.GetAll();
     }
 
     private static ActivityListener CreateDecisionActivityListener(

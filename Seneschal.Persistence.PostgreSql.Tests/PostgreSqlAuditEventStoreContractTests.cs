@@ -44,3 +44,20 @@ public sealed class PostgreSqlAuditEventStoreContractTests :
 
 [CollectionDefinition("PostgreSQL")]
 public sealed class PostgreSqlCollection : ICollectionFixture<PostgreSqlFixture>;
+
+[Collection("PostgreSQL")]
+public sealed class PostgreSqlApprovalStoreContractTests :
+    Seneschal.Core.Tests.Repositories.ApprovalStoreContractTests,
+    IAsyncLifetime
+{
+    private readonly PostgreSqlFixture _fixture;
+
+    public PostgreSqlApprovalStoreContractTests(PostgreSqlFixture fixture) =>
+        _fixture = fixture;
+
+    public Task InitializeAsync() => _fixture.ResetAsync();
+    public Task DisposeAsync() => Task.CompletedTask;
+
+    protected override IApprovalStore CreateStore() =>
+        new PostgreSqlApprovalStore(_fixture.CreateFactory());
+}

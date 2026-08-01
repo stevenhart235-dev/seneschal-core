@@ -12,6 +12,9 @@ public interface IApprovalStore
     ApprovalRecord? Find(
         string identityId, string capabilityId, string environment,
         string resourceId, string? operationId = null);
+    ApprovalRecord? GetById(string approvalId);
+    IReadOnlyCollection<ApprovalRecord> GetPending();
+    IReadOnlyCollection<ApprovalRecord> GetHistory();
     ApprovalRecord? Resolve(
         string approvalId, ApprovalStatus status, string resolvedBy,
         DateTimeOffset resolvedAt);

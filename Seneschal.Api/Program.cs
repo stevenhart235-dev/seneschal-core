@@ -15,6 +15,7 @@ builder.Services.AddSingleton<
     Seneschal.Core.Interfaces.IPolicyEvaluator,
     Seneschal.Core.Services.PolicyEvaluator>();
 builder.Services.AddSingleton<CoreDecisionService>();
+builder.Services.AddSingleton<ApprovalResolutionService>();
 builder.Services.AddSingleton<PolicyValidator>();
 builder.Services.AddSeneschalPersistence(builder.Configuration);
 builder.Services.AddSingleton<IActivityStore, InMemoryActivityStore>();

@@ -126,7 +126,9 @@ public sealed class PostgreSqlEvaluationCommitCoordinator(
                     .SetProperty(item => item.Status, (int)target.Status)
                     .SetProperty(item => item.ConsumedAt, target.ConsumedAt)
                     .SetProperty(item => item.ConsumedByDecisionId,
-                        target.ConsumedByDecisionId), cancellationToken);
+                        target.ConsumedByDecisionId)
+                    .SetProperty(item => item.Version, item => item.Version + 1),
+                    cancellationToken);
             if (updated == 1)
             {
                 return;
@@ -138,6 +140,38 @@ public sealed class PostgreSqlEvaluationCommitCoordinator(
                 PostgreSqlMappings.ToModel(existing) == target)
             {
                 return;
+            }
+        }
+
+        if (mutation.Kind == ApprovalMutationKind.Resolve &&
+            mutation.Record.Status is ApprovalStatus.Approved or ApprovalStatus.Rejected)
+        {
+            var target = mutation.Record;
+            var updated = await context.Approvals
+                .Where(item => item.Id == target.Id &&
+                    item.Status == (int)ApprovalStatus.Pending)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(item => item.Status, (int)target.Status)
+                    .SetProperty(item => item.ResolvedAt, target.ResolvedAt)
+                    .SetProperty(item => item.ResolvedBy, target.ResolvedBy)
+                    .SetProperty(item => item.Version, item => item.Version + 1),
+                    cancellationToken);
+            if (updated == 1)
+            {
+                return;
+            }
+            var existing = await context.Approvals.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.Id == target.Id,
+                    cancellationToken);
+            if (existing is not null &&
+                PostgreSqlMappings.ToModel(existing) == target)
+            {
+                return;
+            }
+            if (existing is not null)
+            {
+                throw new ApprovalTransitionException(target.Id,
+                    (ApprovalStatus)existing.Status, target.Status);
             }
         }
 

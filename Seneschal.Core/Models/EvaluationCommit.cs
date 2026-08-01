@@ -25,5 +25,6 @@ public sealed record ApprovalMutation
 public enum ApprovalMutationKind
 {
     Create,
-    Consume
+    Consume,
+    Resolve
 }

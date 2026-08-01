@@ -42,8 +42,10 @@ Separating migration execution supports controlled deployment and rollback.
 dotnet run --project Seneschal.Api
 ```
 
-Submit authenticated evaluations, inspect `GET /audit`, restart Seneschal
-without removing PostgreSQL, and confirm the evidence remains. To return to
+Submit authenticated evaluations, inspect `GET /audit` and `/approvals`, restart
+Seneschal without removing PostgreSQL, and confirm evidence and approval state
+remain. Pending, approved, rejected, and consumed approvals retain their
+resolution and consumption metadata. To return to
 transient behavior, unset the variables or select `InMemory`; in-memory
 evidence and approvals reset on restart.
 
@@ -53,10 +55,18 @@ distinguishes identical retries from conflicting writes under the same evidence
 ID. A database primary key enforces uniqueness and an identity sequence makes
 equal-timestamp ordering deterministic.
 
+Approval state transitions are Pending to Approved, Pending to Rejected, and
+Approved to Consumed. Invalid and repeated transitions fail explicitly. A
+concurrency version protects direct updates, conditional updates protect atomic
+evaluation commits, and transaction-scoped PostgreSQL advisory locks serialize
+duplicate creation for one correlation scope. Approval/rejection state and its
+administrative evidence commit together; consumption and the consuming decision
+evidence continue to commit together.
+
 ## Current limitations
 
-Only evaluation evidence and the minimal approval state required by its atomic
-transaction are durable. Incidents, runtime mode, governance windows, activity,
+Only evaluation evidence and the existing approval lifecycle are durable.
+Incidents, runtime mode, governance windows, activity,
 metrics, catalog, and graph projections remain process-local or recomputable.
 Policies, capabilities, identities, and integration keys remain YAML-backed.
 Backup, restore, retention, high availability, multitenancy, and secret delivery

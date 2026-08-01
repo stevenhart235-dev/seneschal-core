@@ -624,6 +624,15 @@ public sealed class CoreDecisionServiceTests :
             string resourceId, string? operationId = null) => _inner.Find(
                 identityId, capabilityId, environment, resourceId, operationId);
 
+        public ApprovalRecord? GetById(string approvalId) =>
+            _inner.GetById(approvalId);
+
+        public IReadOnlyCollection<ApprovalRecord> GetPending() =>
+            _inner.GetPending();
+
+        public IReadOnlyCollection<ApprovalRecord> GetHistory() =>
+            _inner.GetHistory();
+
         public ApprovalRecord? Resolve(
             string approvalId, Seneschal.Core.Enums.ApprovalStatus status,
             string resolvedBy, DateTimeOffset resolvedAt) => _inner.Resolve(

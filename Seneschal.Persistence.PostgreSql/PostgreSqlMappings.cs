@@ -49,6 +49,7 @@ internal static class PostgreSqlMappings
         target.ResolvedBy = mapped.ResolvedBy;
         target.ConsumedAt = mapped.ConsumedAt;
         target.ConsumedByDecisionId = mapped.ConsumedByDecisionId;
+        target.Version++;
     }
 
     public static string? NormalizeOperationId(string? operationId) =>

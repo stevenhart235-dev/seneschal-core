@@ -35,8 +35,10 @@ public sealed class ApprovalsPageTests : IClassFixture<ApiApplicationFactory>
         var store = new InMemoryApprovalStore();
         var audit = new InMemoryAuditEventStore();
         var record = store.GetOrCreate("<identity>", "capability", "prod", "resource", "reason", DateTimeOffset.UtcNow).Record;
-        var page = new ApprovalsModel(store, audit,
-            new InMemoryGovernanceModeStore(new RuntimeSettings()));
+        var mode = new InMemoryGovernanceModeStore(new RuntimeSettings());
+        var page = new ApprovalsModel(store,
+            new ApprovalResolutionService(store,
+                new InMemoryEvaluationCommitCoordinator(audit, store), mode));
 
         await page.OnPostResolveAsync(record.Id, resolution, "<reviewer>");
 
@@ -59,8 +61,11 @@ public sealed class ApprovalsPageTests : IClassFixture<ApiApplicationFactory>
         store.Resolve(rejected.Id, ApprovalStatus.Rejected, "operator", now);
         store.Resolve(consumed.Id, ApprovalStatus.Approved, "operator", now);
         store.Consume(consumed.Id, "decision", now);
-        var page = new ApprovalsModel(store, new InMemoryAuditEventStore(),
-            new InMemoryGovernanceModeStore(new RuntimeSettings()));
+        var audit = new InMemoryAuditEventStore();
+        var page = new ApprovalsModel(store,
+            new ApprovalResolutionService(store,
+                new InMemoryEvaluationCommitCoordinator(audit, store),
+                new InMemoryGovernanceModeStore(new RuntimeSettings())));
 
         page.OnGet();
 
@@ -79,8 +84,11 @@ public sealed class ApprovalsPageTests : IClassFixture<ApiApplicationFactory>
         var record = store.GetOrCreate(
             "worker", "production.release.approve", "production",
             "checkout-api", "reason", requestedAt, "release-demo-0042").Record;
-        var page = new ApprovalsModel(store, new InMemoryAuditEventStore(),
-            new InMemoryGovernanceModeStore(new RuntimeSettings()));
+        var audit = new InMemoryAuditEventStore();
+        var page = new ApprovalsModel(store,
+            new ApprovalResolutionService(store,
+                new InMemoryEvaluationCommitCoordinator(audit, store),
+                new InMemoryGovernanceModeStore(new RuntimeSettings())));
 
         var json = JsonSerializer.Serialize(page.OnGetState().Value);
 

@@ -93,11 +93,22 @@ namespace Seneschal.Persistence.PostgreSql.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("status");
 
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("Status", "RequestedAt", "Id")
+                        .IsDescending(false, true, false);
 
                     b.HasIndex("IdentityId", "CapabilityId", "Environment", "ResourceId", "OperationId");
 
-                    b.ToTable("approvals", (string)null);
+                    b.ToTable("approvals", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_approvals_status", "status >= 0 AND status <= 3");
+                        });
                 });
 
             modelBuilder.Entity("Seneschal.Persistence.PostgreSql.EvaluationEvidenceEntity", b =>

@@ -67,6 +67,33 @@ public sealed class InMemoryApprovalStore : IApprovalStore
         }
     }
 
+    public ApprovalRecord? GetById(string approvalId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(approvalId);
+        lock (_gate)
+        {
+            return _records.GetValueOrDefault(approvalId);
+        }
+    }
+
+    public IReadOnlyCollection<ApprovalRecord> GetPending()
+    {
+        lock (_gate)
+        {
+            return Order(_records.Values.Where(record =>
+                record.Status == ApprovalStatus.Pending));
+        }
+    }
+
+    public IReadOnlyCollection<ApprovalRecord> GetHistory()
+    {
+        lock (_gate)
+        {
+            return Order(_records.Values.Where(record =>
+                record.Status != ApprovalStatus.Pending));
+        }
+    }
+
     public ApprovalRecord? Resolve(
         string approvalId, ApprovalStatus status, string resolvedBy,
         DateTimeOffset resolvedAt)
@@ -76,9 +103,11 @@ public sealed class InMemoryApprovalStore : IApprovalStore
             return null;
         lock (_gate)
         {
-            if (!_records.TryGetValue(approvalId, out var record) ||
-                record.Status != ApprovalStatus.Pending)
+            if (!_records.TryGetValue(approvalId, out var record))
                 return null;
+            if (record.Status != ApprovalStatus.Pending)
+                throw new ApprovalTransitionException(
+                    approvalId, record.Status, status);
             var resolved = record with
             {
                 Status = status,
@@ -96,9 +125,11 @@ public sealed class InMemoryApprovalStore : IApprovalStore
         ArgumentException.ThrowIfNullOrWhiteSpace(decisionId);
         lock (_gate)
         {
-            if (!_records.TryGetValue(approvalId, out var record) ||
-                record.Status != ApprovalStatus.Approved)
+            if (!_records.TryGetValue(approvalId, out var record))
                 return null;
+            if (record.Status != ApprovalStatus.Approved)
+                throw new ApprovalTransitionException(
+                    approvalId, record.Status, ApprovalStatus.Consumed);
 
             var consumed = record with
             {
@@ -113,7 +144,7 @@ public sealed class InMemoryApprovalStore : IApprovalStore
 
     public IReadOnlyCollection<ApprovalRecord> GetAll()
     {
-        lock (_gate) return _records.Values.ToList();
+        lock (_gate) return Order(_records.Values);
     }
 
     internal ApprovalMutation? PrepareMutationNoLock(
@@ -178,6 +209,19 @@ public sealed class InMemoryApprovalStore : IApprovalStore
             return mutation;
         }
 
+        if (mutation.Kind == ApprovalMutationKind.Resolve)
+        {
+            if (existing is null ||
+                existing.Status != ApprovalStatus.Pending ||
+                target.Status is not (ApprovalStatus.Approved or ApprovalStatus.Rejected))
+            {
+                throw new EvaluationCommitException(
+                    $"Approval '{target.Id}' could not be resolved atomically.");
+            }
+
+            return mutation;
+        }
+
         throw new EvaluationCommitException(
             $"Unsupported approval mutation '{mutation.Kind}'.");
     }
@@ -197,4 +241,10 @@ public sealed class InMemoryApprovalStore : IApprovalStore
 
     private static string? NormalizeOperationId(string? operationId) =>
         string.IsNullOrWhiteSpace(operationId) ? null : operationId.Trim();
+
+    private static IReadOnlyCollection<ApprovalRecord> Order(
+        IEnumerable<ApprovalRecord> records) => records
+            .OrderByDescending(record => record.RequestedAt)
+            .ThenBy(record => record.Id, StringComparer.Ordinal)
+            .ToList();
 }

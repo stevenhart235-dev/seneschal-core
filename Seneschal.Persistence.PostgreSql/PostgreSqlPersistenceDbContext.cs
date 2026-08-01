@@ -43,7 +43,8 @@ public sealed class PostgreSqlPersistenceDbContext(
 
         modelBuilder.Entity<ApprovalEntity>(entity =>
         {
-            entity.ToTable("approvals");
+            entity.ToTable("approvals", table => table.HasCheckConstraint(
+                "CK_approvals_status", "status >= 0 AND status <= 3"));
             entity.HasKey(item => item.Id);
             entity.Property(item => item.Id).HasColumnName("id").HasMaxLength(128);
             entity.Property(item => item.IdentityId).HasColumnName("identity_id").HasMaxLength(256);
@@ -59,6 +60,7 @@ public sealed class PostgreSqlPersistenceDbContext(
             entity.Property(item => item.ResolvedBy).HasColumnName("resolved_by").HasMaxLength(256);
             entity.Property(item => item.ConsumedAt).HasColumnName("consumed_at");
             entity.Property(item => item.ConsumedByDecisionId).HasColumnName("consumed_by_decision_id").HasMaxLength(128);
+            entity.Property(item => item.Version).HasColumnName("version").IsConcurrencyToken();
             entity.HasIndex(item => new
             {
                 item.IdentityId,
@@ -67,6 +69,8 @@ public sealed class PostgreSqlPersistenceDbContext(
                 item.ResourceId,
                 item.OperationId
             });
+            entity.HasIndex(item => new { item.Status, item.RequestedAt, item.Id })
+                .IsDescending(false, true, false);
         });
     }
 }
@@ -104,4 +108,5 @@ internal sealed class ApprovalEntity
     public string? ResolvedBy { get; set; }
     public DateTimeOffset? ConsumedAt { get; set; }
     public string? ConsumedByDecisionId { get; set; }
+    public long Version { get; set; }
 }

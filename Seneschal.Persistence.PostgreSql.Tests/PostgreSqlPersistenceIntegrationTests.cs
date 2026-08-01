@@ -19,6 +19,8 @@ public sealed class PostgreSqlPersistenceIntegrationTests(
         Assert.Empty(await context.Database.GetPendingMigrationsAsync());
         Assert.Contains("202608010001_InitialEvaluationEvidence",
             await context.Database.GetAppliedMigrationsAsync());
+        Assert.Contains("202608020001_CompleteApprovalPersistence",
+            await context.Database.GetAppliedMigrationsAsync());
     }
 
     [Fact]
@@ -214,6 +216,46 @@ public sealed class PostgreSqlPersistenceIntegrationTests(
             Assert.Single(approvals.GetAll()).Status);
         Assert.NotNull(await new PostgreSqlAuditEventStore(factory)
             .GetByIdAsync("approval-consumed"));
+    }
+
+    [Theory]
+    [InlineData(ApprovalStatus.Approved)]
+    [InlineData(ApprovalStatus.Rejected)]
+    public async Task ApprovalResolution_CommitsStateAndEvidenceAtomically(
+        ApprovalStatus status)
+    {
+        var factory = fixture.CreateFactory();
+        var approvals = new PostgreSqlApprovalStore(factory);
+        var approval = approvals.GetOrCreate("resolver", "deploy", "prod", "api",
+            "Review required.", DateTimeOffset.UtcNow).Record;
+        var resolved = approval with
+        {
+            Status = status,
+            ResolvedAt = DateTimeOffset.UtcNow,
+            ResolvedBy = "reviewer"
+        };
+        var evidence = CreateEvidence("resolution-" + status) with
+        {
+            ApprovalId = approval.Id,
+            ApprovalStatus = status.ToString(),
+            ApprovalAction = status.ToString()
+        };
+
+        await new PostgreSqlEvaluationCommitCoordinator(factory).CommitAsync(
+            new EvaluationCommit
+            {
+                Evidence = evidence,
+                ApprovalMutation = new ApprovalMutation
+                {
+                    Kind = ApprovalMutationKind.Resolve,
+                    Record = resolved,
+                    ExpectedStatus = ApprovalStatus.Pending
+                }
+            });
+
+        Assert.Equal(status, approvals.GetById(approval.Id)!.Status);
+        Assert.NotNull(await new PostgreSqlAuditEventStore(factory)
+            .GetByIdAsync(evidence.Id));
     }
 
     [Fact]

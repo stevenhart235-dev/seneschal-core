@@ -11,15 +11,13 @@ namespace Seneschal.Api.Pages;
 public sealed class ApprovalsModel : PageModel
 {
     private readonly IApprovalStore _store;
-    private readonly IAuditSink _audit;
-    private readonly IGovernanceModeStore _mode;
+    private readonly ApprovalResolutionService _resolutionService;
 
-    public ApprovalsModel(IApprovalStore store, IAuditSink audit,
-        IGovernanceModeStore mode)
+    public ApprovalsModel(IApprovalStore store,
+        ApprovalResolutionService resolutionService)
     {
         _store = store;
-        _audit = audit;
-        _mode = mode;
+        _resolutionService = resolutionService;
     }
 
     public IReadOnlyCollection<ApprovalRecord> Approvals { get; private set; } = [];
@@ -51,34 +49,10 @@ public sealed class ApprovalsModel : PageModel
             string.IsNullOrWhiteSpace(resolvedBy))
             return BadRequest();
 
-        var record = _store.Resolve(
-            approvalId, status, resolvedBy, DateTimeOffset.UtcNow);
+        var record = await _resolutionService.ResolveAsync(
+            approvalId, status, resolvedBy, DateTimeOffset.UtcNow,
+            HttpContext?.RequestAborted ?? default);
         if (record is null) return NotFound();
-
-        await _audit.WriteAsync(new AuditEvent
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            RequestId = record.Id,
-            TimestampUtc = record.ResolvedAt!.Value,
-            IdentityId = record.IdentityId,
-            CapabilityId = record.CapabilityId,
-            ResourceId = record.ResourceId,
-            Environment = record.Environment,
-            Decision = status == ApprovalStatus.Approved
-                ? DecisionType.Allow : DecisionType.Deny,
-            PolicyDecision = DecisionType.RequireApproval,
-            EnforcementMode = _mode.GetMode(),
-            Reason = $"Approval {status.ToString().ToLowerInvariant()} by {record.ResolvedBy}.",
-            PolicyReason = record.RequestReason,
-            ApprovalId = record.Id,
-            ApprovalStatus = record.Status.ToString(),
-            ApprovalAction = record.Status.ToString(),
-            ApprovalRequestReason = record.RequestReason,
-            ApprovalResolvedAt = record.ResolvedAt,
-            ApprovalResolvedBy = record.ResolvedBy
-            ,ApprovalOperationId = record.OperationId
-            ,ApprovalCorrelationMode = record.CorrelationMode.ToString()
-        });
         return RedirectToPage();
     }
 

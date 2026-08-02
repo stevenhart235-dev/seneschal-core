@@ -80,16 +80,16 @@ public static class TechnologyIconCatalog
 public sealed class TechnologyActivityService
 {
     private readonly ICapabilityCatalog _catalog;
-    private readonly IActivityStore _activityStore;
+    private readonly IInvestigationActivityReader _investigationActivity;
     private readonly IAuditEventStore _auditStore;
     private readonly IGovernanceWindowStore _windowStore;
     private readonly TechnologyClassifier _classifier;
 
-    public TechnologyActivityService(ICapabilityCatalog catalog, IActivityStore activityStore,
+    public TechnologyActivityService(ICapabilityCatalog catalog, IInvestigationActivityReader investigationActivity,
         IAuditEventStore auditStore, IGovernanceWindowStore windowStore, TechnologyClassifier classifier)
     {
         _catalog = catalog;
-        _activityStore = activityStore;
+        _investigationActivity = investigationActivity;
         _auditStore = auditStore;
         _windowStore = windowStore;
         _classifier = classifier;
@@ -98,7 +98,7 @@ public sealed class TechnologyActivityService
     public async Task<IReadOnlyList<TechnologyActivity>> GetTechnologiesAsync(CancellationToken cancellationToken = default)
     {
         var catalog = await _catalog.SearchAsync(new CapabilityCatalogQuery(), cancellationToken);
-        var activity = await _activityStore.GetSnapshotAsync(cancellationToken);
+        var activity = await _investigationActivity.GetSnapshotAsync(cancellationToken);
         var audit = await _auditStore.GetRecentAsync(100, cancellationToken);
         var window = _windowStore.GetWindow();
         return Build(catalog, activity, audit, window);

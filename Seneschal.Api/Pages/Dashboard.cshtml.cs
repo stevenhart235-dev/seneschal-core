@@ -12,6 +12,7 @@ public sealed class DashboardModel : PageModel
     private readonly ICapabilityCatalog _capabilityCatalog;
     private readonly IGovernanceGraph _governanceGraph;
     private readonly IActivityStore _activityStore;
+    private readonly IInvestigationActivityReader _investigationActivity;
     private readonly IAuditEventStore _auditEventStore;
     private readonly IdentityLoader _identityLoader;
     private readonly PolicyLoader _policyLoader;
@@ -30,7 +31,8 @@ public sealed class DashboardModel : PageModel
         PolicyLoader policyLoader,
         IGovernanceModeStore governanceModeStore,
         IGovernanceWindowStore governanceWindowStore,
-        TechnologyActivityService technologyActivityService)
+        TechnologyActivityService technologyActivityService,
+        IInvestigationActivityReader investigationActivity)
     {
         _capabilityCatalog = capabilityCatalog;
         _governanceGraph = governanceGraph;
@@ -41,6 +43,7 @@ public sealed class DashboardModel : PageModel
         _governanceModeStore = governanceModeStore;
         _governanceWindowStore = governanceWindowStore;
         _technologyActivityService = technologyActivityService;
+        _investigationActivity = investigationActivity;
     }
 
     public int TotalCapabilities { get; private set; }
@@ -95,7 +98,9 @@ public sealed class DashboardModel : PageModel
         var relationships = await _governanceGraph.QueryAsync(
             new GovernanceRelationshipQuery(),
             cancellationToken);
-        Activity = await _activityStore.GetSnapshotAsync(cancellationToken);
+        Activity = await _investigationActivity.GetSnapshotAsync(cancellationToken);
+        var transientActivity = await _activityStore.GetSnapshotAsync(
+            cancellationToken);
         var auditEvents = await _auditEventStore.GetRecentAsync(
             count: 100,
             cancellationToken);
@@ -117,11 +122,13 @@ public sealed class DashboardModel : PageModel
             capability => capability.DeniedCount);
         PendingApprovalRuntimeDecisions = Activity.Capabilities.Sum(
             capability => capability.PendingApprovalCount);
-        AverageEvaluationDurationMs = TotalRuntimeDecisions == 0
+        var transientDecisionCount = transientActivity.Capabilities.Sum(
+            capability => capability.TotalRequests);
+        AverageEvaluationDurationMs = transientDecisionCount == 0
             ? 0
-            : Activity.Capabilities.Sum(capability =>
+            : transientActivity.Capabilities.Sum(capability =>
                 capability.AverageEvaluationDurationMs *
-                capability.TotalRequests) / TotalRuntimeDecisions;
+                capability.TotalRequests) / transientDecisionCount;
 
         MostActiveCapability = Activity.Capabilities
             .OrderByDescending(capability => capability.TotalRequests)

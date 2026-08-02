@@ -27,6 +27,15 @@ exports, and portal summaries are recomputable projections applied only after
 the required evaluation commit succeeds. Projection failure does not invalidate
 committed evidence.
 
+When PostgreSQL is selected, Dashboard decision counts, capability activity,
+identity activity, and Technology Explorer evaluation totals are queried from
+the extracted `evaluation_evidence` columns. Audit Trail and Decision Trace
+continue to reconstruct complete events from authoritative JSONB. Live Monitor
+remains a process-local operational stream; it is not a historical read model.
+Matched-policy activity, duration averages, metrics, incidents, and governance
+window state remain transient because their required aggregation fields are not
+currently extracted for relational evidence queries.
+
 [ADR-0009: Operational State and Persistence](../adr/0009-operational-state-and-persistence.md)
 defines the intended evidence, mutable-state, projection, storage, transaction,
 and rollout boundaries. See the

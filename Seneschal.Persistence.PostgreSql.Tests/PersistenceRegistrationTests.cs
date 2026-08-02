@@ -11,6 +11,7 @@ public sealed class PersistenceRegistrationTests
     public void DefaultProvider_IsInMemory()
     {
         using var provider = new ServiceCollection()
+            .AddSingleton<IActivityStore, InMemoryActivityStore>()
             .AddSeneschalPersistence(new ConfigurationBuilder().Build())
             .BuildServiceProvider();
 
@@ -18,6 +19,8 @@ public sealed class PersistenceRegistrationTests
             provider.GetRequiredService<IAuditEventStore>());
         Assert.IsType<InMemoryEvaluationCommitCoordinator>(
             provider.GetRequiredService<IEvaluationCommitCoordinator>());
+        Assert.IsType<ActivityStoreInvestigationActivityReader>(
+            provider.GetRequiredService<IInvestigationActivityReader>());
     }
 
     [Fact]
@@ -33,6 +36,7 @@ public sealed class PersistenceRegistrationTests
             .Build();
         using var provider = new ServiceCollection()
             .AddLogging()
+            .AddSingleton<IActivityStore, InMemoryActivityStore>()
             .AddSeneschalPersistence(configuration)
             .BuildServiceProvider();
 
@@ -40,6 +44,8 @@ public sealed class PersistenceRegistrationTests
             provider.GetRequiredService<IAuditEventStore>());
         Assert.IsType<PostgreSqlEvaluationCommitCoordinator>(
             provider.GetRequiredService<IEvaluationCommitCoordinator>());
+        Assert.IsType<PostgreSqlInvestigationActivityReader>(
+            provider.GetRequiredService<IInvestigationActivityReader>());
     }
 
     [Fact]

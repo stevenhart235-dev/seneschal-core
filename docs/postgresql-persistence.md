@@ -55,6 +55,15 @@ distinguishes identical retries from conflicting writes under the same evidence
 ID. A database primary key enforces uniqueness and an identity sequence makes
 equal-timestamp ordering deterministic.
 
+Dashboard decision distribution, top capabilities, active identities, and
+Technology Explorer evaluation/deny/pending counts use PostgreSQL `GROUP BY`,
+conditional `COUNT`, `MAX`, and distinct identity/capability queries over the
+extracted evidence columns. Administrative approval-transition evidence is not
+counted as a runtime evaluation. Audit Trail preserves timestamp-descending,
+append-sequence-ascending ordering and Decision Trace reconstructs the complete
+event from JSONB. Live Monitor remains intentionally process-local and shows
+newly committed activity rather than becoming a historical database view.
+
 Approval state transitions are Pending to Approved, Pending to Rejected, and
 Approved to Consumed. Invalid and repeated transitions fail explicitly. A
 concurrency version protects direct updates, conditional updates protect atomic
@@ -68,6 +77,9 @@ evidence continue to commit together.
 Only evaluation evidence and the existing approval lifecycle are durable.
 Incidents, runtime mode, governance windows, activity,
 metrics, catalog, and graph projections remain process-local or recomputable.
+Matched-policy aggregates and evaluation-duration averages also remain
+process-local because those fields are not extracted relational columns; the
+PostgreSQL read model does not scan JSONB or invent replacements for them.
 Policies, capabilities, identities, and integration keys remain YAML-backed.
 Backup, restore, retention, high availability, multitenancy, and secret delivery
 remain deployment concerns.

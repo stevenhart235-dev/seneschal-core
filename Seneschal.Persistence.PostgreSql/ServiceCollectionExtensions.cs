@@ -28,6 +28,8 @@ public static class ServiceCollectionExtensions
                 new InMemoryEvaluationCommitCoordinator(
                     sp.GetRequiredService<InMemoryAuditEventStore>(),
                     sp.GetRequiredService<InMemoryApprovalStore>()));
+            services.AddSingleton<IInvestigationActivityReader,
+                ActivityStoreInvestigationActivityReader>();
             return services;
         }
 
@@ -57,6 +59,8 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<PostgreSqlApprovalStore>());
         services.AddSingleton<IEvaluationCommitCoordinator,
             PostgreSqlEvaluationCommitCoordinator>();
+        services.AddSingleton<IInvestigationActivityReader,
+            PostgreSqlInvestigationActivityReader>();
         services.AddSingleton<PostgreSqlStartupValidator>();
         return services;
     }

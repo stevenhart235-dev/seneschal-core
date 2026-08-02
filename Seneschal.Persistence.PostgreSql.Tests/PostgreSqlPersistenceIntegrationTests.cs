@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Seneschal.Core.Enums;
 using Seneschal.Core.Exceptions;
 using Seneschal.Core.Models;
+using Seneschal.Core.Repositories;
 
 namespace Seneschal.Persistence.PostgreSql.Tests;
 
@@ -34,6 +35,61 @@ public sealed class PostgreSqlPersistenceIntegrationTests(
 
         Assert.Equivalent(evidence,
             await restarted.GetByIdAsync(evidence.Id), strict: true);
+    }
+
+    [Fact]
+    public async Task InvestigationActivity_AggregatesAllDurableEvaluations()
+    {
+        var factory = fixture.CreateFactory();
+        var audit = new PostgreSqlAuditEventStore(factory);
+        var now = new DateTimeOffset(2026, 8, 2, 12, 0, 0, TimeSpan.Zero);
+        await audit.WriteAsync(CreateEvidence("investigation-allow") with
+        {
+            TimestampUtc = now,
+            IdentityId = "identity-a",
+            CapabilityId = "capability-a",
+            Decision = DecisionType.Allow
+        });
+        await audit.WriteAsync(CreateEvidence("investigation-deny") with
+        {
+            TimestampUtc = now.AddMinutes(1),
+            IdentityId = "identity-a",
+            CapabilityId = "capability-a",
+            Decision = DecisionType.Deny
+        });
+        await audit.WriteAsync(CreateEvidence("investigation-pending") with
+        {
+            TimestampUtc = now.AddMinutes(2),
+            IdentityId = "identity-b",
+            CapabilityId = "capability-b",
+            Decision = DecisionType.RequireApproval
+        });
+        await audit.WriteAsync(CreateEvidence("administrative-transition") with
+        {
+            TimestampUtc = now.AddMinutes(3),
+            IdentityId = "identity-a",
+            CapabilityId = "capability-a",
+            Decision = DecisionType.Allow,
+            EffectiveAction = "approval_approved"
+        });
+
+        var snapshot = await new PostgreSqlInvestigationActivityReader(
+                factory, new InMemoryActivityStore())
+            .GetSnapshotAsync();
+
+        var capabilityA = Assert.Single(snapshot.Capabilities,
+            item => item.CapabilityId == "capability-a");
+        Assert.Equal(2, capabilityA.TotalRequests);
+        Assert.Equal(1, capabilityA.AllowedCount);
+        Assert.Equal(1, capabilityA.DeniedCount);
+        Assert.Equal(now.AddMinutes(1), capabilityA.LastUsedUtc);
+        var capabilityB = Assert.Single(snapshot.Capabilities,
+            item => item.CapabilityId == "capability-b");
+        Assert.Equal(1, capabilityB.PendingApprovalCount);
+        var identityA = Assert.Single(snapshot.Identities,
+            item => item.IdentityId == "identity-a");
+        Assert.Equal(2, identityA.TotalRequests);
+        Assert.Equal(["capability-a"], identityA.DistinctCapabilitiesUsed);
     }
 
     [Fact]

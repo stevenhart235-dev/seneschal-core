@@ -66,16 +66,16 @@ public sealed class PostgreSqlPersistenceIntegrationTests(
         });
         await audit.WriteAsync(CreateEvidence("administrative-transition") with
         {
-            TimestampUtc = now.AddMinutes(3),
+            TimestampUtc = now.AddMinutes(1),
             IdentityId = "identity-a",
             CapabilityId = "capability-a",
             Decision = DecisionType.Allow,
             EffectiveAction = "approval_approved"
         });
 
-        var snapshot = await new PostgreSqlInvestigationActivityReader(
-                factory, new InMemoryActivityStore())
-            .GetSnapshotAsync();
+        var reader = new PostgreSqlInvestigationActivityReader(
+            factory, new InMemoryActivityStore());
+        var snapshot = await reader.GetSnapshotAsync();
 
         var capabilityA = Assert.Single(snapshot.Capabilities,
             item => item.CapabilityId == "capability-a");
@@ -90,6 +90,27 @@ public sealed class PostgreSqlPersistenceIntegrationTests(
             item => item.IdentityId == "identity-a");
         Assert.Equal(2, identityA.TotalRequests);
         Assert.Equal(["capability-a"], identityA.DistinctCapabilitiesUsed);
+
+        var capabilityDetail = await reader.GetCapabilityAsync(
+            "capability-a", 3);
+        Assert.NotNull(capabilityDetail);
+        Assert.Equal(2, capabilityDetail.Activity.TotalRequests);
+        Assert.Equal(["identity-a"], capabilityDetail.ObservedIdentities);
+        Assert.Equal(["dev"], capabilityDetail.Environments);
+        Assert.Equal(
+            ["investigation-deny", "administrative-transition", "investigation-allow"],
+            capabilityDetail.RecentEvidence.Select(item => item.Id));
+
+        var identityDetail = await reader.GetIdentityAsync("identity-a", 2);
+        Assert.NotNull(identityDetail);
+        Assert.Equal(2, identityDetail.Activity.TotalRequests);
+        Assert.Equal(["capability-a"],
+            identityDetail.Activity.DistinctCapabilitiesUsed);
+        Assert.Equal(["investigation-deny", "administrative-transition"],
+            identityDetail.RecentEvidence.Select(item => item.Id));
+
+        Assert.Null(await reader.GetCapabilityAsync("missing"));
+        Assert.Null(await reader.GetIdentityAsync("missing"));
     }
 
     [Fact]

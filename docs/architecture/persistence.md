@@ -32,6 +32,10 @@ identity activity, and Technology Explorer evaluation totals are queried from
 the extracted `evaluation_evidence` columns. Audit Trail and Decision Trace
 continue to reconstruct complete events from authoritative JSONB. Live Monitor
 remains a process-local operational stream; it is not a historical read model.
+Capability Activity and Identity Activity use the same durable relational
+summaries and reconstruct their newest 100 detailed events from JSONB in
+canonical evidence order. Their PostgreSQL history therefore survives process
+restart, while the InMemory versions remain process-local.
 Matched-policy activity, duration averages, metrics, incidents, and governance
 window state remain transient because their required aggregation fields are not
 currently extracted for relational evidence queries.

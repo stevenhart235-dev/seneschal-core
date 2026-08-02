@@ -85,6 +85,9 @@ public sealed class IdentityActivityPageTests :
         Assert.Contains(identity, html);
         Assert.Contains(capability, html);
         Assert.Contains("Capabilities Used", html);
+        Assert.Contains("Recent Evaluations", html);
+        Assert.Contains("View Decision Trace", html);
+        Assert.Contains($"/capability-activity?capabilityId={Uri.EscapeDataString(capability)}", html);
         Assert.Contains("Open Filtered Audit Trail", html);
         Assert.Contains($"/audit?identityId={Uri.EscapeDataString(identity)}", html);
         Assert.Contains("Back to Identities", html);

@@ -7,15 +7,14 @@ namespace Seneschal.Api.Pages;
 
 public sealed class CapabilityActivityModel : PageModel
 {
-    private readonly IActivityStore _activityStore;
-    private readonly IAuditEventStore _auditEventStore;
+    private readonly IInvestigationActivityReader _investigationActivity;
     private readonly IApprovalStore _approvalStore;
 
-    public CapabilityActivityModel(IActivityStore activityStore,
-        IAuditEventStore auditEventStore, IApprovalStore approvalStore)
+    public CapabilityActivityModel(
+        IInvestigationActivityReader investigationActivity,
+        IApprovalStore approvalStore)
     {
-        _activityStore = activityStore;
-        _auditEventStore = auditEventStore;
+        _investigationActivity = investigationActivity;
         _approvalStore = approvalStore;
     }
 
@@ -52,7 +51,8 @@ public sealed class CapabilityActivityModel : PageModel
         EnvironmentFilter = environment;
         OperationIdFilter = operationId;
         RuntimeModeFilter = runtimeMode;
-        var snapshot = await _activityStore.GetSnapshotAsync(cancellationToken);
+        var snapshot = await _investigationActivity.GetSnapshotAsync(
+            cancellationToken);
 
         Capabilities = snapshot.Capabilities
             .OrderByDescending(item => item.TotalRequests)
@@ -61,28 +61,20 @@ public sealed class CapabilityActivityModel : PageModel
             .ThenBy(item => item.CapabilityId).ToList();
 
         if (string.IsNullOrWhiteSpace(capabilityId)) return;
-        SelectedCapability = Capabilities.FirstOrDefault(item => string.Equals(
-            item.CapabilityId, capabilityId, StringComparison.OrdinalIgnoreCase));
-        if (SelectedCapability is null) return;
+        var investigation = await _investigationActivity.GetCapabilityAsync(
+            capabilityId, 100, cancellationToken);
+        SelectedCapability = investigation?.Activity;
+        if (investigation is null) return;
+        var auditEvents = investigation.RecentEvidence.ToList();
 
-        var auditEvents = (await _auditEventStore.GetRecentAsync(
-                count: 100, cancellationToken: cancellationToken))
-            .Where(item => string.Equals(item.CapabilityId, capabilityId,
-                StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(item => item.TimestampUtc).ToList();
-
-        AvailableIdentities = auditEvents.Select(item => item.IdentityId)
-            .Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase).ToList();
-        AvailableEnvironments = auditEvents.Select(item => item.Environment)
-            .Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase).ToList();
+        AvailableIdentities = investigation.ObservedIdentities;
+        AvailableEnvironments = investigation.Environments;
         AvailableOperations = auditEvents.Select(item => item.ApprovalOperationId)
             .Where(item => !string.IsNullOrWhiteSpace(item)).Cast<string>()
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(item => item, StringComparer.OrdinalIgnoreCase).ToList();
 
-        Summary = BuildSummary(auditEvents);
+        Summary = BuildSummary(investigation.Activity, auditEvents);
         var approvals = _approvalStore.GetAll().Where(item => string.Equals(
             item.CapabilityId, capabilityId, StringComparison.OrdinalIgnoreCase)).ToList();
         var timeline = auditEvents.Select(item => ToTimelineEvent(item,
@@ -142,6 +134,7 @@ public sealed class CapabilityActivityModel : PageModel
             StringComparison.OrdinalIgnoreCase);
 
     private static CapabilityInvestigationSummary BuildSummary(
+        CapabilityActivity activity,
         IReadOnlyCollection<AuditEvent> events)
     {
         var evaluations = events.Where(item => item.ApprovalAction is not
@@ -157,10 +150,13 @@ public sealed class CapabilityActivityModel : PageModel
             .ToList();
         return new CapabilityInvestigationSummary
     {
-        TotalEvaluations = evaluations.Count,
-        AllowCount = evaluations.Count(item => item.Decision == DecisionType.Allow),
-        DenyCount = evaluations.Count(item => item.Decision == DecisionType.Deny),
-        PendingApprovalCount = evaluations.Count(item => item.Decision == DecisionType.RequireApproval),
+        TotalEvaluations = activity.TotalRequests,
+        AllowCount = activity.AllowedCount,
+        DenyCount = activity.DeniedCount,
+        PendingApprovalCount = activity.PendingApprovalCount,
+        RecentEvaluationCount = evaluations.Count,
+        RecentAllowCount = evaluations.Count(item => item.Decision == DecisionType.Allow),
+        RecentDenyCount = evaluations.Count(item => item.Decision == DecisionType.Deny),
         DistinctOperations = events.Select(item => item.ApprovalOperationId)
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Distinct(StringComparer.OrdinalIgnoreCase).Count(),
@@ -170,7 +166,7 @@ public sealed class CapabilityActivityModel : PageModel
         RejectedOperationCount = operationStates.Count(item => item == "Rejected"),
         ConsumedOperationCount = operationStates.Count(item => item == "Consumed"),
         PendingOperationCount = operationStates.Count(item => item == "Pending"),
-        MostRecentActivityUtc = events.FirstOrDefault()?.TimestampUtc
+        MostRecentActivityUtc = activity.LastUsedUtc
     };
     }
 
@@ -200,21 +196,21 @@ public sealed class CapabilityActivityModel : PageModel
             correlated = $"{subject} awaiting a retry after {Count(summary.CorrelatedEvaluationCount, "evaluation attempt", "evaluation attempts")}.";
         }
         else if (summary.PendingOperationCount == summary.DistinctOperations &&
-                 summary.AllowCount == 0 && summary.DenyCount == 0)
+                 summary.RecentAllowCount == 0 && summary.RecentDenyCount == 0)
         {
             correlated = $"{Count(summary.DistinctOperations, "operation is", "operations are")} awaiting approval after {Count(summary.CorrelatedEvaluationCount, "evaluation attempt", "evaluation attempts")}.";
         }
-        else if (summary.AllowCount == summary.CorrelatedEvaluationCount)
+        else if (summary.RecentAllowCount == summary.CorrelatedEvaluationCount)
         {
             correlated = $"Recent activity includes {Count(summary.CorrelatedEvaluationCount, "Allow evaluation attempt", "Allow evaluation attempts")} across {Count(summary.DistinctOperations, "operation", "operations")}.";
         }
-        else if (summary.DenyCount == summary.CorrelatedEvaluationCount)
+        else if (summary.RecentDenyCount == summary.CorrelatedEvaluationCount)
         {
             correlated = $"Recent activity includes {Count(summary.CorrelatedEvaluationCount, "denied evaluation attempt", "denied evaluation attempts")} across {Count(summary.DistinctOperations, "operation", "operations")}.";
         }
         else
         {
-            correlated = $"Recent activity includes {Count(summary.CorrelatedEvaluationCount, "evaluation attempt", "evaluation attempts")} across {Count(summary.DistinctOperations, "operation", "operations")}: {Count(summary.AllowCount, "Allow", "Allows")}, {Count(summary.DenyCount, "Deny", "Denies")}, and {Count(summary.PendingApprovalCount, "Pending Approval", "Pending Approvals")}.";
+            correlated = $"Recent activity includes {Count(summary.CorrelatedEvaluationCount, "evaluation attempt", "evaluation attempts")} across {Count(summary.DistinctOperations, "operation", "operations")}: {Count(summary.RecentAllowCount, "Allow", "Allows")}, {Count(summary.RecentDenyCount, "Deny", "Denies")}, and {Count(summary.RecentEvaluationCount - summary.RecentAllowCount - summary.RecentDenyCount, "Pending Approval", "Pending Approvals")}.";
         }
 
         return summary.LegacyEvaluationCount == 0
@@ -222,7 +218,7 @@ public sealed class CapabilityActivityModel : PageModel
             : $"{correlated} {Count(summary.LegacyEvaluationCount, "legacy evaluation lacks", "legacy evaluations lack")} an Operation ID and cannot be assigned to a distinct operation.";
     }
 
-    private static string Count(int count, string singular, string plural) =>
+    private static string Count(long count, string singular, string plural) =>
         $"{count} {(count == 1 ? singular : plural)}";
     private static string Possessive(int count) => count == 1 ? "its" : "their";
 
@@ -284,10 +280,13 @@ public sealed record CapabilityOperationGroup(string OperationId,
 
 public sealed record CapabilityInvestigationSummary
 {
-    public int TotalEvaluations { get; init; }
-    public int AllowCount { get; init; }
-    public int DenyCount { get; init; }
-    public int PendingApprovalCount { get; init; }
+    public long TotalEvaluations { get; init; }
+    public long AllowCount { get; init; }
+    public long DenyCount { get; init; }
+    public long PendingApprovalCount { get; init; }
+    public int RecentEvaluationCount { get; init; }
+    public int RecentAllowCount { get; init; }
+    public int RecentDenyCount { get; init; }
     public int DistinctOperations { get; init; }
     public int CorrelatedEvaluationCount { get; init; }
     public int LegacyEvaluationCount { get; init; }

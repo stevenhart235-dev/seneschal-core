@@ -8,14 +8,14 @@ namespace Seneschal.Api.Pages;
 
 public sealed class IdentityActivityModel : PageModel
 {
-    private readonly IActivityStore _activityStore;
+    private readonly IInvestigationActivityReader _investigationActivity;
     private readonly IdentityLoader _identityLoader;
 
     public IdentityActivityModel(
-        IActivityStore activityStore,
+        IInvestigationActivityReader investigationActivity,
         IdentityLoader identityLoader)
     {
-        _activityStore = activityStore;
+        _investigationActivity = investigationActivity;
         _identityLoader = identityLoader;
     }
 
@@ -24,6 +24,9 @@ public sealed class IdentityActivityModel : PageModel
         = [];
     public IdentityActivity? SelectedIdentity { get; private set; }
     public IdentityDefinition? SelectedIdentityDefinition { get; private set; }
+    public IReadOnlyCollection<Seneschal.Core.Models.AuditEvent> RecentEvidence
+        { get; private set; } = [];
+    public IReadOnlyCollection<string> Environments { get; private set; } = [];
     public bool IdentityWasRequested => !string.IsNullOrWhiteSpace(IdentityId);
     public bool HasActivity => Identities.Count > 0;
 
@@ -32,7 +35,8 @@ public sealed class IdentityActivityModel : PageModel
         CancellationToken cancellationToken)
     {
         IdentityId = identityId;
-        var snapshot = await _activityStore.GetSnapshotAsync(cancellationToken);
+        var snapshot = await _investigationActivity.GetSnapshotAsync(
+            cancellationToken);
 
         Identities = snapshot.Identities
             .OrderByDescending(identity => identity.TotalRequests)
@@ -43,11 +47,11 @@ public sealed class IdentityActivityModel : PageModel
 
         if (!string.IsNullOrWhiteSpace(identityId))
         {
-            SelectedIdentity = Identities.FirstOrDefault(identity =>
-                string.Equals(
-                    identity.IdentityId,
-                    identityId,
-                    StringComparison.OrdinalIgnoreCase));
+            var investigation = await _investigationActivity.GetIdentityAsync(
+                identityId, 100, cancellationToken);
+            SelectedIdentity = investigation?.Activity;
+            RecentEvidence = investigation?.RecentEvidence ?? [];
+            Environments = investigation?.Environments ?? [];
             SelectedIdentityDefinition = _identityLoader.GetIdentities()
                 .FirstOrDefault(identity => string.Equals(
                     identity.Name,

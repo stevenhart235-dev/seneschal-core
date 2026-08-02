@@ -182,6 +182,26 @@
                                 </ul>
                             }
                         </section>
+
+                        <section class="graph-inspector-section">
+                            <h3>Recent Evaluations</h3>
+                            @if (Model.RecentEvidence.Count == 0)
+                            {
+                                <div class="empty-state"><strong>No recent activity</strong><p>Evaluations will appear here after this identity is observed.</p></div>
+                            }
+                            else
+                            {
+                                <div class="table-scroll" tabindex="0" role="region" aria-label="Recent identity evaluations">
+                                    <table class="activity-table"><thead><tr><th>Time</th><th>Capability</th><th>Environment</th><th>Decision</th><th>Runtime mode</th><th>Operation ID</th><th>Investigation</th></tr></thead><tbody>
+                                    @foreach (var evidence in Model.RecentEvidence)
+                                    {
+                                        var decision = evidence.Decision == Seneschal.Core.Enums.DecisionType.RequireApproval ? "Pending Approval" : evidence.Decision.ToString();
+                                        <tr><td><time datetime="@evidence.TimestampUtc.ToString("O")">@evidence.TimestampUtc.ToString("u")</time></td><td><a href="/capability-activity?capabilityId=@Uri.EscapeDataString(evidence.CapabilityId)">@evidence.CapabilityId</a></td><td>@(string.IsNullOrWhiteSpace(evidence.Environment) ? "Not provided" : evidence.Environment)</td><td><span class="decision-badge decision-@decision.Replace(" ", "").ToLowerInvariant()">@decision</span></td><td>@evidence.EnforcementMode</td><td><code>@(evidence.ApprovalOperationId ?? "—")</code></td><td><a href="/audit/@Uri.EscapeDataString(evidence.Id)">View Decision Trace</a></td></tr>
+                                    }
+                                    </tbody></table>
+                                </div>
+                            }
+                        </section>
                     </section>
                 }
             }

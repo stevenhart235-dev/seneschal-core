@@ -63,6 +63,12 @@ counted as a runtime evaluation. Audit Trail preserves timestamp-descending,
 append-sequence-ascending ordering and Decision Trace reconstructs the complete
 event from JSONB. Live Monitor remains intentionally process-local and shows
 newly committed activity rather than becoming a historical database view.
+Capability Activity and Identity Activity use relational all-history counts,
+distinct identity/capability and environment queries, and last-observed times.
+Their detailed timelines reconstruct at most 100 complete JSONB events ordered
+by timestamp descending and append sequence ascending, including approval,
+operation, policy, runtime-mode, and governance-window context. These summaries
+and timelines survive Seneschal restart; InMemory activity and evidence reset.
 
 Approval state transitions are Pending to Approved, Pending to Rejected, and
 Approved to Consumed. Invalid and repeated transitions fail explicitly. A

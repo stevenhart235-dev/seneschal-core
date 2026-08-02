@@ -1,7 +1,13 @@
 using Seneschal.Api.Pages;
 using Seneschal.Api.Services;
 using Seneschal.Core.Enums;
+using Seneschal.Core.Exceptions;
+using Seneschal.Core.Interfaces;
+using Seneschal.Core.Models;
 using Seneschal.Core.Repositories;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Text.Json;
 using Xunit;
 
@@ -97,5 +103,120 @@ public sealed class ApprovalsPageTests : IClassFixture<ApiApplicationFactory>
         Assert.Contains("Operation", json);
         Assert.Contains("Pending", json);
         Assert.Contains("production.release.approve", json);
+    }
+
+    [Fact]
+    public async Task ApprovingRejectedApproval_ReturnsConflictWithoutMutationOrEvidence()
+    {
+        var (page, store, audit, record) = CreatePage();
+        store.Resolve(record.Id, ApprovalStatus.Rejected, "first", DateTimeOffset.UtcNow);
+
+        var result = await page.OnPostResolveAsync(
+            record.Id, "Approved", "second");
+
+        Assert.IsType<PageResult>(result);
+        Assert.Equal(StatusCodes.Status409Conflict, page.Response.StatusCode);
+        Assert.Contains("current status does not allow", page.StatusMessage);
+        Assert.Equal(ApprovalStatus.Rejected, store.GetById(record.Id)!.Status);
+        Assert.Empty(await audit.GetRecentAsync());
+    }
+
+    [Fact]
+    public async Task RejectingConsumedApproval_ReturnsConflictWithoutDuplicateEvidence()
+    {
+        var (page, store, audit, record) = CreatePage();
+        await page.OnPostResolveAsync(record.Id, "Approved", "first");
+        store.Consume(record.Id, "decision", DateTimeOffset.UtcNow);
+        var evidenceBefore = await audit.GetRecentAsync();
+
+        var result = await page.OnPostResolveAsync(
+            record.Id, "Rejected", "second");
+
+        Assert.IsType<PageResult>(result);
+        Assert.Equal(ApprovalStatus.Consumed, store.GetById(record.Id)!.Status);
+        Assert.Equal(evidenceBefore.Count, (await audit.GetRecentAsync()).Count);
+    }
+
+    [Fact]
+    public async Task ResolvingAlreadyResolvedApproval_DoesNotDuplicateEvidence()
+    {
+        var (page, store, audit, record) = CreatePage();
+        await page.OnPostResolveAsync(record.Id, "Approved", "first");
+
+        var result = await page.OnPostResolveAsync(
+            record.Id, "Approved", "second");
+
+        Assert.IsType<PageResult>(result);
+        Assert.Equal(ApprovalStatus.Approved, store.GetById(record.Id)!.Status);
+        Assert.Single(await audit.GetRecentAsync());
+    }
+
+    [Fact]
+    public async Task ConcurrentMutation_ReturnsDistinctConflictMessage()
+    {
+        var store = new InMemoryApprovalStore();
+        var record = store.GetOrCreate("identity", "capability", "prod",
+            "resource", "reason", DateTimeOffset.UtcNow).Record;
+        var page = CreatePage(store, new ThrowingCoordinator(
+            new OperationalControlConcurrencyException("approval", 0, 1)));
+
+        var result = await page.OnPostResolveAsync(
+            record.Id, "Approved", "reviewer");
+
+        Assert.IsType<PageResult>(result);
+        Assert.Contains("changed by another operation", page.StatusMessage);
+        Assert.Equal(ApprovalStatus.Pending, store.GetById(record.Id)!.Status);
+    }
+
+    [Fact]
+    public async Task ProviderFailure_ReturnsSafeUnavailableResponse()
+    {
+        var store = new InMemoryApprovalStore();
+        var record = store.GetOrCreate("identity", "capability", "prod",
+            "resource", "reason", DateTimeOffset.UtcNow).Record;
+        var page = CreatePage(store, new ThrowingCoordinator(
+            new EvaluationCommitException("database table secret")));
+
+        var result = Assert.IsType<ObjectResult>(await page.OnPostResolveAsync(
+            record.Id, "Approved", "reviewer"));
+
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, result.StatusCode);
+        Assert.DoesNotContain("database", result.Value?.ToString(),
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(ApprovalStatus.Pending, store.GetById(record.Id)!.Status);
+    }
+
+    private static (ApprovalsModel Page, InMemoryApprovalStore Store,
+        InMemoryAuditEventStore Audit, ApprovalRecord Record) CreatePage()
+    {
+        var store = new InMemoryApprovalStore();
+        var audit = new InMemoryAuditEventStore();
+        var record = store.GetOrCreate("identity", "capability", "prod",
+            "resource", "reason", DateTimeOffset.UtcNow).Record;
+        return (CreatePage(store,
+            new InMemoryEvaluationCommitCoordinator(audit, store)),
+            store, audit, record);
+    }
+
+    private static ApprovalsModel CreatePage(
+        InMemoryApprovalStore store,
+        IEvaluationCommitCoordinator coordinator)
+    {
+        var page = new ApprovalsModel(store, new ApprovalResolutionService(
+            store, coordinator,
+            new InMemoryGovernanceModeStore(new RuntimeSettings())));
+        page.PageContext = new PageContext
+        {
+            HttpContext = new DefaultHttpContext()
+        };
+        return page;
+    }
+
+    private sealed class ThrowingCoordinator(Exception exception) :
+        IEvaluationCommitCoordinator
+    {
+        public Task CommitAsync(EvaluationCommit evaluationCommit,
+            CancellationToken cancellationToken = default) =>
+            Task.FromException(exception);
     }
 }

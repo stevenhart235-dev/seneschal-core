@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Seneschal.Core.Enums;
+using Seneschal.Core.Exceptions;
 using Seneschal.Core.Interfaces;
 using Seneschal.Core.Models;
 using Seneschal.Api.Services;
@@ -21,6 +22,8 @@ public sealed class ApprovalsModel : PageModel
     }
 
     public IReadOnlyCollection<ApprovalRecord> Approvals { get; private set; } = [];
+
+    public string? StatusMessage { get; private set; }
 
     public void OnGet() => Load();
 
@@ -49,11 +52,50 @@ public sealed class ApprovalsModel : PageModel
             string.IsNullOrWhiteSpace(resolvedBy))
             return BadRequest();
 
-        var record = await _resolutionService.ResolveAsync(
-            approvalId, status, resolvedBy, DateTimeOffset.UtcNow,
-            HttpContext?.RequestAborted ?? default);
-        if (record is null) return NotFound();
-        return RedirectToPage();
+        try
+        {
+            var record = await _resolutionService.ResolveAsync(
+                approvalId, status, resolvedBy, DateTimeOffset.UtcNow,
+                HttpContext?.RequestAborted ?? default);
+            if (record is null) return NotFound();
+            return RedirectToPage();
+        }
+        catch (ApprovalTransitionException)
+        {
+            return Conflict(
+                "This approval can no longer be changed because its current status does not allow that action.");
+        }
+        catch (OperationalControlConcurrencyException)
+        {
+            return Conflict(
+                "This approval was changed by another operation. Refresh the page and review its current status.");
+        }
+        catch (OperationCanceledException) when (
+            HttpContext?.RequestAborted.IsCancellationRequested == true)
+        {
+            throw;
+        }
+        catch
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                "The approval could not be changed because the service is temporarily unavailable. Retry the request.");
+        }
+    }
+
+    private IActionResult Conflict(string message)
+    {
+        StatusMessage = message;
+        try
+        {
+            Load();
+        }
+        catch
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                "The approval could not be changed because the service is temporarily unavailable. Retry the request.");
+        }
+        Response.StatusCode = StatusCodes.Status409Conflict;
+        return Page();
     }
 
     private void Load() => Approvals = _store.GetAll()

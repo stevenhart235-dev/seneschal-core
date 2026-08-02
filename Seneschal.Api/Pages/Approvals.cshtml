@@ -10,6 +10,7 @@
 <main class="container explorer-page approvals-page">
 <header class="page-header"><div><nav class="breadcrumb" aria-label="Breadcrumb"><a href="/dashboard">Dashboard</a> / Approvals</nav><h1>Approvals</h1>
 <p class="subtitle">Resolve capability requests that require a manual human decision.</p></div></header>
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage)) { <p class="governance-volatile-note" role="alert"><strong>Approval not changed.</strong> @Model.StatusMessage</p> }
 <p class="governance-volatile-note"><strong>Temporary runtime state.</strong> Approval records are held in memory and reset when Seneschal restarts.</p>
 <p class="approval-correlation-note"><strong>Approval scope:</strong> Operation ID provides exact operation correlation. Requests without one temporarily use legacy context matching.</p>
 <section class="approval-section" aria-labelledby="pendingApprovalsTitle"><header><h2 id="pendingApprovalsTitle">Pending approvals</h2><span>@Model.Approvals.Count(item => item.Status == ApprovalStatus.Pending)</span></header>

@@ -74,3 +74,10 @@ defines the intended evidence, mutable-state, projection, storage, transaction,
 and rollout boundaries. See the
 [PostgreSQL setup guide](../postgresql-persistence.md) for configuration,
 migrations, verification, and current limitations.
+
+Database changes are explicit and forward-only: startup validates but never
+applies migrations. The currently supported production pairing is one release
+with its complete migration set, using a stop-the-writer deployment; rolling
+N-1 schema compatibility is not yet guaranteed. Production rollback requires a
+validated compatible application or restoration of the pre-migration backup.
+See the [database migration strategy](../database-migrations.md).

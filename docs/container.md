@@ -133,13 +133,15 @@ docker rm seneschal-core
 
 ## Persistence and runtime writes
 
-The default profile does not write product data to the filesystem. Audit
-events, activity projections, metrics, approvals, incidents, governance mode,
-and governance windows are process-local and reset when the process restarts.
-The opt-in PostgreSQL provider durably stores evaluation evidence and the
-minimal approval state required for the evaluation transaction; see the
-[PostgreSQL setup guide](postgresql-persistence.md). With the Northwind seed
-enabled, its deterministic baseline is regenerated relative to startup time.
+The default profile does not write product data to the filesystem. Its audit
+events, activity projections, metrics, approvals, incident operator state,
+governance mode, and governance windows are process-local and reset when the
+process restarts. The opt-in PostgreSQL provider durably stores evaluation
+evidence, the complete approval lifecycle, runtime mode, Governance Window
+state, and incident operator status. Derived projections remain recomputable;
+see the [PostgreSQL setup guide](postgresql-persistence.md). With the Northwind
+seed enabled, its deterministic baseline is regenerated relative to startup
+time.
 
 The application has no product-data directory to mount. The non-root process
 can write ASP.NET Core Data Protection keys under
@@ -148,10 +150,16 @@ writable temporary directory (`/tmp`) for framework or operating-system needs.
 Neither path contains Seneschal audit or governance state. Mounting YAML
 configuration preserves only configuration, not runtime state.
 
-The default in-memory stores and remaining mutable governance controls assume
-one process. PostgreSQL can share evaluation evidence and approval state, but
-multiple replicas would still have independent incidents, projections, runtime
-mode, and governance-window state. Multi-instance coordination for that state,
-secret distribution, TLS/ingress, deployment manifests, demo workloads, and
-lifecycle orchestration remain outside this image and, where appropriate for
-the demonstration environment, belong in `seneschal-demo-lab`.
+The runtime image contains the PostgreSQL provider assembly and checked-in
+migrations, but it does not contain the .NET SDK or `dotnet-ef` and it never
+auto-migrates. Apply migrations with one pre-deployment tooling job before the
+application rollout, following the
+[database migration strategy](database-migrations.md).
+
+The default in-memory stores and transient projections assume one process.
+PostgreSQL shares its durable state, but coordinated multi-replica operation is
+not yet supported. Secret distribution, database provisioning and backup,
+migration-job execution and ordering, TLS/ingress, deployment manifests, demo
+workloads, and lifecycle orchestration remain outside this image and, where
+appropriate for the demonstration environment, belong in
+`seneschal-demo-lab`.

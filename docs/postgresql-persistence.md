@@ -43,6 +43,9 @@ dotnet tool run dotnet-ef database update `
 
 The migration command reads `ConnectionStrings__SeneschalPostgreSql`.
 Separating migration execution supports controlled deployment and rollback.
+The authoritative [database migration strategy](database-migrations.md)
+defines deployment ordering, exact-history validation, Kubernetes ownership,
+backup requirements, failure handling, and rollback constraints.
 
 ## Start and verify
 

@@ -114,7 +114,8 @@ public sealed class GovernanceModel : PageModel
     private static bool IsAdministrativeEvidence(string effectiveAction) =>
         effectiveAction.StartsWith("approval_", StringComparison.Ordinal) ||
         effectiveAction.StartsWith("runtime_mode_", StringComparison.Ordinal) ||
-        effectiveAction.StartsWith("governance_window_", StringComparison.Ordinal);
+        effectiveAction.StartsWith("governance_window_", StringComparison.Ordinal) ||
+        effectiveAction.StartsWith("incident_", StringComparison.Ordinal);
 }
 
 public sealed record GovernanceImpactSummary(

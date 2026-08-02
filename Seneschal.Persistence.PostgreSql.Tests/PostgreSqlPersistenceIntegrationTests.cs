@@ -24,6 +24,83 @@ public sealed class PostgreSqlPersistenceIntegrationTests(
             await context.Database.GetAppliedMigrationsAsync());
         Assert.Contains("20260802124554_PersistOperationalControls",
             await context.Database.GetAppliedMigrationsAsync());
+        Assert.Contains("20260802132300_PersistIncidentOperatorState",
+            await context.Database.GetAppliedMigrationsAsync());
+    }
+
+    [Fact]
+    public async Task IncidentOperatorState_SurvivesRecreationAndProjectionReplay()
+    {
+        var factory = fixture.CreateFactory();
+        await new PostgreSqlAuditEventStore(factory).WriteAsync(
+            CreateIncidentEvidence("incident-first"));
+        var store = CreateIncidentStore(factory);
+        var projected = Assert.Single(await store.GetAllAsync());
+
+        var acknowledged = await store.AcknowledgeAsync(projected.Id, 0);
+        await new PostgreSqlAuditEventStore(factory).WriteAsync(
+            CreateIncidentEvidence("incident-second") with
+            { TimestampUtc = CreateIncidentEvidence("unused").TimestampUtc.AddMinutes(1) });
+        var restarted = CreateIncidentStore(factory);
+        var refreshed = Assert.Single(await restarted.GetAllAsync());
+
+        Assert.Equal(GovernanceIncidentStatus.Acknowledged, acknowledged?.Status);
+        Assert.Equal(GovernanceIncidentStatus.Acknowledged, refreshed.CurrentStatus);
+        Assert.Equal(1, refreshed.OperatorStateVersion);
+        Assert.Equal(2, refreshed.OccurrenceCount);
+        Assert.Single(await new PostgreSqlAuditEventStore(factory).GetRecentAsync(),
+            item => item.EffectiveAction == "incident_acknowledged");
+    }
+
+    [Fact]
+    public async Task IncidentResolve_CommitsStateAndEvidenceAtomically()
+    {
+        var factory = fixture.CreateFactory();
+        await new PostgreSqlAuditEventStore(factory).WriteAsync(
+            CreateIncidentEvidence("incident-resolve"));
+        var store = CreateIncidentStore(factory);
+        var incident = Assert.Single(await store.GetAllAsync());
+
+        var resolved = await store.ResolveAsync(incident.Id, 0);
+
+        Assert.Equal(GovernanceIncidentStatus.Resolved, resolved?.Status);
+        Assert.Equal(1, resolved?.Version);
+        Assert.Contains(await new PostgreSqlAuditEventStore(factory).GetRecentAsync(),
+            item => item.EffectiveAction == "incident_resolved");
+    }
+
+    [Fact]
+    public async Task IncidentTransition_RejectsStaleVersion()
+    {
+        var factory = fixture.CreateFactory();
+        await new PostgreSqlAuditEventStore(factory).WriteAsync(
+            CreateIncidentEvidence("incident-stale"));
+        var store = CreateIncidentStore(factory);
+        var incident = Assert.Single(await store.GetAllAsync());
+        await store.AcknowledgeAsync(incident.Id, 0);
+
+        await Assert.ThrowsAsync<OperationalControlConcurrencyException>(() =>
+            store.ResolveAsync(incident.Id, 0));
+        Assert.Single(await new PostgreSqlAuditEventStore(factory).GetRecentAsync(),
+            item => item.EffectiveAction.StartsWith("incident_"));
+    }
+
+    [Fact]
+    public async Task ConcurrentIncidentTransitions_OnlyOneCommits()
+    {
+        var factory = fixture.CreateFactory();
+        await new PostgreSqlAuditEventStore(factory).WriteAsync(
+            CreateIncidentEvidence("incident-concurrent"));
+        var incident = Assert.Single(await CreateIncidentStore(factory).GetAllAsync());
+        var stores = new[] { CreateIncidentStore(factory), CreateIncidentStore(factory) };
+        var outcomes = await Task.WhenAll(
+            stores[0].AcknowledgeAsync(incident.Id, 0).ContinueWith(task => task.Exception),
+            stores[1].ResolveAsync(incident.Id, 0).ContinueWith(task => task.Exception));
+
+        Assert.Single(outcomes, item => item is null);
+        Assert.Single(outcomes, item => item is not null);
+        Assert.Single(await new PostgreSqlAuditEventStore(factory).GetRecentAsync(),
+            item => item.EffectiveAction.StartsWith("incident_"));
     }
 
     [Fact]
@@ -440,6 +517,32 @@ public sealed class PostgreSqlPersistenceIntegrationTests(
         EffectiveAction = "allow",
         Reason = "Allowed."
     };
+
+    private static AuditEvent CreateIncidentEvidence(string id) =>
+        CreateEvidence(id) with
+        {
+            Decision = DecisionType.Deny,
+            PolicyDecision = DecisionType.Deny,
+            EffectiveAction = "deny",
+            Reason = "Denied by policy.",
+            MatchedPolicies = ["deny-policy"]
+        };
+
+    private static PostgreSqlGovernanceIncidentStore CreateIncidentStore(
+        IDbContextFactory<PostgreSqlPersistenceDbContext> factory) => new(
+            factory,
+            new InMemoryCapabilityCatalog(
+            [
+                new Capability
+                {
+                    Id = "DeployApplication",
+                    DisplayName = "Deploy application",
+                    Description = "Deploy.",
+                    Provider = "Test",
+                    RiskLevel = RiskLevel.High,
+                    Category = "Deployment"
+                }
+            ]));
 
     private static ApprovalRecord CreateApproval(string id) => new()
     {

@@ -37,6 +37,6 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     {
         await using var context = await CreateFactory().CreateDbContextAsync();
         await context.Database.ExecuteSqlRawAsync(
-            "TRUNCATE TABLE evaluation_evidence, approvals, runtime_governance_state, governance_window_state RESTART IDENTITY;");
+            "TRUNCATE TABLE evaluation_evidence, approvals, runtime_governance_state, governance_window_state, incident_operator_state RESTART IDENTITY;");
     }
 }

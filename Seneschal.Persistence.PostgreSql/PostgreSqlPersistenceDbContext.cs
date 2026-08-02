@@ -11,6 +11,7 @@ public sealed class PostgreSqlPersistenceDbContext(
     internal DbSet<ApprovalEntity> Approvals => Set<ApprovalEntity>();
     internal DbSet<RuntimeGovernanceStateEntity> RuntimeGovernanceStates => Set<RuntimeGovernanceStateEntity>();
     internal DbSet<GovernanceWindowStateEntity> GovernanceWindowStates => Set<GovernanceWindowStateEntity>();
+    internal DbSet<IncidentOperatorStateEntity> IncidentOperatorStates => Set<IncidentOperatorStateEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         ConfigureModel(modelBuilder);
@@ -101,7 +102,26 @@ public sealed class PostgreSqlPersistenceDbContext(
             entity.Property(item => item.Reason).HasColumnName("reason");
             entity.Property(item => item.Version).HasColumnName("version").IsConcurrencyToken();
         });
+
+        modelBuilder.Entity<IncidentOperatorStateEntity>(entity =>
+        {
+            entity.ToTable("incident_operator_state", table => table.HasCheckConstraint(
+                "CK_incident_operator_state_status", "status >= 0 AND status <= 2"));
+            entity.HasKey(item => item.IncidentId);
+            entity.Property(item => item.IncidentId).HasColumnName("incident_id").HasMaxLength(73);
+            entity.Property(item => item.Status).HasColumnName("status");
+            entity.Property(item => item.Version).HasColumnName("version").IsConcurrencyToken();
+            entity.Property(item => item.UpdatedAt).HasColumnName("updated_at");
+        });
     }
+}
+
+internal sealed class IncidentOperatorStateEntity
+{
+    public required string IncidentId { get; set; }
+    public int Status { get; set; }
+    public long Version { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
 }
 
 internal sealed class RuntimeGovernanceStateEntity

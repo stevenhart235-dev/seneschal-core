@@ -63,6 +63,7 @@ public static class ServiceCollectionExtensions
             PostgreSqlInvestigationActivityReader>();
         services.AddSingleton<IGovernanceModeStore, PostgreSqlGovernanceModeStore>();
         services.AddSingleton<IGovernanceWindowStore, PostgreSqlGovernanceWindowStore>();
+        services.AddSingleton<IGovernanceIncidentStore, PostgreSqlGovernanceIncidentStore>();
         services.AddSingleton<PostgreSqlStartupValidator>();
         return services;
     }

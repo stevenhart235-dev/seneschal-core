@@ -18,7 +18,8 @@ public sealed class PostgreSqlInvestigationActivityReader(
         var evaluations = context.EvaluationEvidence.AsNoTracking()
             .Where(item => !item.EffectiveAction.StartsWith("approval_") &&
                 !item.EffectiveAction.StartsWith("runtime_mode_") &&
-                !item.EffectiveAction.StartsWith("governance_window_"));
+                !item.EffectiveAction.StartsWith("governance_window_") &&
+                !item.EffectiveAction.StartsWith("incident_"));
 
         var capabilities = await evaluations
             .GroupBy(item => item.CapabilityId)
@@ -160,7 +161,8 @@ public sealed class PostgreSqlInvestigationActivityReader(
         context.EvaluationEvidence.AsNoTracking()
             .Where(item => !item.EffectiveAction.StartsWith("approval_") &&
                 !item.EffectiveAction.StartsWith("runtime_mode_") &&
-                !item.EffectiveAction.StartsWith("governance_window_"));
+                !item.EffectiveAction.StartsWith("governance_window_") &&
+                !item.EffectiveAction.StartsWith("incident_"));
 
     private static async Task<IReadOnlyCollection<AuditEvent>> RecentEvidenceAsync(
         IQueryable<EvaluationEvidenceEntity> evaluations, int recentCount,

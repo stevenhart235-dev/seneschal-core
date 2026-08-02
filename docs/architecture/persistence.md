@@ -58,11 +58,16 @@ operator state without persisting occurrence counts, timestamps, severity, or
 other derived fields as authoritative data.
 
 Only the existing operator-managed status (`Open`, `Acknowledged`, or
-`Resolved`) and its concurrency version are defined as future durable state in
-this slice. InMemory preserves that status while matching evidence refreshes the
-projection and resets it on process restart. PostgreSQL incident operator-state
-storage, migrations, and administrative transition evidence are not yet
-implemented.
+`Resolved`) and its concurrency version are durable. PostgreSQL stores them in
+`incident_operator_state`; it batch-merges matching rows onto each freshly
+derived projection. A missing row means Open/version 0. Rows without a current
+projection are retained but not displayed.
+
+Acknowledge and resolve conditionally advance the version and append immutable
+`incident_acknowledged` or `incident_resolved` evidence in one transaction.
+Stale versions fail explicitly, while failed evidence writes roll back state.
+InMemory preserves status during matching projection refreshes but resets all
+incident state on process restart.
 
 [ADR-0009: Operational State and Persistence](../adr/0009-operational-state-and-persistence.md)
 defines the intended evidence, mutable-state, projection, storage, transaction,

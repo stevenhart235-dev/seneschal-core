@@ -41,12 +41,16 @@ builder.Services.AddSingleton<IntegrationApiKeyLoader>();
 builder.Services.AddSingleton<IntegrationApiKeyAuthorizer>();
 builder.Services.AddSingleton<CapabilityLoader>();
 builder.Services.AddSingleton<IdentityLoader>();
-builder.Services.AddSingleton<IGovernanceIncidentStore>(services =>
-    new InMemoryGovernanceIncidentStore(
-        services
-            .GetRequiredService<CapabilityLoader>()
-            .GetCapabilities()
-            .Select(CapabilityMapper.ToCore)));
+if (!string.Equals(builder.Configuration["Seneschal:Persistence:Provider"],
+        "PostgreSql", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddSingleton<IGovernanceIncidentStore>(services =>
+        new InMemoryGovernanceIncidentStore(
+            services
+                .GetRequiredService<CapabilityLoader>()
+                .GetCapabilities()
+                .Select(CapabilityMapper.ToCore)));
+}
 builder.Services.AddSingleton<PolicyProjector>();
 builder.Services.AddSingleton<ICapabilityCatalog>(services =>
     new InMemoryCapabilityCatalog(
@@ -254,18 +258,33 @@ app.MapPost(
         IGovernanceIncidentStore governanceIncidentStore,
         CancellationToken cancellationToken) =>
     {
-        var acknowledged = await governanceIncidentStore.AcknowledgeAsync(
-            id,
-            cancellationToken);
-
-        if (!acknowledged)
+        try
         {
-            return Results.NotFound();
-        }
+            var incidentExists = await governanceIncidentStore.GetByIdAsync(
+                id, cancellationToken) is not null;
+            var acknowledged = await governanceIncidentStore.AcknowledgeAsync(
+                id, cancellationToken);
 
-        return AcceptsHtml(request)
-            ? Results.Redirect("/incidents")
-            : Results.NoContent();
+            if (!acknowledged)
+                return incidentExists ? Results.Conflict() : Results.NotFound();
+
+            return AcceptsHtml(request)
+                ? Results.Redirect("/incidents")
+                : Results.NoContent();
+        }
+        catch (OperationalControlConcurrencyException)
+        {
+            return Results.Conflict();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return Results.Json(new { reason = "The incident transition could not be persisted. Retry the request." },
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
     });
 
 app.MapPost(
@@ -276,18 +295,33 @@ app.MapPost(
         IGovernanceIncidentStore governanceIncidentStore,
         CancellationToken cancellationToken) =>
     {
-        var resolved = await governanceIncidentStore.ResolveAsync(
-            id,
-            cancellationToken);
-
-        if (!resolved)
+        try
         {
-            return Results.NotFound();
-        }
+            var incidentExists = await governanceIncidentStore.GetByIdAsync(
+                id, cancellationToken) is not null;
+            var resolved = await governanceIncidentStore.ResolveAsync(
+                id, cancellationToken);
 
-        return AcceptsHtml(request)
-            ? Results.Redirect("/incidents")
-            : Results.NoContent();
+            if (!resolved)
+                return incidentExists ? Results.Conflict() : Results.NotFound();
+
+            return AcceptsHtml(request)
+                ? Results.Redirect("/incidents")
+                : Results.NoContent();
+        }
+        catch (OperationalControlConcurrencyException)
+        {
+            return Results.Conflict();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return Results.Json(new { reason = "The incident transition could not be persisted. Retry the request." },
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
     });
 
 app.MapGet("/audit", async (

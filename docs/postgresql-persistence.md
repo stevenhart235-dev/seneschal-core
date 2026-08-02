@@ -86,6 +86,19 @@ duplicate creation for one correlation scope. Approval/rejection state and its
 administrative evidence commit together; consumption and the consuming decision
 evidence continue to commit together.
 
+Incident occurrence count, first/last observed time, severity, reason, policy,
+capability, and identity remain projections rebuilt from durable evaluation
+evidence. Their deterministic incident key reconnects each projection to the
+matching `incident_operator_state` row. PostgreSQL stores only status, version,
+and update time. Missing state is Open/version 0; orphaned state is retained but
+not displayed until matching evidence projects the incident again.
+
+Acknowledge and resolve transitions use optimistic versions and commit the
+operator-state change with immutable `incident_acknowledged` or
+`incident_resolved` evidence in one transaction. Stale conflicts return HTTP
+409 and provider failures return HTTP 503. InMemory incident state remains
+process-local and resets on restart.
+
 Runtime-mode and Governance Window mutations likewise commit versioned state
 and `runtime_mode_*` or `governance_window_*` administrative evidence in one
 transaction. Optimistic versions reject stale conflicting forms with HTTP 409.
@@ -96,9 +109,10 @@ state.
 
 ## Current limitations
 
-Evaluation evidence, the existing approval lifecycle, runtime mode, and the
-built-in Governance Window state are durable. Incidents, activity, metrics,
-catalog, and graph projections remain process-local or recomputable.
+Evaluation evidence, the existing approval lifecycle, runtime mode, the
+built-in Governance Window state, and incident operator status/version are
+durable. Incident detection and derived fields, activity, metrics, catalog, and
+graph projections remain recomputable.
 Matched-policy aggregates and evaluation-duration averages also remain
 process-local because those fields are not extracted relational columns; the
 PostgreSQL read model does not scan JSONB or invent replacements for them.

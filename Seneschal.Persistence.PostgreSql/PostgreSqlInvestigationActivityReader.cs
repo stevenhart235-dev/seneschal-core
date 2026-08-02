@@ -16,7 +16,9 @@ public sealed class PostgreSqlInvestigationActivityReader(
         await using var context = await contextFactory.CreateDbContextAsync(
             cancellationToken);
         var evaluations = context.EvaluationEvidence.AsNoTracking()
-            .Where(item => !item.EffectiveAction.StartsWith("approval_"));
+            .Where(item => !item.EffectiveAction.StartsWith("approval_") &&
+                !item.EffectiveAction.StartsWith("runtime_mode_") &&
+                !item.EffectiveAction.StartsWith("governance_window_"));
 
         var capabilities = await evaluations
             .GroupBy(item => item.CapabilityId)
@@ -156,7 +158,9 @@ public sealed class PostgreSqlInvestigationActivityReader(
     private static IQueryable<EvaluationEvidenceEntity> Evaluations(
         PostgreSqlPersistenceDbContext context) =>
         context.EvaluationEvidence.AsNoTracking()
-            .Where(item => !item.EffectiveAction.StartsWith("approval_"));
+            .Where(item => !item.EffectiveAction.StartsWith("approval_") &&
+                !item.EffectiveAction.StartsWith("runtime_mode_") &&
+                !item.EffectiveAction.StartsWith("governance_window_"));
 
     private static async Task<IReadOnlyCollection<AuditEvent>> RecentEvidenceAsync(
         IQueryable<EvaluationEvidenceEntity> evaluations, int recentCount,

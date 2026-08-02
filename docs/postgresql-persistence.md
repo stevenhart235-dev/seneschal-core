@@ -3,6 +3,13 @@
 PostgreSQL persistence is opt-in. Seneschal uses process-local in-memory stores
 unless `Seneschal:Persistence:Provider` is set to `PostgreSql`.
 
+When selected, PostgreSQL is authoritative for evaluation evidence, approvals,
+runtime governance mode, and the built-in Governance Window state. After
+migration validation, missing singleton control rows initialize idempotently to
+the existing defaults (`LogOnly`; window disabled in `Observe` mode), without
+creating an operator transition. Existing rows are never overwritten by
+startup configuration.
+
 ## Local setup
 
 ```powershell
@@ -24,7 +31,8 @@ files.
 ## Apply migrations
 
 Migrations are explicit. Startup validates connectivity and fails clearly when
-migrations are pending, but never creates, resets, or migrates the database.
+migrations are pending, but never creates or resets schema and never applies
+migrations.
 
 ```powershell
 dotnet tool restore
@@ -78,11 +86,19 @@ duplicate creation for one correlation scope. Approval/rejection state and its
 administrative evidence commit together; consumption and the consuming decision
 evidence continue to commit together.
 
+Runtime-mode and Governance Window mutations likewise commit versioned state
+and `runtime_mode_*` or `governance_window_*` administrative evidence in one
+transaction. Optimistic versions reject stale conflicting forms with HTTP 409.
+Reapplying the already-current value is a no-op and creates no duplicate
+evidence. The fixed Production Freeze definition remains product configuration;
+its enabled flag, mode, update metadata, reason, and version are operational
+state.
+
 ## Current limitations
 
-Only evaluation evidence and the existing approval lifecycle are durable.
-Incidents, runtime mode, governance windows, activity,
-metrics, catalog, and graph projections remain process-local or recomputable.
+Evaluation evidence, the existing approval lifecycle, runtime mode, and the
+built-in Governance Window state are durable. Incidents, activity, metrics,
+catalog, and graph projections remain process-local or recomputable.
 Matched-policy aggregates and evaluation-duration averages also remain
 process-local because those fields are not extracted relational columns; the
 PostgreSQL read model does not scan JSONB or invent replacements for them.

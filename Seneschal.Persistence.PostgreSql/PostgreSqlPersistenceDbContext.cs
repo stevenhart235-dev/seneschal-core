@@ -9,6 +9,8 @@ public sealed class PostgreSqlPersistenceDbContext(
         Set<EvaluationEvidenceEntity>();
 
     internal DbSet<ApprovalEntity> Approvals => Set<ApprovalEntity>();
+    internal DbSet<RuntimeGovernanceStateEntity> RuntimeGovernanceStates => Set<RuntimeGovernanceStateEntity>();
+    internal DbSet<GovernanceWindowStateEntity> GovernanceWindowStates => Set<GovernanceWindowStateEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         ConfigureModel(modelBuilder);
@@ -72,7 +74,55 @@ public sealed class PostgreSqlPersistenceDbContext(
             entity.HasIndex(item => new { item.Status, item.RequestedAt, item.Id })
                 .IsDescending(false, true, false);
         });
+
+        modelBuilder.Entity<RuntimeGovernanceStateEntity>(entity =>
+        {
+            entity.ToTable("runtime_governance_state", table => table.HasCheckConstraint(
+                "CK_runtime_governance_state_mode", "mode >= 0 AND mode <= 1"));
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Id).HasColumnName("id");
+            entity.Property(item => item.Mode).HasColumnName("mode");
+            entity.Property(item => item.UpdatedAt).HasColumnName("updated_at");
+            entity.Property(item => item.UpdatedBy).HasColumnName("updated_by").HasMaxLength(256);
+            entity.Property(item => item.Reason).HasColumnName("reason");
+            entity.Property(item => item.Version).HasColumnName("version").IsConcurrencyToken();
+        });
+
+        modelBuilder.Entity<GovernanceWindowStateEntity>(entity =>
+        {
+            entity.ToTable("governance_window_state", table => table.HasCheckConstraint(
+                "CK_governance_window_state_mode", "mode >= 0 AND mode <= 1"));
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Id).HasColumnName("id");
+            entity.Property(item => item.Enabled).HasColumnName("enabled");
+            entity.Property(item => item.Mode).HasColumnName("mode");
+            entity.Property(item => item.UpdatedAt).HasColumnName("updated_at");
+            entity.Property(item => item.UpdatedBy).HasColumnName("updated_by").HasMaxLength(256);
+            entity.Property(item => item.Reason).HasColumnName("reason");
+            entity.Property(item => item.Version).HasColumnName("version").IsConcurrencyToken();
+        });
     }
+}
+
+internal sealed class RuntimeGovernanceStateEntity
+{
+    public short Id { get; set; }
+    public int Mode { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
+    public string? UpdatedBy { get; set; }
+    public string? Reason { get; set; }
+    public long Version { get; set; }
+}
+
+internal sealed class GovernanceWindowStateEntity
+{
+    public short Id { get; set; }
+    public bool Enabled { get; set; }
+    public int Mode { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
+    public string? UpdatedBy { get; set; }
+    public string? Reason { get; set; }
+    public long Version { get; set; }
 }
 
 internal sealed class EvaluationEvidenceEntity

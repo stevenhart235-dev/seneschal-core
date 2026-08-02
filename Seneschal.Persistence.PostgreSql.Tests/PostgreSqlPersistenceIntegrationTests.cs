@@ -22,6 +22,88 @@ public sealed class PostgreSqlPersistenceIntegrationTests(
             await context.Database.GetAppliedMigrationsAsync());
         Assert.Contains("202608020001_CompleteApprovalPersistence",
             await context.Database.GetAppliedMigrationsAsync());
+        Assert.Contains("20260802124554_PersistOperationalControls",
+            await context.Database.GetAppliedMigrationsAsync());
+    }
+
+    [Fact]
+    public async Task OperationalControls_InitializeAndSurviveProviderRecreation()
+    {
+        var factory = fixture.CreateFactory();
+        await new PostgreSqlStartupValidator(factory).ValidateAsync();
+        var modes = new PostgreSqlGovernanceModeStore(factory);
+        var windows = new PostgreSqlGovernanceWindowStore(factory);
+
+        Assert.Equal(EnforcementMode.LogOnly, modes.GetState().Mode);
+        Assert.False(windows.GetWindow().Enabled);
+        var mode = await modes.SetModeAsync(EnforcementMode.Enforce, 0,
+            "test-operator", "Enable enforcement.", "mode-restart");
+        var window = await windows.SetStateAsync(true,
+            GovernanceWindowMode.Enforce, 0, "test-operator",
+            "Open freeze.", "window-restart");
+
+        var restartedMode = new PostgreSqlGovernanceModeStore(factory).GetState();
+        Assert.Equal(mode.Mode, restartedMode.Mode);
+        Assert.Equal(mode.Version, restartedMode.Version);
+        Assert.Equal(mode.UpdatedBy, restartedMode.UpdatedBy);
+        Assert.Equal(mode.Reason, restartedMode.Reason);
+        var restartedWindow = new PostgreSqlGovernanceWindowStore(factory).GetWindow();
+        Assert.Equal(window.Enabled, restartedWindow.Enabled);
+        Assert.Equal(window.Mode, restartedWindow.Mode);
+        Assert.Equal(window.Version, restartedWindow.Version);
+        Assert.Equal(window.UpdatedBy, restartedWindow.UpdatedBy);
+        var evidence = await new PostgreSqlAuditEventStore(factory).GetRecentAsync();
+        Assert.Contains(evidence, item => item.EffectiveAction == "runtime_mode_changed");
+        Assert.Contains(evidence, item => item.EffectiveAction == "governance_window_enabled");
+    }
+
+    [Fact]
+    public async Task OperationalControlMutations_RejectStaleConflictsAndTreatIdenticalRetriesAsNoOps()
+    {
+        var factory = fixture.CreateFactory();
+        await new PostgreSqlStartupValidator(factory).ValidateAsync();
+        var store = new PostgreSqlGovernanceModeStore(factory);
+        await store.SetModeAsync(EnforcementMode.Enforce, 0,
+            operationId: "mode-idempotent");
+        await store.SetModeAsync(EnforcementMode.Enforce, 0,
+            operationId: "mode-idempotent");
+        await Assert.ThrowsAsync<OperationalControlConcurrencyException>(() =>
+            store.SetModeAsync(EnforcementMode.LogOnly, 0,
+                operationId: "mode-conflict"));
+
+        var evidence = await new PostgreSqlAuditEventStore(factory).GetRecentAsync();
+        Assert.Single(evidence, item => item.EffectiveAction == "runtime_mode_changed");
+    }
+
+    [Fact]
+    public async Task OperationalControlState_RollsBackWhenEvidenceConflicts()
+    {
+        var factory = fixture.CreateFactory();
+        await new PostgreSqlStartupValidator(factory).ValidateAsync();
+        await new PostgreSqlAuditEventStore(factory).WriteAsync(
+            CreateEvidence("runtime-mode-conflicting-operation"));
+
+        await Assert.ThrowsAsync<EvaluationEvidenceConflictException>(() =>
+            new PostgreSqlGovernanceModeStore(factory).SetModeAsync(
+                EnforcementMode.Enforce, 0, operationId: "conflicting-operation"));
+
+        Assert.Equal(EnforcementMode.LogOnly,
+            new PostgreSqlGovernanceModeStore(factory).GetState().Mode);
+    }
+
+    [Fact]
+    public async Task GovernanceWindow_RejectsStaleConflictingMutation()
+    {
+        var factory = fixture.CreateFactory();
+        await new PostgreSqlStartupValidator(factory).ValidateAsync();
+        var store = new PostgreSqlGovernanceWindowStore(factory);
+        await store.SetStateAsync(true, GovernanceWindowMode.Observe, 0,
+            operationId: "window-first");
+
+        await Assert.ThrowsAsync<OperationalControlConcurrencyException>(() =>
+            store.SetStateAsync(false, GovernanceWindowMode.Enforce, 0,
+                operationId: "window-stale"));
+        Assert.True(store.GetWindow().Enabled);
     }
 
     [Fact]

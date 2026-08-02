@@ -45,6 +45,7 @@
                     <h2>Runtime state</h2>
                     <p class="muted">Changing this state affects future evaluations immediately.</p>
                     <form method="post" action="/governance-windows?handler=SetState" class="governance-window-form">
+                        <input type="hidden" name="expectedVersion" value="@Model.Window.Version" />
                         <label class="governance-window-toggle">
                             <input type="checkbox" name="enabled" value="true" checked="@Model.Window.Enabled" />
                             <span>Enable Production Freeze</span>

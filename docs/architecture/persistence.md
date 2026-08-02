@@ -4,7 +4,8 @@ Seneschal loads capabilities, identities, policies, and integration keys from
 YAML. In-memory persistence remains the default. When explicitly configured,
 the PostgreSQL provider durably stores append-only evaluation evidence and the
 complete existing approval lifecycle: pending, approved, rejected, and consumed
-state plus resolution and consumption metadata.
+state plus resolution and consumption metadata. PostgreSQL also stores the
+current runtime governance mode and built-in Governance Window state.
 Other operational state remains process-local or recomputable.
 
 `IAuditEventStore` is the provider-neutral append-only evaluation-evidence
@@ -37,8 +38,16 @@ summaries and reconstruct their newest 100 detailed events from JSONB in
 canonical evidence order. Their PostgreSQL history therefore survives process
 restart, while the InMemory versions remain process-local.
 Matched-policy activity, duration averages, metrics, incidents, and governance
-window state remain transient because their required aggregation fields are not
-currently extracted for relational evidence queries.
+window projections remain transient.
+
+PostgreSQL owns one versioned singleton row for runtime mode and one for the
+Governance Window. Missing rows initialize idempotently to the existing
+`LogOnly` and disabled/`Observe` defaults after migration validation, without
+operator evidence. Existing durable rows always win over configuration
+defaults. Each real change conditionally updates its row and appends immutable
+administrative evidence in one transaction; identical no-op retries do not add
+evidence and stale conflicting versions fail. InMemory keeps the same defaults
+but resets both controls when the process restarts.
 
 [ADR-0009: Operational State and Persistence](../adr/0009-operational-state-and-persistence.md)
 defines the intended evidence, mutable-state, projection, storage, transaction,

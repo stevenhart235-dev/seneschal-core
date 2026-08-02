@@ -25,8 +25,17 @@ builder.Services.AddSingleton(new RuntimeSettings
 {
     Mode = Seneschal.Core.Enums.EnforcementMode.LogOnly
 });
-builder.Services.AddSingleton<IGovernanceModeStore, InMemoryGovernanceModeStore>();
-builder.Services.AddSingleton<IGovernanceWindowStore, InMemoryGovernanceWindowStore>();
+if (!string.Equals(builder.Configuration["Seneschal:Persistence:Provider"],
+        "PostgreSql", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddSingleton<IGovernanceModeStore>(services =>
+        new InMemoryGovernanceModeStore(
+            services.GetRequiredService<RuntimeSettings>(),
+            services.GetRequiredService<IAuditEventStore>()));
+    builder.Services.AddSingleton<IGovernanceWindowStore>(services =>
+        new InMemoryGovernanceWindowStore(
+            services.GetRequiredService<IAuditEventStore>()));
+}
 builder.Services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
 builder.Services.AddSingleton<IntegrationApiKeyLoader>();
 builder.Services.AddSingleton<IntegrationApiKeyAuthorizer>();

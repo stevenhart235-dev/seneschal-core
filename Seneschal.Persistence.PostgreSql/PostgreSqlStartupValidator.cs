@@ -21,6 +21,19 @@ public sealed class PostgreSqlStartupValidator(
             throw new InvalidOperationException(
                 "PostgreSQL persistence has pending migrations. Apply migrations before starting Seneschal.");
         }
+
+        await InitializeOperationalControlsAsync(context, cancellationToken);
+    }
+
+    private static async Task InitializeOperationalControlsAsync(
+        PostgreSqlPersistenceDbContext context, CancellationToken cancellationToken)
+    {
+        await context.Database.ExecuteSqlRawAsync(
+            "INSERT INTO runtime_governance_state (id, mode, version) VALUES (1, 0, 0) ON CONFLICT (id) DO NOTHING",
+            cancellationToken);
+        await context.Database.ExecuteSqlRawAsync(
+            "INSERT INTO governance_window_state (id, enabled, mode, version) VALUES (1, FALSE, 0, 0) ON CONFLICT (id) DO NOTHING",
+            cancellationToken);
     }
 
 }

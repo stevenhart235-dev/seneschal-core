@@ -10,4 +10,7 @@ public sealed record GovernanceWindow
     public required GovernanceWindowMode Mode { get; init; }
     public IReadOnlyCollection<string> AffectedCapabilities { get; init; } = [];
     public required string Reason { get; init; }
+    public long Version { get; init; }
+    public DateTimeOffset? UpdatedAt { get; init; }
+    public string? UpdatedBy { get; init; }
 }

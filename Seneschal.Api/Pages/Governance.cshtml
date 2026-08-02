@@ -92,6 +92,7 @@
             <dialog class="governance-dialog" id="enforce-confirmation" aria-labelledby="enforce-dialog-title" aria-describedby="enforce-dialog-description">
                 <form method="post" action="/governance?handler=SetMode">
                     <input type="hidden" name="mode" value="Enforce" />
+                    <input type="hidden" name="expectedVersion" value="@Model.CurrentModeVersion" />
                     <h2 id="enforce-dialog-title">Enable runtime enforcement?</h2>
                     <div id="enforce-dialog-description">
                         <ul>
@@ -128,6 +129,7 @@
             <dialog class="governance-dialog" id="logonly-confirmation" aria-labelledby="logonly-dialog-title" aria-describedby="logonly-dialog-description">
                 <form method="post" action="/governance?handler=SetMode">
                     <input type="hidden" name="mode" value="LogOnly" />
+                    <input type="hidden" name="expectedVersion" value="@Model.CurrentModeVersion" />
                     <h2 id="logonly-dialog-title">Return to LogOnly?</h2>
                     <p id="logonly-dialog-description">Denied and Pending Approval decisions will continue to be recorded but will no longer block integrated operations.</p>
                     <div class="dialog-actions">

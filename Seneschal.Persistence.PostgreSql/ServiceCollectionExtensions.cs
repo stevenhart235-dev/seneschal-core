@@ -61,6 +61,8 @@ public static class ServiceCollectionExtensions
             PostgreSqlEvaluationCommitCoordinator>();
         services.AddSingleton<IInvestigationActivityReader,
             PostgreSqlInvestigationActivityReader>();
+        services.AddSingleton<IGovernanceModeStore, PostgreSqlGovernanceModeStore>();
+        services.AddSingleton<IGovernanceWindowStore, PostgreSqlGovernanceWindowStore>();
         services.AddSingleton<PostgreSqlStartupValidator>();
         return services;
     }

@@ -22,6 +22,7 @@ public sealed class GovernanceModel : PageModel
     }
 
     public EnforcementMode CurrentMode { get; private set; }
+    public long CurrentModeVersion { get; private set; }
 
     public string CurrentModeLabel => CurrentMode == EnforcementMode.LogOnly
         ? "LogOnly"
@@ -36,14 +37,18 @@ public sealed class GovernanceModel : PageModel
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
-        CurrentMode = _governanceModeStore.GetMode();
+        var state = _governanceModeStore.GetState();
+        CurrentMode = state.Mode;
+        CurrentModeVersion = state.Version;
         var events = await _auditEventStore.GetRecentAsync(
             count: 100,
             cancellationToken);
         Impact = CreateImpactSummary(events, DateTimeOffset.UtcNow);
     }
 
-    public IActionResult OnPostSetMode(string mode)
+    public async Task<IActionResult> OnPostSetModeAsync(
+        string mode, long? expectedVersion,
+        CancellationToken cancellationToken)
     {
         if (!Enum.TryParse<EnforcementMode>(
                 mode,
@@ -53,7 +58,27 @@ public sealed class GovernanceModel : PageModel
             return BadRequest();
         }
 
-        _governanceModeStore.SetMode(parsedMode);
+        try
+        {
+            await _governanceModeStore.SetModeAsync(parsedMode,
+                expectedVersion ?? _governanceModeStore.GetState().Version,
+                reason: "Runtime governance mode changed through the operator portal.",
+                cancellationToken: cancellationToken);
+        }
+        catch (Seneschal.Core.Exceptions.OperationalControlConcurrencyException exception)
+        {
+            ModelState.AddModelError(string.Empty, exception.Message);
+            return StatusCode(StatusCodes.Status409Conflict, ModelState);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                "The runtime governance change could not be persisted. Retry the request.");
+        }
 
         return RedirectToPage();
     }
@@ -63,6 +88,8 @@ public sealed class GovernanceModel : PageModel
         DateTimeOffset now)
     {
         var events = auditEvents
+            .Where(auditEvent => !IsAdministrativeEvidence(
+                auditEvent.EffectiveAction))
             .OrderByDescending(auditEvent => auditEvent.TimestampUtc)
             .ToList();
         var activeAfter = now - DashboardModel.ActiveThreshold;
@@ -83,6 +110,11 @@ public sealed class GovernanceModel : PageModel
             events.FirstOrDefault(auditEvent =>
                 auditEvent.Decision == DecisionType.RequireApproval)?.CapabilityId);
     }
+
+    private static bool IsAdministrativeEvidence(string effectiveAction) =>
+        effectiveAction.StartsWith("approval_", StringComparison.Ordinal) ||
+        effectiveAction.StartsWith("runtime_mode_", StringComparison.Ordinal) ||
+        effectiveAction.StartsWith("governance_window_", StringComparison.Ordinal);
 }
 
 public sealed record GovernanceImpactSummary(

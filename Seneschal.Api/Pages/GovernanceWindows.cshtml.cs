@@ -35,7 +35,9 @@ public sealed class GovernanceWindowsModel : PageModel
             .ToList();
     }
 
-    public IActionResult OnPostSetState(bool enabled, string mode)
+    public async Task<IActionResult> OnPostSetStateAsync(
+        bool enabled, string mode, long? expectedVersion,
+        CancellationToken cancellationToken)
     {
         if (!Enum.TryParse<GovernanceWindowMode>(
                 mode,
@@ -45,7 +47,27 @@ public sealed class GovernanceWindowsModel : PageModel
             return BadRequest();
         }
 
-        _windowStore.SetState(enabled, parsedMode);
+        try
+        {
+            await _windowStore.SetStateAsync(enabled, parsedMode,
+                expectedVersion ?? _windowStore.GetWindow().Version,
+                reason: "Governance Window state changed through the operator portal.",
+                cancellationToken: cancellationToken);
+        }
+        catch (Seneschal.Core.Exceptions.OperationalControlConcurrencyException exception)
+        {
+            ModelState.AddModelError(string.Empty, exception.Message);
+            return StatusCode(StatusCodes.Status409Conflict, ModelState);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                "The Governance Window change could not be persisted. Retry the request.");
+        }
         return RedirectToPage();
     }
 }

@@ -49,6 +49,21 @@ administrative evidence in one transaction; identical no-op retries do not add
 evidence and stale conflicting versions fail. InMemory keeps the same defaults
 but resets both controls when the process restarts.
 
+Incident detection remains a replayable projection derived from evaluation
+evidence. Its grouping fields are capability ID, identity ID, decision reason,
+and the first nonblank matched policy. The stable incident ID is `incident-`
+plus the lowercase SHA-256 hash of those four trimmed, lowercase, length-prefixed
+values in that order. This lets a refreshed projection reconnect to the same
+operator state without persisting occurrence counts, timestamps, severity, or
+other derived fields as authoritative data.
+
+Only the existing operator-managed status (`Open`, `Acknowledged`, or
+`Resolved`) and its concurrency version are defined as future durable state in
+this slice. InMemory preserves that status while matching evidence refreshes the
+projection and resets it on process restart. PostgreSQL incident operator-state
+storage, migrations, and administrative transition evidence are not yet
+implemented.
+
 [ADR-0009: Operational State and Persistence](../adr/0009-operational-state-and-persistence.md)
 defines the intended evidence, mutable-state, projection, storage, transaction,
 and rollout boundaries. See the

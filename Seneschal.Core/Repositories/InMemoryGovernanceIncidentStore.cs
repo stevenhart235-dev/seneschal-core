@@ -44,7 +44,7 @@ public sealed class InMemoryGovernanceIncidentStore : IGovernanceIncidentStore
         var matchedPolicy = auditEvent.MatchedPolicies
             .FirstOrDefault(policy => !string.IsNullOrWhiteSpace(policy)) ??
             string.Empty;
-        var key = BuildKey(
+        var key = GovernanceIncidentKey.Create(
             auditEvent.CapabilityId,
             auditEvent.IdentityId,
             auditEvent.Reason,
@@ -119,6 +119,33 @@ public sealed class InMemoryGovernanceIncidentStore : IGovernanceIncidentStore
         }
     }
 
+    public Task<GovernanceIncidentOperatorState?> GetOperatorStateAsync(
+        string incidentId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(incidentId);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        lock (_gate)
+        {
+            return Task.FromResult(FindById(incidentId)?.ToOperatorState());
+        }
+    }
+
+    public Task<GovernanceIncidentOperatorState?> AcknowledgeAsync(
+        string incidentId,
+        long expectedVersion,
+        CancellationToken cancellationToken = default) =>
+        TransitionAsync(incidentId, expectedVersion, acknowledge: true,
+            cancellationToken);
+
+    public Task<GovernanceIncidentOperatorState?> ResolveAsync(
+        string incidentId,
+        long expectedVersion,
+        CancellationToken cancellationToken = default) =>
+        TransitionAsync(incidentId, expectedVersion, acknowledge: false,
+            cancellationToken);
+
     public Task<bool> ResolveAsync(
         string incidentId,
         CancellationToken cancellationToken = default)
@@ -158,18 +185,33 @@ public sealed class InMemoryGovernanceIncidentStore : IGovernanceIncidentStore
             DecisionType.LogOnly;
     }
 
-    private static string BuildKey(
-        string capabilityId,
-        string identityId,
-        string reason,
-        string matchedPolicy)
+    private Task<GovernanceIncidentOperatorState?> TransitionAsync(
+        string incidentId,
+        long expectedVersion,
+        bool acknowledge,
+        CancellationToken cancellationToken)
     {
-        return string.Join(
-            "|",
-            capabilityId.Trim(),
-            identityId.Trim(),
-            reason.Trim(),
-            matchedPolicy.Trim());
+        ArgumentException.ThrowIfNullOrWhiteSpace(incidentId);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        lock (_gate)
+        {
+            var incident = FindById(incidentId);
+            if (incident is null)
+            {
+                return Task.FromResult<GovernanceIncidentOperatorState?>(null);
+            }
+            if (incident.Version != expectedVersion)
+            {
+                throw new Seneschal.Core.Exceptions.OperationalControlConcurrencyException(
+                    "incident operator", expectedVersion, incident.Version);
+            }
+
+            var changed = acknowledge
+                ? incident.Acknowledge()
+                : incident.Resolve();
+            return Task.FromResult(changed ? incident.ToOperatorState() : null);
+        }
     }
 
     private sealed class IncidentAccumulator
@@ -183,7 +225,8 @@ public sealed class InMemoryGovernanceIncidentStore : IGovernanceIncidentStore
             string matchedPolicy,
             DateTimeOffset firstSeenUtc)
         {
-            Id = Guid.NewGuid().ToString("N");
+            Id = GovernanceIncidentKey.Create(
+                capabilityId, identityId, decisionReason, matchedPolicy);
             CapabilityId = capabilityId;
             IdentityId = identityId;
             DecisionReason = decisionReason;
@@ -211,6 +254,8 @@ public sealed class InMemoryGovernanceIncidentStore : IGovernanceIncidentStore
         public GovernanceIncidentStatus CurrentStatus { get; private set; } =
             GovernanceIncidentStatus.Open;
 
+        public long Version { get; private set; }
+
         public void Record(AuditEvent auditEvent)
         {
             OccurrenceCount++;
@@ -236,9 +281,17 @@ public sealed class InMemoryGovernanceIncidentStore : IGovernanceIncidentStore
                 FirstSeenUtc = FirstSeenUtc,
                 LastSeenUtc = LastSeenUtc,
                 OccurrenceCount = OccurrenceCount,
-                CurrentStatus = CurrentStatus
+                CurrentStatus = CurrentStatus,
+                OperatorStateVersion = Version
             };
         }
+
+        public GovernanceIncidentOperatorState ToOperatorState() => new()
+        {
+            IncidentId = Id,
+            Status = CurrentStatus,
+            Version = Version
+        };
 
         public bool Acknowledge()
         {
@@ -248,6 +301,7 @@ public sealed class InMemoryGovernanceIncidentStore : IGovernanceIncidentStore
             }
 
             CurrentStatus = GovernanceIncidentStatus.Acknowledged;
+            Version++;
 
             return true;
         }
@@ -260,6 +314,7 @@ public sealed class InMemoryGovernanceIncidentStore : IGovernanceIncidentStore
             }
 
             CurrentStatus = GovernanceIncidentStatus.Resolved;
+            Version++;
 
             return true;
         }

@@ -15,11 +15,25 @@ public interface IGovernanceIncidentStore
         string incidentId,
         CancellationToken cancellationToken = default);
 
+    Task<GovernanceIncidentOperatorState?> GetOperatorStateAsync(
+        string incidentId,
+        CancellationToken cancellationToken = default);
+
     Task<bool> AcknowledgeAsync(
         string incidentId,
         CancellationToken cancellationToken = default);
 
     Task<bool> ResolveAsync(
         string incidentId,
+        CancellationToken cancellationToken = default);
+
+    Task<GovernanceIncidentOperatorState?> AcknowledgeAsync(
+        string incidentId,
+        long expectedVersion,
+        CancellationToken cancellationToken = default);
+
+    Task<GovernanceIncidentOperatorState?> ResolveAsync(
+        string incidentId,
+        long expectedVersion,
         CancellationToken cancellationToken = default);
 }

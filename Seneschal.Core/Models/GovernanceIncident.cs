@@ -25,4 +25,6 @@ public sealed record GovernanceIncident
     public required int OccurrenceCount { get; init; }
 
     public required GovernanceIncidentStatus CurrentStatus { get; init; }
+
+    public long OperatorStateVersion { get; init; }
 }

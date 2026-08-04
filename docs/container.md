@@ -13,6 +13,33 @@ Build from the repository root:
 docker build --tag seneschal-core:dev .
 ```
 
+## Publish release-matched images
+
+Release both the application runtime and PostgreSQL migration images from one
+clean working-tree revision with:
+
+```powershell
+.\scripts\publish-images.ps1 `
+  -Tag demo-20260804 `
+  -AwsAccountId 961381385086 `
+  -AwsRegion us-east-2
+```
+
+The tag is required and `latest` is rejected. The script validates the active
+AWS account, refuses dirty working trees, refuses to overwrite either existing
+ECR tag, builds `Dockerfile` and `Dockerfile.migrations` from the repository
+root, verifies the Git commit and working-tree state stayed unchanged between
+builds, authenticates Docker using `aws ecr get-login-password`, and pushes:
+
+- `<account>.dkr.ecr.<region>.amazonaws.com/seneschal/core:<tag>`
+- `<account>.dkr.ecr.<region>.amazonaws.com/seneschal/migrations:<tag>`
+
+On success it reports the source commit, tagged references, and digest-pinned
+references. It does not publish worker images or create repositories. For a
+development-only publication from local changes, pass
+`-AllowDirtyWorkingTree`; the warning notes that the reported commit does not
+identify those uncommitted contents.
+
 Run the container with host port `5077` mapped to container port `8080`:
 
 ```powershell

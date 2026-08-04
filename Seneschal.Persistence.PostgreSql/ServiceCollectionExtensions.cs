@@ -16,6 +16,8 @@ public static class ServiceCollectionExtensions
             ?? "InMemory";
         if (string.Equals(provider, "InMemory", StringComparison.OrdinalIgnoreCase))
         {
+            services.AddSingleton<IPersistenceReadiness,
+                InMemoryPersistenceReadiness>();
             services.AddSingleton<InMemoryAuditEventStore>();
             services.AddSingleton<IAuditEventStore>(sp =>
                 sp.GetRequiredService<InMemoryAuditEventStore>());
@@ -49,6 +51,8 @@ public static class ServiceCollectionExtensions
         services.AddPooledDbContextFactory<PostgreSqlPersistenceDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly(
                 typeof(PostgreSqlPersistenceDbContext).Assembly.FullName)));
+        services.AddSingleton<IPersistenceReadiness,
+            PostgreSqlPersistenceReadiness>();
         services.AddSingleton<PostgreSqlAuditEventStore>();
         services.AddSingleton<IAuditEventStore>(sp =>
             sp.GetRequiredService<PostgreSqlAuditEventStore>());

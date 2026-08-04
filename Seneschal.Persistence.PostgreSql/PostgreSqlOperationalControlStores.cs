@@ -12,10 +12,9 @@ public sealed class PostgreSqlGovernanceModeStore(IDbContextFactory<PostgreSqlPe
     public void SetMode(EnforcementMode mode) =>
         SetModeAsync(mode, GetState().Version).GetAwaiter().GetResult();
     public RuntimeGovernanceState GetState()
-    {
-        using var context = contextFactory.CreateDbContext();
-        return Map(context.RuntimeGovernanceStates.AsNoTracking().Single(item => item.Id == 1));
-    }
+        => contextFactory.Execute(context => Map(
+            context.RuntimeGovernanceStates.AsNoTracking()
+                .Single(item => item.Id == 1)));
 
     public async Task<RuntimeGovernanceState> SetModeAsync(EnforcementMode mode, long expectedVersion,
         string? actor = null, string? reason = null, string? operationId = null,
@@ -76,10 +75,9 @@ public sealed class PostgreSqlGovernanceWindowStore(IDbContextFactory<PostgreSql
     public void SetState(bool enabled, GovernanceWindowMode mode) =>
         SetStateAsync(enabled, mode, GetWindow().Version).GetAwaiter().GetResult();
     public GovernanceWindow GetWindow()
-    {
-        using var context = contextFactory.CreateDbContext();
-        return Map(context.GovernanceWindowStates.AsNoTracking().Single(item => item.Id == 1));
-    }
+        => contextFactory.Execute(context => Map(
+            context.GovernanceWindowStates.AsNoTracking()
+                .Single(item => item.Id == 1)));
 
     public async Task<GovernanceWindow> SetStateAsync(bool enabled, GovernanceWindowMode mode, long expectedVersion,
         string? actor = null, string? reason = null, string? operationId = null,

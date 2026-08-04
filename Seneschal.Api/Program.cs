@@ -82,6 +82,30 @@ builder.Services.AddSingleton<NorthwindHistorySeeder>();
 
 var app = builder.Build();
 
+app.Use(async (httpContext, next) =>
+{
+    try
+    {
+        await next(httpContext);
+    }
+    catch (PostgreSqlReadUnavailableException exception)
+    {
+        if (httpContext.Response.HasStarted)
+        {
+            throw;
+        }
+
+        app.Logger.LogWarning(
+            "A PostgreSQL read remained unavailable after bounded retries ({ExceptionType}).",
+            exception.InnerException?.GetType().Name ?? exception.GetType().Name);
+        httpContext.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        await httpContext.Response.WriteAsJsonAsync(new
+        {
+            reason = "Persistence is temporarily unavailable. Retry the request."
+        }, httpContext.RequestAborted);
+    }
+});
+
 app.UseStaticFiles();
 
 await app.Services.ValidateSeneschalPersistenceAsync();
@@ -147,24 +171,28 @@ app.MapGet("/live", () =>
     });
 });
 
-app.MapGet("/ready", (
+app.MapGet("/ready", async (
     CapabilityLoader capabilityLoader,
     IdentityLoader identityLoader,
     PolicyLoader policyLoader,
     RuntimeSettings runtimeSettings,
-    IConfigurationValidator configurationValidator) =>
+    IConfigurationValidator configurationValidator,
+    IPersistenceReadiness persistenceReadiness,
+    CancellationToken cancellationToken) =>
 {
     var capabilityCount = capabilityLoader.GetCapabilities().Count;
     var identityCount = identityLoader.GetIdentities().Count;
     var policyCount = policyLoader.GetPolicies().Count;
     var runtimeSettingsLoaded = runtimeSettings is not null;
     var validationResult = configurationValidator.Validate();
+    var persistence = await persistenceReadiness.CheckAsync(cancellationToken);
     var ready = capabilityCount > 0
         && identityCount > 0
         && policyCount > 0
-        && runtimeSettingsLoaded;
+        && runtimeSettingsLoaded
+        && persistence.IsReady;
 
-    return Results.Ok(new
+    var response = new
     {
         status = ready ? "ready" : "not_ready",
         timestampUtc = DateTimeOffset.UtcNow,
@@ -174,8 +202,15 @@ app.MapGet("/ready", (
         runtimeSettingsLoaded,
         configValid = validationResult.IsValid,
         validationErrors = validationResult.ErrorCount,
-        validationWarnings = validationResult.WarningCount
-    });
+        validationWarnings = validationResult.WarningCount,
+        persistenceProvider = persistence.Provider,
+        persistenceReachable = persistence.Reachable,
+        migrationsCurrent = persistence.MigrationsCurrent
+    };
+    return ready
+        ? Results.Ok(response)
+        : Results.Json(response,
+            statusCode: StatusCodes.Status503ServiceUnavailable);
 });
 
 app.MapGet("/config/validate", (

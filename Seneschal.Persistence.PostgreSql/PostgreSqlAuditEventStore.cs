@@ -54,14 +54,16 @@ public sealed class PostgreSqlAuditEventStore(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         cancellationToken.ThrowIfCancellationRequested();
-        await using var context = await contextFactory.CreateDbContextAsync(
-            cancellationToken);
-        var payload = await context.EvaluationEvidence
-            .AsNoTracking()
-            .Where(item => item.Id == id)
-            .Select(item => item.Payload)
-            .SingleOrDefaultAsync(cancellationToken);
-        return payload is null ? null : AuditEventSerialization.Deserialize(payload);
+        return await contextFactory.ExecuteAsync(async (context, token) =>
+        {
+            var payload = await context.EvaluationEvidence
+                .AsNoTracking()
+                .Where(item => item.Id == id)
+                .Select(item => item.Payload)
+                .SingleOrDefaultAsync(token);
+            return payload is null
+                ? null : AuditEventSerialization.Deserialize(payload);
+        }, cancellationToken);
     }
 
     public async Task<IReadOnlyCollection<AuditEvent>> GetRecentAsync(
@@ -69,16 +71,18 @@ public sealed class PostgreSqlAuditEventStore(
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        await using var context = await contextFactory.CreateDbContextAsync(
-            cancellationToken);
-        var payloads = await context.EvaluationEvidence
-            .AsNoTracking()
-            .OrderByDescending(item => item.TimestampUtc)
-            .ThenBy(item => item.AppendSequence)
-            .Take(count)
-            .Select(item => item.Payload)
-            .ToListAsync(cancellationToken);
-        return payloads.Select(AuditEventSerialization.Deserialize).ToList();
+        return await contextFactory.ExecuteAsync(async (context, token) =>
+        {
+            var payloads = await context.EvaluationEvidence
+                .AsNoTracking()
+                .OrderByDescending(item => item.TimestampUtc)
+                .ThenBy(item => item.AppendSequence)
+                .Take(count)
+                .Select(item => item.Payload)
+                .ToListAsync(token);
+            return (IReadOnlyCollection<AuditEvent>)payloads
+                .Select(AuditEventSerialization.Deserialize).ToList();
+        }, cancellationToken);
     }
 
     internal static EvaluationEvidenceEntity ToEntity(

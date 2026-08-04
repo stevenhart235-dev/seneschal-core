@@ -1,6 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Seneschal.Core.Interfaces;
+using Seneschal.Core.Models;
+using Seneschal.Persistence.PostgreSql;
 using Xunit;
 
 namespace Seneschal.Api.Tests;
@@ -60,8 +66,53 @@ public sealed class HealthDiagnosticsEndpointTests :
         Assert.True(root.GetProperty("identitiesLoaded").GetBoolean());
         Assert.True(root.GetProperty("policiesLoaded").GetBoolean());
         Assert.True(root.GetProperty("runtimeSettingsLoaded").GetBoolean());
+        Assert.Equal("InMemory",
+            root.GetProperty("persistenceProvider").GetString());
+        Assert.True(root.GetProperty("persistenceReachable").GetBoolean());
+        Assert.True(root.GetProperty("migrationsCurrent").GetBoolean());
         Assert.True(root.TryGetProperty("timestampUtc", out var timestamp));
         Assert.Equal(JsonValueKind.String, timestamp.ValueKind);
+    }
+
+    [Fact]
+    public async Task Ready_ReturnsSafe503WhenSelectedPersistenceIsUnavailable()
+    {
+        using var factory = new UnavailableReadinessFactory();
+        using var client = factory.CreateClient();
+
+        using var readyResponse = await client.GetAsync("/ready");
+        using var healthResponse = await client.GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable,
+            readyResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, healthResponse.StatusCode);
+        var body = await readyResponse.Content.ReadAsStringAsync();
+        Assert.Contains("not_ready", body);
+        Assert.Contains("PostgreSql", body);
+        Assert.DoesNotContain("Password", body,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Npgsql", body,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("57P01", body,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ExhaustedPostgreSqlRead_ReturnsSafe503()
+    {
+        using var factory = new UnavailableReadFactory();
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/audit");
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("temporarily unavailable", body,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("provider detail", body,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("PostgreSQL", body,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -136,5 +187,60 @@ public sealed class HealthDiagnosticsEndpointTests :
     {
         var stream = await response.Content.ReadAsStreamAsync();
         return await JsonDocument.ParseAsync(stream);
+    }
+
+    private sealed class UnavailableReadinessFactory : ApiApplicationFactory
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            base.ConfigureWebHost(builder);
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IPersistenceReadiness>();
+                services.AddSingleton<IPersistenceReadiness>(
+                    new UnavailableReadiness());
+            });
+        }
+    }
+
+    private sealed class UnavailableReadiness : IPersistenceReadiness
+    {
+        public Task<PersistenceReadinessResult> CheckAsync(
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new PersistenceReadinessResult(
+                "PostgreSql", Reachable: false, MigrationsCurrent: false));
+    }
+
+    private sealed class UnavailableReadFactory : ApiApplicationFactory
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            base.ConfigureWebHost(builder);
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IAuditEventStore>();
+                services.AddSingleton<IAuditEventStore>(
+                    new UnavailableAuditStore());
+            });
+        }
+    }
+
+    private sealed class UnavailableAuditStore : IAuditEventStore
+    {
+        public Task WriteAsync(AuditEvent auditEvent,
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task<AuditEvent?> GetByIdAsync(string id,
+            CancellationToken cancellationToken = default) =>
+            Task.FromException<AuditEvent?>(Unavailable());
+
+        public Task<IReadOnlyCollection<AuditEvent>> GetRecentAsync(
+            int count = 100,
+            CancellationToken cancellationToken = default) =>
+            Task.FromException<IReadOnlyCollection<AuditEvent>>(Unavailable());
+
+        private static PostgreSqlReadUnavailableException Unavailable() =>
+            new(new IOException("provider detail"));
     }
 }

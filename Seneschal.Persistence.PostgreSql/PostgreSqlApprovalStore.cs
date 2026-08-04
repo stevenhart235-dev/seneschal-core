@@ -64,40 +64,44 @@ public sealed class PostgreSqlApprovalStore(
         string resourceId, string? operationId = null)
     {
         operationId = PostgreSqlMappings.NormalizeOperationId(operationId);
-        using var context = contextFactory.CreateDbContext();
-        var entity = context.Approvals.AsNoTracking()
-            .Where(item => item.IdentityId == identityId &&
-                item.CapabilityId == capabilityId &&
-                item.Environment == environment &&
-                item.ResourceId == resourceId &&
-                item.OperationId == operationId &&
-                item.Status != (int)ApprovalStatus.Consumed)
-            .OrderByDescending(item => item.RequestedAt)
-            .FirstOrDefault();
-        return entity is null ? null : PostgreSqlMappings.ToModel(entity);
+        return contextFactory.Execute(context =>
+        {
+            var entity = context.Approvals.AsNoTracking()
+                .Where(item => item.IdentityId == identityId &&
+                    item.CapabilityId == capabilityId &&
+                    item.Environment == environment &&
+                    item.ResourceId == resourceId &&
+                    item.OperationId == operationId &&
+                    item.Status != (int)ApprovalStatus.Consumed)
+                .OrderByDescending(item => item.RequestedAt)
+                .FirstOrDefault();
+            return entity is null ? null : PostgreSqlMappings.ToModel(entity);
+        });
     }
 
     public ApprovalRecord? GetById(string approvalId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(approvalId);
-        using var context = contextFactory.CreateDbContext();
-        var entity = context.Approvals.AsNoTracking()
-            .SingleOrDefault(item => item.Id == approvalId);
-        return entity is null ? null : PostgreSqlMappings.ToModel(entity);
+        return contextFactory.Execute(context =>
+        {
+            var entity = context.Approvals.AsNoTracking()
+                .SingleOrDefault(item => item.Id == approvalId);
+            return entity is null ? null : PostgreSqlMappings.ToModel(entity);
+        });
     }
 
     public IReadOnlyCollection<ApprovalRecord> GetPending()
     {
-        using var context = contextFactory.CreateDbContext();
-        return Ordered(context.Approvals.AsNoTracking()
-            .Where(item => item.Status == (int)ApprovalStatus.Pending));
+        return contextFactory.Execute(context => Ordered(
+            context.Approvals.AsNoTracking().Where(item =>
+                item.Status == (int)ApprovalStatus.Pending)));
     }
 
     public IReadOnlyCollection<ApprovalRecord> GetHistory()
     {
-        using var context = contextFactory.CreateDbContext();
-        return Ordered(context.Approvals.AsNoTracking()
-            .Where(item => item.Status != (int)ApprovalStatus.Pending));
+        return contextFactory.Execute(context => Ordered(
+            context.Approvals.AsNoTracking().Where(item =>
+                item.Status != (int)ApprovalStatus.Pending)));
     }
 
     public ApprovalRecord? Resolve(
@@ -168,8 +172,8 @@ public sealed class PostgreSqlApprovalStore(
 
     public IReadOnlyCollection<ApprovalRecord> GetAll()
     {
-        using var context = contextFactory.CreateDbContext();
-        return Ordered(context.Approvals.AsNoTracking());
+        return contextFactory.Execute(context =>
+            Ordered(context.Approvals.AsNoTracking()));
     }
 
     private static IReadOnlyCollection<ApprovalRecord> Ordered(

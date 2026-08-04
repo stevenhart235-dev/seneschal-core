@@ -37,6 +37,28 @@ Capability Activity and Identity Activity use the same durable relational
 summaries and reconstruct their newest 100 detailed events from JSONB in
 canonical evidence order. Their PostgreSQL history therefore survives process
 restart, while the InMemory versions remain process-local.
+
+PostgreSQL read models execute through one bounded retry boundary: two retries
+with 50 ms and 150 ms delays, a fresh context per attempt, Npgsql-native
+transient classification, and request cancellation for asynchronous reads.
+This covers authoritative audit/Decision Trace, durable dashboard and activity
+aggregates, approval queries, incident projections/operator state, and runtime
+mode/Governance Window reads. Exhaustion becomes the API's safe persistence
+unavailable response rather than exposing provider exceptions. A detected
+administrator shutdown or connection-level I/O failure clears only the affected
+Npgsql pool so all connections made stale by a server restart are retired.
+
+The persistence provider also supplies readiness state. InMemory has no
+dependency. PostgreSQL readiness opens a fresh connection, checks known pending
+migrations, and performs a non-mutating scalar query on every probe under a
+two-second bound. This intentionally keeps `/health` as process liveness while
+`/ready` returns non-ready during database unavailability or schema mismatch
+and recovers automatically after PostgreSQL returns.
+
+Write execution remains outside the retry boundary. The provider's explicit
+transactions, deterministic evidence identifiers, idempotency checks, and
+optimistic concurrency rules remain unchanged; an ambiguous commit is not
+blindly replayed.
 Matched-policy activity, duration averages, metrics, incidents, and governance
 window projections remain transient.
 

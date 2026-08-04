@@ -19,4 +19,8 @@
     <ProjectReference Include="..\Seneschal.Core\Seneschal.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Seneschal.Persistence.PostgreSql.Tests" />
+  </ItemGroup>
+
 </Project>

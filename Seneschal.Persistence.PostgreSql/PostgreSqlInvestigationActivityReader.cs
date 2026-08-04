@@ -11,10 +11,17 @@ public sealed class PostgreSqlInvestigationActivityReader(
 {
     public async Task<ActivitySnapshot> GetSnapshotAsync(
         CancellationToken cancellationToken = default)
+        => await contextFactory.ExecuteAsync(
+            (context, token) => GetSnapshotCoreAsync(
+                context, transientActivityStore, token),
+            cancellationToken);
+
+    private static async Task<ActivitySnapshot> GetSnapshotCoreAsync(
+        PostgreSqlPersistenceDbContext context,
+        IActivityStore transientActivityStore,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        await using var context = await contextFactory.CreateDbContextAsync(
-            cancellationToken);
         var evaluations = context.EvaluationEvidence.AsNoTracking()
             .Where(item => !item.EffectiveAction.StartsWith("approval_") &&
                 !item.EffectiveAction.StartsWith("runtime_mode_") &&
@@ -92,8 +99,19 @@ public sealed class PostgreSqlInvestigationActivityReader(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(capabilityId);
         if (recentCount < 0) throw new ArgumentOutOfRangeException(nameof(recentCount));
-        await using var context = await contextFactory.CreateDbContextAsync(
+        return await contextFactory.ExecuteAsync(
+            (context, token) => GetCapabilityCoreAsync(
+                context, capabilityId, recentCount, token),
             cancellationToken);
+    }
+
+    private static async Task<CapabilityInvestigationActivity?>
+        GetCapabilityCoreAsync(
+            PostgreSqlPersistenceDbContext context,
+            string capabilityId,
+            int recentCount,
+            CancellationToken cancellationToken)
+    {
         var evaluations = Evaluations(context).Where(item =>
             item.CapabilityId == capabilityId);
         var activity = await evaluations.GroupBy(item => item.CapabilityId)
@@ -127,8 +145,19 @@ public sealed class PostgreSqlInvestigationActivityReader(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(identityId);
         if (recentCount < 0) throw new ArgumentOutOfRangeException(nameof(recentCount));
-        await using var context = await contextFactory.CreateDbContextAsync(
+        return await contextFactory.ExecuteAsync(
+            (context, token) => GetIdentityCoreAsync(
+                context, identityId, recentCount, token),
             cancellationToken);
+    }
+
+    private static async Task<IdentityInvestigationActivity?>
+        GetIdentityCoreAsync(
+            PostgreSqlPersistenceDbContext context,
+            string identityId,
+            int recentCount,
+            CancellationToken cancellationToken)
+    {
         var evaluations = Evaluations(context).Where(item =>
             item.IdentityId == identityId);
         var activity = await evaluations.GroupBy(item => item.IdentityId)

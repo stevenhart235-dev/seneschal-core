@@ -23,21 +23,24 @@ public sealed class PostgreSqlGovernanceIncidentStore(
     public async Task<IReadOnlyCollection<GovernanceIncident>> GetAllAsync(
         CancellationToken cancellationToken = default)
     {
-        var projected = await ProjectAsync(cancellationToken);
-        var ids = projected.Select(item => item.Id).ToList();
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var states = await context.IncidentOperatorStates.AsNoTracking()
-            .Where(item => ids.Contains(item.IncidentId))
-            .ToDictionaryAsync(item => item.IncidentId, StringComparer.OrdinalIgnoreCase,
-                cancellationToken);
-        return projected.Select(incident => states.TryGetValue(incident.Id, out var state)
-                ? incident with
-                {
-                    CurrentStatus = (GovernanceIncidentStatus)state.Status,
-                    OperatorStateVersion = state.Version
-                }
-                : incident)
-            .ToList();
+        return await contextFactory.ExecuteAsync(async (context, token) =>
+        {
+            var projected = await ProjectAsync(token);
+            var ids = projected.Select(item => item.Id).ToList();
+            var states = await context.IncidentOperatorStates.AsNoTracking()
+                .Where(item => ids.Contains(item.IncidentId))
+                .ToDictionaryAsync(item => item.IncidentId,
+                    StringComparer.OrdinalIgnoreCase, token);
+            return (IReadOnlyCollection<GovernanceIncident>)projected
+                .Select(incident => states.TryGetValue(incident.Id, out var state)
+                    ? incident with
+                    {
+                        CurrentStatus = (GovernanceIncidentStatus)state.Status,
+                        OperatorStateVersion = state.Version
+                    }
+                    : incident)
+                .ToList();
+        }, cancellationToken);
     }
 
     public async Task<GovernanceIncident?> GetByIdAsync(string incidentId,
@@ -49,11 +52,13 @@ public sealed class PostgreSqlGovernanceIncidentStore(
         string incidentId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(incidentId);
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var state = await context.IncidentOperatorStates.AsNoTracking()
-            .SingleOrDefaultAsync(item => item.IncidentId == incidentId,
-                cancellationToken);
-        return state is null ? null : ToModel(state);
+        return await contextFactory.ExecuteAsync(async (context, token) =>
+        {
+            var state = await context.IncidentOperatorStates.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.IncidentId == incidentId,
+                    token);
+            return state is null ? null : ToModel(state);
+        }, cancellationToken);
     }
 
     public async Task<bool> AcknowledgeAsync(string incidentId,

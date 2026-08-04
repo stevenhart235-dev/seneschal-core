@@ -8,7 +8,7 @@ using Seneschal.Api.Services;
 
 namespace Seneschal.Api.Tests;
 
-public sealed class ApiApplicationFactory : WebApplicationFactory<Program>
+public class ApiApplicationFactory : WebApplicationFactory<Program>
 {
     public const string TestApiKey = "dev-test-key";
 

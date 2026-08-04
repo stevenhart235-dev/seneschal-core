@@ -8,7 +8,7 @@ namespace Seneschal.Persistence.PostgreSql.Tests;
 public sealed class PersistenceRegistrationTests
 {
     [Fact]
-    public void DefaultProvider_IsInMemory()
+    public async Task DefaultProvider_IsInMemory()
     {
         using var provider = new ServiceCollection()
             .AddSingleton<IActivityStore, InMemoryActivityStore>()
@@ -21,6 +21,9 @@ public sealed class PersistenceRegistrationTests
             provider.GetRequiredService<IEvaluationCommitCoordinator>());
         Assert.IsType<ActivityStoreInvestigationActivityReader>(
             provider.GetRequiredService<IInvestigationActivityReader>());
+        Assert.Equal("InMemory",
+            (await provider.GetRequiredService<IPersistenceReadiness>()
+                .CheckAsync()).Provider);
     }
 
     [Fact]
@@ -46,6 +49,8 @@ public sealed class PersistenceRegistrationTests
             provider.GetRequiredService<IEvaluationCommitCoordinator>());
         Assert.IsType<PostgreSqlInvestigationActivityReader>(
             provider.GetRequiredService<IInvestigationActivityReader>());
+        Assert.IsType<PostgreSqlPersistenceReadiness>(
+            provider.GetRequiredService<IPersistenceReadiness>());
     }
 
     [Fact]

@@ -24,6 +24,10 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
 
     public Task DisposeAsync() => _container.DisposeAsync().AsTask();
 
+    public Task StopAsync() => _container.StopAsync();
+
+    public Task StartAsync() => _container.StartAsync();
+
     public IDbContextFactory<PostgreSqlPersistenceDbContext> CreateFactory(
         string? connectionString = null)
     {

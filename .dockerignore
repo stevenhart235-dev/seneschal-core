@@ -25,3 +25,19 @@ Seneschal.Cli
 Seneschal.Samples.*
 demo*.ps1
 stop-demo.ps1
+
+# The deployment-worker image packs the matching client library before
+# restoring the lab project from the repository-root build context.
+!Seneschal.Client/
+!Seneschal.Client/**
+!labs/
+labs/*
+!labs/multi-application-adoption/
+labs/multi-application-adoption/*
+!labs/multi-application-adoption/NuGet.Config
+!labs/multi-application-adoption/DeploymentWorker/
+!labs/multi-application-adoption/DeploymentWorker/**
+Seneschal.Client/bin
+Seneschal.Client/obj
+labs/multi-application-adoption/DeploymentWorker/bin
+labs/multi-application-adoption/DeploymentWorker/obj

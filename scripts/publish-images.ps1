@@ -51,6 +51,33 @@ function Get-EcrImageDigest {
     return $digest.Trim()
 }
 
+function Assert-SourceUnchanged {
+    param(
+        [Parameter(Mandatory)]
+        [string] $Stage
+    )
+
+    $currentSha = (& git rev-parse HEAD).Trim()
+    $currentStatus = (& git status --porcelain=v1 --untracked-files=normal) -join "`n"
+    if ($LASTEXITCODE -ne 0 -or $currentSha -ne $commitSha -or
+        $currentStatus -ne $initialStatus) {
+        throw "The working-tree revision changed $Stage; refusing to publish mismatched images."
+    }
+}
+
+function Assert-ImageRevision {
+    param(
+        [Parameter(Mandatory)]
+        [string] $Image
+    )
+
+    $revision = (& docker image inspect $Image `
+        --format '{{index .Config.Labels "org.opencontainers.image.revision"}}').Trim()
+    if ($LASTEXITCODE -ne 0 -or $revision -ne $commitSha) {
+        throw "Image '$Image' does not carry expected source revision '$commitSha'."
+    }
+}
+
 $Tag = $Tag.Trim()
 if ($Tag.Length -eq 0) {
     throw 'Tag must not be blank.'
@@ -106,10 +133,15 @@ try {
     $registry = "$AwsAccountId.dkr.ecr.$AwsRegion.amazonaws.com"
     $runtimeRepository = 'seneschal/core'
     $migrationRepository = 'seneschal/migrations'
+    $workerRepository = 'seneschal/demo-deployment-worker'
     $runtimeImage = "${registry}/${runtimeRepository}:$Tag"
     $migrationImage = "${registry}/${migrationRepository}:$Tag"
+    $workerImage = "${registry}/${workerRepository}:$Tag"
 
-    foreach ($repositoryName in @($runtimeRepository, $migrationRepository)) {
+    foreach ($repositoryName in @(
+        $runtimeRepository,
+        $migrationRepository,
+        $workerRepository)) {
         $existingDigest = & aws ecr describe-images `
             --region $AwsRegion `
             --repository-name $repositoryName `
@@ -135,25 +167,28 @@ try {
     Write-Host "Publishing Seneschal images from commit $commitSha"
     Write-Host "Building runtime image: $runtimeImage"
     Invoke-NativeCommand docker @(
-        'build', '--file', 'Dockerfile', '--tag', $runtimeImage, '.'
+        'build', '--file', 'Dockerfile', '--tag', $runtimeImage,
+        '--label', "org.opencontainers.image.revision=$commitSha", '.'
     )
-
-    $midBuildSha = (& git rev-parse HEAD).Trim()
-    $midBuildStatus = (& git status --porcelain=v1 --untracked-files=normal) -join "`n"
-    if ($LASTEXITCODE -ne 0 -or $midBuildSha -ne $commitSha -or $midBuildStatus -ne $initialStatus) {
-        throw 'The working-tree revision changed after the runtime build; refusing to build a mismatched migration image.'
-    }
+    Assert-SourceUnchanged 'after the runtime build'
 
     Write-Host "Building migration image: $migrationImage"
     Invoke-NativeCommand docker @(
-        'build', '--file', 'Dockerfile.migrations', '--tag', $migrationImage, '.'
+        'build', '--file', 'Dockerfile.migrations', '--tag', $migrationImage,
+        '--label', "org.opencontainers.image.revision=$commitSha", '.'
     )
+    Assert-SourceUnchanged 'after the migration build'
 
-    $finalBuildSha = (& git rev-parse HEAD).Trim()
-    $finalBuildStatus = (& git status --porcelain=v1 --untracked-files=normal) -join "`n"
-    if ($LASTEXITCODE -ne 0 -or $finalBuildSha -ne $commitSha -or $finalBuildStatus -ne $initialStatus) {
-        throw 'The working-tree revision changed during the builds; refusing to push mismatched images.'
-    }
+    Write-Host "Building deployment worker image: $workerImage"
+    Invoke-NativeCommand docker @(
+        'build', '--file', 'Dockerfile.deployment-worker', '--tag', $workerImage,
+        '--label', "org.opencontainers.image.revision=$commitSha", '.'
+    )
+    Assert-SourceUnchanged 'after the deployment worker build'
+
+    Assert-ImageRevision $runtimeImage
+    Assert-ImageRevision $migrationImage
+    Assert-ImageRevision $workerImage
 
     Write-Host "Authenticating Docker to $registry"
     $ecrPassword = & aws ecr get-login-password --region $AwsRegion
@@ -172,8 +207,12 @@ try {
     Write-Host "Pushing migration image: $migrationImage"
     Invoke-NativeCommand docker @('push', $migrationImage)
 
+    Write-Host "Pushing deployment worker image: $workerImage"
+    Invoke-NativeCommand docker @('push', $workerImage)
+
     $runtimeDigest = Get-EcrImageDigest $runtimeRepository
     $migrationDigest = Get-EcrImageDigest $migrationRepository
+    $workerDigest = Get-EcrImageDigest $workerRepository
 
     Write-Host 'Release-matched images published successfully:'
     Write-Output "Git commit: $commitSha"
@@ -181,6 +220,8 @@ try {
     Write-Output "Runtime digest: ${registry}/${runtimeRepository}@$runtimeDigest"
     Write-Output "Migrations: $migrationImage"
     Write-Output "Migrations digest: ${registry}/${migrationRepository}@$migrationDigest"
+    Write-Output "Deployment worker: $workerImage"
+    Write-Output "Deployment worker digest: ${registry}/${workerRepository}@$workerDigest"
 }
 finally {
     Pop-Location

@@ -1,0 +1,38 @@
+# syntax=docker/dockerfile:1
+
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+COPY Seneschal.Client/Seneschal.Client.csproj Seneschal.Client/
+COPY Seneschal.Client/README.md Seneschal.Client/
+RUN dotnet restore Seneschal.Client/Seneschal.Client.csproj
+
+COPY Seneschal.Client/ Seneschal.Client/
+RUN dotnet pack Seneschal.Client/Seneschal.Client.csproj \
+    --configuration Release \
+    --no-restore \
+    --output /src/artifacts/packages
+
+COPY labs/multi-application-adoption/NuGet.Config labs/multi-application-adoption/
+COPY labs/multi-application-adoption/DeploymentWorker/DeploymentWorker.csproj labs/multi-application-adoption/DeploymentWorker/
+RUN dotnet restore labs/multi-application-adoption/DeploymentWorker/DeploymentWorker.csproj \
+    --configfile labs/multi-application-adoption/NuGet.Config
+
+COPY labs/multi-application-adoption/DeploymentWorker/ labs/multi-application-adoption/DeploymentWorker/
+RUN dotnet publish labs/multi-application-adoption/DeploymentWorker/DeploymentWorker.csproj \
+    --configuration Release \
+    --no-restore \
+    --output /app/publish \
+    /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/runtime:8.0-noble-chiseled AS runtime
+WORKDIR /app
+
+LABEL org.opencontainers.image.title="Seneschal demo deployment worker" \
+      org.opencontainers.image.description="Deployment worker for the Seneschal multi-application adoption demo"
+
+COPY --from=build --chown=$APP_UID:$APP_UID /app/publish .
+
+USER $APP_UID
+
+ENTRYPOINT ["dotnet", "DeploymentWorker.dll"]

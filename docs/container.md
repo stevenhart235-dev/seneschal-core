@@ -15,8 +15,8 @@ docker build --tag seneschal-core:dev .
 
 ## Publish release-matched images
 
-Release both the application runtime and PostgreSQL migration images from one
-clean working-tree revision with:
+Release the application runtime, PostgreSQL migration, and demo deployment
+worker images from one clean working-tree revision with:
 
 ```powershell
 .\scripts\publish-images.ps1 `
@@ -26,16 +26,19 @@ clean working-tree revision with:
 ```
 
 The tag is required and `latest` is rejected. The script validates the active
-AWS account, refuses dirty working trees, refuses to overwrite either existing
-ECR tag, builds `Dockerfile` and `Dockerfile.migrations` from the repository
-root, verifies the Git commit and working-tree state stayed unchanged between
-builds, authenticates Docker using `aws ecr get-login-password`, and pushes:
+AWS account, refuses dirty working trees, refuses to overwrite any existing ECR
+tag, builds `Dockerfile`, `Dockerfile.migrations`, and
+`Dockerfile.deployment-worker` from the repository root, verifies the Git
+commit and working-tree state stayed unchanged between builds, stamps and
+validates the same OCI source-revision label on every image, authenticates
+Docker using `aws ecr get-login-password`, and pushes:
 
 - `<account>.dkr.ecr.<region>.amazonaws.com/seneschal/core:<tag>`
 - `<account>.dkr.ecr.<region>.amazonaws.com/seneschal/migrations:<tag>`
+- `<account>.dkr.ecr.<region>.amazonaws.com/seneschal/demo-deployment-worker:<tag>`
 
 On success it reports the source commit, tagged references, and digest-pinned
-references. It does not publish worker images or create repositories. For a
+references for all three artifacts. It does not create repositories. For a
 development-only publication from local changes, pass
 `-AllowDirtyWorkingTree`; the warning notes that the reported commit does not
 identify those uncommitted contents.

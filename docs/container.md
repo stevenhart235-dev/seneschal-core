@@ -150,11 +150,12 @@ writable temporary directory (`/tmp`) for framework or operating-system needs.
 Neither path contains Seneschal audit or governance state. Mounting YAML
 configuration preserves only configuration, not runtime state.
 
-The runtime image contains the PostgreSQL provider assembly and checked-in
-migrations, but it does not contain the .NET SDK or `dotnet-ef` and it never
-auto-migrates. Apply migrations with one pre-deployment tooling job before the
-application rollout, following the
-[database migration strategy](database-migrations.md).
+The application runtime image contains the PostgreSQL provider assembly and
+checked-in migrations, but it does not contain the .NET SDK or `dotnet-ef` and
+it never auto-migrates. Build the separate `seneschal-migrations:<release>`
+image from `Dockerfile.migrations` at the same source revision as the
+application release, then run it once as a pre-deployment step. See the
+[database migration strategy](database-migrations.md) for its runtime contract.
 
 The default in-memory stores and transient projections assume one process.
 PostgreSQL shares its durable state, but coordinated multi-replica operation is

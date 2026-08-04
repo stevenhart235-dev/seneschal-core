@@ -1,0 +1,35 @@
+# syntax=docker/dockerfile:1
+
+ARG DOTNET_VERSION=9.0
+
+FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS bundle
+WORKDIR /src
+
+COPY .config/dotnet-tools.json .config/dotnet-tools.json
+COPY Seneschal.Core/Seneschal.Core.csproj Seneschal.Core/
+COPY Seneschal.Persistence.PostgreSql/Seneschal.Persistence.PostgreSql.csproj Seneschal.Persistence.PostgreSql/
+RUN dotnet tool restore \
+    && dotnet restore Seneschal.Persistence.PostgreSql/Seneschal.Persistence.PostgreSql.csproj
+
+COPY Seneschal.Core/ Seneschal.Core/
+COPY Seneschal.Persistence.PostgreSql/ Seneschal.Persistence.PostgreSql/
+RUN SENESCHAL_MIGRATION_BUNDLE_BUILD=true \
+    dotnet tool run dotnet-ef migrations bundle \
+    --project Seneschal.Persistence.PostgreSql \
+    --startup-project Seneschal.Persistence.PostgreSql \
+    --configuration Release \
+    --self-contained \
+    --target-runtime linux-x64 \
+    --output /out/seneschal-migrate
+
+FROM mcr.microsoft.com/dotnet/runtime-deps:${DOTNET_VERSION}-noble-chiseled AS runtime
+WORKDIR /app
+
+LABEL org.opencontainers.image.title="Seneschal PostgreSQL migrations" \
+      org.opencontainers.image.description="Release-matched EF Core migration bundle for Seneschal"
+
+COPY --from=bundle --chown=$APP_UID:$APP_UID /out/seneschal-migrate ./seneschal-migrate
+
+USER $APP_UID
+
+ENTRYPOINT ["/app/seneschal-migrate", "--verbose"]

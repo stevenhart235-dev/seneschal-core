@@ -20,22 +20,86 @@ verify that the ordered contents of `__EFMigrationsHistory` exactly match the
 migrations shipped with the release. This prevents an older binary from being
 started against a newer, unsupported schema.
 
-## Local execution
+## Build the release-owned migration bundle
 
-Set the same connection string that the application will use, then run the
-repository-local tool from the repository root:
+Restore the repository-pinned EF Core tool from the repository root:
 
 ```powershell
 dotnet tool restore
+```
+
+Build a bundle for the current workstation (useful for local validation):
+
+```powershell
+New-Item -ItemType Directory -Force artifacts/migrations | Out-Null
+$env:SENESCHAL_MIGRATION_BUNDLE_BUILD = 'true'
+dotnet tool run dotnet-ef migrations bundle `
+  --project Seneschal.Persistence.PostgreSql `
+  --startup-project Seneschal.Persistence.PostgreSql `
+  --configuration Release `
+  --output artifacts/migrations/seneschal-migrate.exe `
+  --force
+Remove-Item Env:SENESCHAL_MIGRATION_BUNDLE_BUILD
+```
+
+The bundle is a release artifact: build and publish it from the same source
+revision as the matching Seneschal application image. It contains the complete
+checked-in migration chain at that revision. Do not reuse a migration image
+from another release, even when its tag appears compatible.
+
+Build the Linux migration image, which creates a self-contained bundle during
+the build and does not retain the SDK or EF tool in its final stage:
+
+```powershell
+docker build --file Dockerfile.migrations --tag seneschal-migrations:dev .
+```
+
+For a release, replace `dev` with the exact immutable application release tag
+or digest-correlated version used by the deployment repository.
+
+## Run against local PostgreSQL
+
+Pass the connection string only at container runtime. For PostgreSQL running
+on the host (Docker Desktop), run:
+
+```powershell
+docker run --rm `
+  --env "ConnectionStrings__SeneschalPostgreSql=Host=host.docker.internal;Port=5432;Database=seneschal;Username=seneschal;Password=<local-password>" `
+  seneschal-migrations:dev
+```
+
+`ConnectionStrings__SeneschalPostgreSql` is the only required environment
+variable and the only supported way to supply the database connection string.
+Keep it in the deployment platform's secret facility; it is not built into the
+bundle or image. The image runs `/app/seneschal-migrate --verbose` from `/app`
+as the non-root .NET `app` user.
+
+`SENESCHAL_MIGRATION_BUNDLE_BUILD` is an internal build-time switch used only
+to compile the bundle without a connection string. It is not present in the
+final image and is not a migration runtime input.
+
+With no target migration supplied, EF applies every pending checked-in
+migration to the current head and records it in `__EFMigrationsHistory`.
+Running the same release against the same database again is expected to report
+that the database is already up to date and exit zero without dropping,
+resetting, or recreating it. A missing or invalid connection string, an
+unreachable database, or a migration error is logged and exits nonzero. Stop
+the rollout on any nonzero result; the runner never responds by resetting the
+database.
+
+For SDK-based local troubleshooting, set the same runtime variable and invoke
+the checked-in migration chain directly:
+
+```powershell
 $env:ConnectionStrings__SeneschalPostgreSql = `
   'Host=localhost;Port=5432;Database=seneschal;Username=seneschal;Password=<local-password>'
 dotnet tool run dotnet-ef database update `
   --project Seneschal.Persistence.PostgreSql `
-  --startup-project Seneschal.Persistence.PostgreSql
+  --startup-project Seneschal.Persistence.PostgreSql `
+  --verbose
 ```
 
-Do not pass a target migration in normal operations. Apply the checked-in
-migration chain to its current head. Confirm the result with:
+Do not pass a target migration in normal operations. Confirm the result with:
 
 ```powershell
 dotnet tool run dotnet-ef migrations list `
@@ -71,15 +135,19 @@ For the currently supported single-instance deployment:
    `/ready` checks and exercise the critical evaluation path.
 
 In Kubernetes, use a single pre-deployment Job or equivalent CI/CD stage. The
-published Seneschal runtime image contains the provider assembly and migrations
-but not the .NET SDK or `dotnet-ef`; use the checked-out repository or a
-dedicated, versioned migration-tooling image. Do not run one migrator per
+published Seneschal application image contains the provider assembly and
+migrations but no migration tooling. The separate, versioned migration image
+contains only the self-contained bundle and its Linux runtime dependencies; it
+contains neither the .NET SDK nor `dotnet-ef`. Do not run one migrator per
 application replica, and do not put connection strings into either image.
 
-The `seneschal-demo-lab` deployment owns creation of PostgreSQL, secret
-delivery, execution and observation of the migration Job, ordering that Job
+The `seneschal-demo-lab` deployment owns PostgreSQL provisioning, runtime secret
+delivery, choosing the matching immutable migration-image tag, execution and
+observation of the one-shot migration job, ordering successful completion
 before the Seneschal rollout, and backup/restore operations. `seneschal-core`
-owns the migrations, startup validation, commands, and compatibility contract.
+owns the checked-in migrations, bundle and image definition, startup
+validation, runtime contract, and release compatibility contract. This
+repository intentionally provides no Kubernetes manifests.
 
 ## Failure, backup, and rollback
 

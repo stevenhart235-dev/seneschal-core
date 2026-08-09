@@ -55,6 +55,14 @@ public sealed class CoreDecisionService
     }
 
     public ApiDecisionResult Evaluate(ApiDecisionRequest request)
+        => Evaluate(request, commit: true);
+
+    public ApiDecisionResult Preview(ApiDecisionRequest request)
+        => Evaluate(request, commit: false);
+
+    private ApiDecisionResult Evaluate(
+        ApiDecisionRequest request,
+        bool commit)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -104,14 +112,17 @@ public sealed class CoreDecisionService
             activity,
             coreResult);
 
-        WriteAuditEvent(
-            coreRequest,
-            coreResult,
-            windowEvaluation,
-            policyDecision,
-            policyReason,
-            approvalEvaluation,
-            approvalMutation);
+        if (commit)
+        {
+            WriteAuditEvent(
+                coreRequest,
+                coreResult,
+                windowEvaluation,
+                policyDecision,
+                policyReason,
+                approvalEvaluation,
+                approvalMutation);
+        }
 
         return DecisionResultMapper.ToApi(
             coreResult,

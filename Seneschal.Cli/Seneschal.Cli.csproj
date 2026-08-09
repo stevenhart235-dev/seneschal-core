@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\Seneschal.Client\Seneschal.Client.csproj" />
     <ProjectReference Include="..\Seneschal.Core\Seneschal.Core.csproj" />
   </ItemGroup>
 

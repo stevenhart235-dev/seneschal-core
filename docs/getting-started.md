@@ -5,9 +5,9 @@ For an existing ASP.NET Core service, follow the canonical
 
 1. Install `Seneschal.AspNetCore`.
 2. Configure `BaseUrl` and `ApiKey`.
-3. Register `AddSeneschal`.
-4. Evaluate one action and check `ShouldProceed`.
-5. Run the service.
+3. Run the read-only `seneschal preflight` check.
+4. Register `AddSeneschal`.
+5. Evaluate one action, check `ShouldProceed`, and run the service.
 
 The package README contains optional automatic endpoint protection and advanced
 failure behavior. Start with the direct evaluation path so the execution and

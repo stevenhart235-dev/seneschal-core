@@ -12,6 +12,12 @@ if (args.Length == 0)
 
 var command = args[0];
 
+if (command.Equals("preflight", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = await PreflightCommand.RunAsync(args[1..]);
+    return;
+}
+
 if (command.Equals("evaluate", StringComparison.OrdinalIgnoreCase))
 {
     await EvaluateAsync(args);
@@ -425,6 +431,7 @@ static string FormatEntity(GovernanceEntityReference entity)
 static void WriteUsage()
 {
     Console.WriteLine("Usage:");
+    Console.WriteLine("  seneschal preflight --url <url> --api-key <key> --identity <id> --capability <id> [--environment <name>]");
     Console.WriteLine("  seneschal evaluate <identity> <capability> <environment>");
     Console.WriteLine("  seneschal capability show <capabilityId>");
 }

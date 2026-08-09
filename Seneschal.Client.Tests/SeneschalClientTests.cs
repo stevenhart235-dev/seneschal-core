@@ -244,6 +244,33 @@ public sealed class SeneschalClientTests
     }
 
     [Fact]
+    public async Task PreflightAsync_UsesReadOnlyEndpointAndCanonicalGuidance()
+    {
+        var handler = new StubHttpMessageHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent(
+                    """{"decision":"deny","executionGuidance":"Block"}""")
+            });
+        using var httpClient = new HttpClient(handler);
+        var client = SeneschalClient.Create(
+            httpClient,
+            new Uri("https://seneschal.example"),
+            "secret-key");
+
+        var result = await client.PreflightAsync(CreateRequest());
+
+        Assert.Equal(
+            "https://seneschal.example/preflight",
+            handler.Requests.Single().RequestUri?.ToString());
+        Assert.Equal(ExecutionGuidanceKind.Block, result.Guidance);
+        Assert.False(result.ShouldProceed);
+        Assert.Contains(
+            "secret-key",
+            handler.Requests.Single().Headers["X-Seneschal-Api-Key"]);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_UnknownFutureGuidanceDeserializesAndFailsClosed()
     {
         var handler = new StubHttpMessageHandler(_ =>

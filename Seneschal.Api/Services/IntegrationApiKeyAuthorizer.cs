@@ -21,6 +21,15 @@ public sealed class IntegrationApiKeyAuthorizer
         HttpRequest httpRequest,
         DecisionRequest decisionRequest)
     {
+        var authentication = Authenticate(httpRequest);
+        return authentication.IsAllowed
+            ? AuthorizeScope(authentication.IntegrationKey!, decisionRequest)
+            : authentication;
+    }
+
+    public IntegrationApiKeyAuthorizationResult Authenticate(
+        HttpRequest httpRequest)
+    {
         if (!httpRequest.Headers.TryGetValue(HeaderName, out var headerValues))
         {
             return IntegrationApiKeyAuthorizationResult.Unauthorized(
@@ -50,6 +59,13 @@ public sealed class IntegrationApiKeyAuthorizer
                 ForbiddenReason);
         }
 
+        return IntegrationApiKeyAuthorizationResult.Allowed(integrationKey);
+    }
+
+    public IntegrationApiKeyAuthorizationResult AuthorizeScope(
+        IntegrationApiKey integrationKey,
+        DecisionRequest decisionRequest)
+    {
         if (!MatchesScope(integrationKey.AllowedIdentities, decisionRequest.Identity))
         {
             return IntegrationApiKeyAuthorizationResult.Forbidden(

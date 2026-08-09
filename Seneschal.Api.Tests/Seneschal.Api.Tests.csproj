@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Seneschal.Api\Seneschal.Api.csproj" />
     <ProjectReference Include="..\Seneschal.Client\Seneschal.Client.csproj" />
+    <ProjectReference Include="..\Seneschal.Cli\Seneschal.Cli.csproj" />
   </ItemGroup>
 
   <ItemGroup>

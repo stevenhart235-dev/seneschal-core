@@ -153,6 +153,63 @@ app.MapPost("/evaluate", (
     }
 });
 
+app.MapPost("/preflight", (
+    DecisionRequest request,
+    HttpRequest httpRequest,
+    IntegrationApiKeyAuthorizer apiKeyAuthorizer,
+    IdentityLoader identityLoader,
+    CapabilityLoader capabilityLoader,
+    CoreDecisionService decisionService) =>
+{
+    var authentication = apiKeyAuthorizer.Authenticate(httpRequest);
+    if (!authentication.IsAllowed)
+    {
+        return Results.Json(new
+        {
+            code = "authentication_failure",
+            reason = authentication.Reason
+        }, statusCode: authentication.StatusCode);
+    }
+
+    if (!identityLoader.GetIdentities().Any(identity => string.Equals(
+            identity.Name,
+            request.Identity,
+            StringComparison.OrdinalIgnoreCase)))
+    {
+        return Results.Json(new
+        {
+            code = "invalid_identity",
+            reason = $"Identity '{request.Identity}' is not configured."
+        }, statusCode: StatusCodes.Status400BadRequest);
+    }
+
+    if (!capabilityLoader.GetCapabilities().Any(capability => string.Equals(
+            capability.Name,
+            request.Capability,
+            StringComparison.OrdinalIgnoreCase)))
+    {
+        return Results.Json(new
+        {
+            code = "invalid_capability",
+            reason = $"Capability '{request.Capability}' is not configured."
+        }, statusCode: StatusCodes.Status400BadRequest);
+    }
+
+    var scope = apiKeyAuthorizer.AuthorizeScope(
+        authentication.IntegrationKey!,
+        request);
+    if (!scope.IsAllowed)
+    {
+        return Results.Json(new
+        {
+            code = "scope_mismatch",
+            reason = scope.Reason
+        }, statusCode: StatusCodes.Status403Forbidden);
+    }
+
+    return Results.Ok(decisionService.Preview(request));
+});
+
 app.MapGet("/health", () =>
 {
     return Results.Ok(new

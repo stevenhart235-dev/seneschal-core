@@ -32,6 +32,12 @@ Only `BaseUrl` and `ApiKey` are required:
 
 Register once in `Program.cs`:
 
+Before editing code, you can validate these values with:
+
+```powershell
+dotnet run --project Seneschal.Cli -- preflight --url http://localhost:5077 --api-key <scoped-api-key> --identity <identity> --capability <capability> --environment <environment>
+```
+
 ```csharp
 using Seneschal.AspNetCore;
 using Seneschal.Client;

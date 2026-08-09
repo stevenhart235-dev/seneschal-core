@@ -31,6 +31,24 @@ sample `Developer` identity and `DeployApplication` capability.
 See [Integration API Keys](../security/integration-api-keys.md) for key scope
 and direct HTTP authentication details.
 
+### Run preflight before editing code
+
+From a `seneschal-core` checkout, validate the connection and scope:
+
+```powershell
+dotnet run --project Seneschal.Cli -- preflight `
+  --url http://localhost:5077 `
+  --api-key dev-sample-key `
+  --identity Developer `
+  --capability DeployApplication `
+  --environment dev
+```
+
+Continue when it reports `Integration: Ready`. A Deny or approval-required
+result can still be a valid integration; preflight separately reports whether
+the governed action would proceed or stop. The command never executes work or
+creates approval, incident, or evaluation evidence.
+
 ## 3. Register and protect one action
 
 Add this to `Program.cs`:

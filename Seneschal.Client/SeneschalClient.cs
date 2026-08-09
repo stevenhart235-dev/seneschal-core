@@ -74,15 +74,32 @@ public sealed class SeneschalClient : ISeneschalClient
     }
 
     /// <inheritdoc />
-    public async Task<DecisionResult> EvaluateAsync(
+    public Task<DecisionResult> EvaluateAsync(
         DecisionRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        SendDecisionAsync(request, BuildEvaluationUri(), cancellationToken);
+
+    /// <summary>
+    /// Validates an integration through Seneschal's non-mutating preflight endpoint.
+    /// </summary>
+    public Task<DecisionResult> PreflightAsync(
+        DecisionRequest request,
+        CancellationToken cancellationToken = default) =>
+        SendDecisionAsync(
+            request,
+            new Uri(_baseUrl, "/preflight"),
+            cancellationToken);
+
+    private async Task<DecisionResult> SendDecisionAsync(
+        DecisionRequest request,
+        Uri endpoint,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         using var httpRequest = new HttpRequestMessage(
             HttpMethod.Post,
-            BuildEvaluationUri());
+            endpoint);
         httpRequest.Content = JsonContent.Create(request, options: JsonOptions);
         httpRequest.Headers.UserAgent.ParseAdd(ClientUserAgent);
 

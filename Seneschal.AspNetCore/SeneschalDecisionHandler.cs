@@ -15,8 +15,13 @@ internal static class SeneschalDecisionHandler
         return enforcementBehavior switch
         {
             SeneschalEnforcementBehavior.Monitor => true,
-            SeneschalEnforcementBehavior.Enforce => IsAllow(decision.Decision),
-            _ => IsMonitorMode(decision.Mode) || IsAllow(decision.Decision)
+            SeneschalEnforcementBehavior.Enforce =>
+                decision.ShouldProceed &&
+                !string.Equals(
+                    decision.ExecutionGuidance,
+                    ExecutionGuidanceContract.ContinueLogOnly,
+                    StringComparison.OrdinalIgnoreCase),
+            _ => decision.ShouldProceed
         };
     }
 
@@ -163,10 +168,4 @@ internal static class SeneschalDecisionHandler
                 StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsMonitorMode(string mode)
-    {
-        return string.Equals(mode, "Monitor", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(mode, "LogOnly", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(mode, "log_only", StringComparison.OrdinalIgnoreCase);
-    }
 }

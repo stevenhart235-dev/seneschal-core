@@ -16,6 +16,7 @@ public sealed class SeneschalCapabilityMiddlewareTests
         {
             Decision = "allow",
             Mode = "Enforce",
+            ExecutionGuidance = "Proceed",
             Reason = "Allowed"
         });
         var middleware = CreateMiddleware(
@@ -46,6 +47,7 @@ public sealed class SeneschalCapabilityMiddlewareTests
         {
             Decision = "deny",
             Mode = "Enforce",
+            ExecutionGuidance = "Block",
             Reason = "Denied",
             PolicyMatched = "deny-policy"
         });
@@ -77,6 +79,7 @@ public sealed class SeneschalCapabilityMiddlewareTests
         {
             Decision = "requires_approval",
             Mode = "Enforce",
+            ExecutionGuidance = "Pause",
             Reason = "Needs approval",
             PolicyMatched = "approval-policy",
             Obligations = ["ticket-required"]
@@ -110,6 +113,7 @@ public sealed class SeneschalCapabilityMiddlewareTests
         {
             Decision = "deny",
             Mode = "LogOnly",
+            ExecutionGuidance = "ContinueLogOnly",
             Reason = "Would deny"
         });
         var middleware = CreateMiddleware(
@@ -126,6 +130,27 @@ public sealed class SeneschalCapabilityMiddlewareTests
 
         Assert.True(nextCalled);
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_FailsClosedForUnknownGuidanceDespiteAllowDecision()
+    {
+        var nextCalled = false;
+        var middleware = CreateMiddleware(
+            new FakeSeneschalClient(new DecisionResult
+            {
+                Decision = "allow",
+                Mode = "LogOnly",
+                ExecutionGuidance = "FutureValue",
+                Reason = "Allowed by policy"
+            }),
+            _ => { nextCalled = true; return Task.CompletedTask; });
+        var context = CreateContext();
+
+        await middleware.InvokeAsync(context);
+
+        Assert.False(nextCalled);
+        Assert.Equal(StatusCodes.Status502BadGateway, context.Response.StatusCode);
     }
 
     private static SeneschalCapabilityMiddleware CreateMiddleware(

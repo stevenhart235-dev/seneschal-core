@@ -111,18 +111,13 @@ static string Fallback(string? value)
 
 static string ToApplicationBehavior(DecisionResult decision)
 {
-    if (string.Equals(
-            decision.EffectiveAction,
-            "logged_only",
-            StringComparison.OrdinalIgnoreCase))
+    if (decision.ShouldProceed &&
+        !string.Equals(decision.Decision, "Allow", StringComparison.OrdinalIgnoreCase))
     {
         return "Monitor mode records the denial, but the simulated integration would proceed.";
     }
 
-    return string.Equals(
-            decision.Decision,
-            "Allow",
-            StringComparison.OrdinalIgnoreCase)
+    return decision.ShouldProceed
         ? "Allowed; would apply infrastructure changes."
         : "Blocked; would not execute infrastructure changes.";
 }

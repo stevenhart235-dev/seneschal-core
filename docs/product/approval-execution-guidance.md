@@ -1,7 +1,8 @@
 # Approval Execution Guidance
 
-Execution guidance describes recommended caller behavior. It does not cause
-Seneschal to pause, queue, resume, or retry an external operation.
+Execution guidance is Seneschal's canonical machine-readable execution
+contract. It does not cause Seneschal to pause, queue, resume, or retry an
+external operation.
 
 | Decision | Runtime mode | Guidance | Existing effective action |
 |---|---|---|---|
@@ -11,9 +12,20 @@ Seneschal to pause, queue, resume, or retry an external operation.
 | Pending Approval | LogOnly | `ContinueLogOnly` | Logged only |
 | Pending Approval | Enforce | `Pause` | Pending Approval |
 
-`Decision` is the governance outcome. `EffectiveAction` is Seneschal's existing
-runtime-mode projection. `ExecutionGuidance` is non-executable advice for the
-integrated caller.
+Use `ExecutionGuidance` / `ShouldProceed` to determine whether to execute.
+`Decision` describes the governance result; it is not by itself an execution
+instruction. `EffectiveAction` remains useful diagnostic and compatibility
+evidence. Callers do not need to interpret runtime mode.
+
+| Guidance | `ShouldProceed` |
+|---|---:|
+| `Proceed` | `true` |
+| `ContinueLogOnly` | `true` |
+| `Block` | `false` |
+| `Pause` | `false` |
+| `Queue` | `false` |
+| `Retry` | `false` |
+| Missing, unknown, or unsupported | `false` |
 
 ## Caller responsibilities
 

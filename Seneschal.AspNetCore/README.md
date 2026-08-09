@@ -141,8 +141,10 @@ if (decision.ShouldProceed)
 }
 ```
 
-`ShouldProceed` is true for allow decisions and for decisions returned in
-`LogOnly`/monitor mode.
+Use `ExecutionGuidance` / `ShouldProceed` to determine whether to execute.
+`Decision` describes the governance result; it is not by itself an execution
+instruction. `ShouldProceed` is derived exclusively from guidance, so direct
+callers do not need to inspect runtime mode.
 
 ## Advanced compatibility
 

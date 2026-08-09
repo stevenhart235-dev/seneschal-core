@@ -28,20 +28,22 @@ public sealed class GitHubActionsGateScriptTests
         "invoke-seneschal-gate.ps1"));
 
     [Theory]
-    [InlineData("allow", "LogOnly", "allow", 0)]
-    [InlineData("deny", "LogOnly", "logged_only", 0)]
-    [InlineData("deny", "Enforce", "deny", 1)]
-    [InlineData("requires_approval", "Enforce", "requires_approval", 1)]
+    [InlineData("allow", "LogOnly", "allow", "Proceed", 0)]
+    [InlineData("deny", "LogOnly", "logged_only", "ContinueLogOnly", 0)]
+    [InlineData("deny", "Enforce", "deny", "Block", 1)]
+    [InlineData("requires_approval", "Enforce", "requires_approval", "Pause", 1)]
+    [InlineData("allow", "LogOnly", "allow", "FutureValue", 1)]
     public async Task DecisionResponse_ProducesExpectedExitCode(
         string decision,
         string mode,
         string effectiveAction,
+        string executionGuidance,
         int expectedExitCode)
     {
         await using var server = await GateStubServer.StartAsync(
             HttpStatusCode.OK,
             $$"""
-            {"decision":"{{decision}}","mode":"{{mode}}","effectiveAction":"{{effectiveAction}}","policyMatched":"test-policy","reason":"test reason"}
+            {"decision":"{{decision}}","mode":"{{mode}}","effectiveAction":"{{effectiveAction}}","executionGuidance":"{{executionGuidance}}","policyMatched":"test-policy","reason":"test reason"}
             """);
 
         var result = await RunGateAsync(server.BaseUrl, "test-secret-key");
@@ -82,12 +84,40 @@ public sealed class GitHubActionsGateScriptTests
     }
 
     [Fact]
+    public void FirstPartyGateUsesGuidanceWithoutRuntimeModeDecisionLogic()
+    {
+        var source = File.ReadAllText(ScriptPath);
+
+        Assert.Contains("$guidance -eq 'Proceed'", source);
+        Assert.Contains("$guidance -eq 'ContinueLogOnly'", source);
+        Assert.DoesNotContain("$decision -eq 'allow' -or $mode", source);
+    }
+
+    [Fact]
+    public void FirstPartyDotNetExamplesUseShouldProceedForExecution()
+    {
+        var root = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", ".."));
+        var protectedApi = File.ReadAllText(Path.Combine(
+            root, "Seneschal.Samples.ProtectedApi", "Program.cs"));
+        var capabilityDemo = File.ReadAllText(Path.Combine(
+            root, "Seneschal.Samples.CapabilityControlDemo", "Program.cs"));
+        var developerQuickstart = File.ReadAllText(Path.Combine(
+            root, "Seneschal.Api", "wwwroot", "developer-quickstart.js"));
+
+        Assert.Contains("decision.ShouldProceed", protectedApi);
+        Assert.Contains("decision.ShouldProceed", capabilityDemo);
+        Assert.Contains("result.ShouldProceed", developerQuickstart);
+        Assert.DoesNotContain("switch (result.ExecutionGuidance)", developerQuickstart);
+    }
+
+    [Fact]
     public async Task ApiKey_IsNeverWrittenToOutput()
     {
         const string secret = "never-print-this-api-key";
         await using var server = await GateStubServer.StartAsync(
             HttpStatusCode.OK,
-            "{\"decision\":\"allow\",\"mode\":\"LogOnly\",\"effectiveAction\":\"allow\",\"policyMatched\":\"safe\",\"reason\":\"allowed\"}");
+            "{\"decision\":\"allow\",\"mode\":\"LogOnly\",\"effectiveAction\":\"allow\",\"executionGuidance\":\"Proceed\",\"policyMatched\":\"safe\",\"reason\":\"allowed\"}");
 
         var result = await RunGateAsync(server.BaseUrl, secret);
 
@@ -97,20 +127,21 @@ public sealed class GitHubActionsGateScriptTests
     }
 
     [Theory]
-    [InlineData("allow", "LogOnly", "allow", 0)]
-    [InlineData("deny", "LogOnly", "logged_only", 0)]
-    [InlineData("deny", "Enforce", "deny", 1)]
-    [InlineData("requires_approval", "Enforce", "requires_approval", 1)]
+    [InlineData("allow", "LogOnly", "allow", "Proceed", 0)]
+    [InlineData("deny", "LogOnly", "logged_only", "ContinueLogOnly", 0)]
+    [InlineData("deny", "Enforce", "deny", "Block", 1)]
+    [InlineData("requires_approval", "Enforce", "requires_approval", "Pause", 1)]
     public async Task TerraformGate_DecisionResponseProducesExpectedExitCode(
         string decision,
         string mode,
         string effectiveAction,
+        string executionGuidance,
         int expectedExitCode)
     {
         await using var server = await GateStubServer.StartAsync(
             HttpStatusCode.OK,
             $$"""
-            {"decision":"{{decision}}","mode":"{{mode}}","effectiveAction":"{{effectiveAction}}","policyMatched":"terraform-policy","reason":"terraform reason"}
+            {"decision":"{{decision}}","mode":"{{mode}}","effectiveAction":"{{effectiveAction}}","executionGuidance":"{{executionGuidance}}","policyMatched":"terraform-policy","reason":"terraform reason"}
             """);
 
         var result = await RunTerraformGateAsync(server.BaseUrl, "terraform-secret");
@@ -158,7 +189,7 @@ public sealed class GitHubActionsGateScriptTests
         const string secret = "never-print-terraform-api-key";
         await using var server = await GateStubServer.StartAsync(
             HttpStatusCode.OK,
-            "{\"decision\":\"allow\",\"mode\":\"LogOnly\",\"effectiveAction\":\"allow\",\"policyMatched\":\"safe\",\"reason\":\"allowed\"}");
+            "{\"decision\":\"allow\",\"mode\":\"LogOnly\",\"effectiveAction\":\"allow\",\"executionGuidance\":\"Proceed\",\"policyMatched\":\"safe\",\"reason\":\"allowed\"}");
 
         var result = await RunTerraformGateAsync(server.BaseUrl, secret);
 
@@ -191,7 +222,7 @@ public sealed class GitHubActionsGateScriptTests
         {
             await using var server = await GateStubServer.StartAsync(
                 HttpStatusCode.OK,
-                "{\"decision\":\"allow\",\"mode\":\"LogOnly\",\"effectiveAction\":\"allow\",\"policyMatched\":\"safe\",\"reason\":\"allowed\"}");
+                "{\"decision\":\"allow\",\"mode\":\"LogOnly\",\"effectiveAction\":\"allow\",\"executionGuidance\":\"Proceed\",\"policyMatched\":\"safe\",\"reason\":\"allowed\"}");
 
             var result = await RunTerraformGateAsync(
                 server.BaseUrl,

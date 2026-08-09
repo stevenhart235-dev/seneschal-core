@@ -18,10 +18,26 @@ This package requires .NET 8 or later and a reachable Seneschal runtime.
 
 ## Execution guidance
 
-`Decision` is the governance outcome. `EffectiveAction` is the runtime-mode
-projection retained for compatibility. `ExecutionGuidance` tells the caller
-whether it should `Proceed`, `Block`, `Pause`, or `ContinueLogOnly`; the SDK
-does not automatically execute, retry, poll, queue, or resume work.
+Use `ExecutionGuidance` / `ShouldProceed` to determine whether to execute.
+`Decision` describes the governance result; it is not by itself an execution
+instruction. `EffectiveAction` remains available as diagnostic and compatibility
+evidence. The SDK does not automatically execute, retry, poll, queue, or resume
+work.
+
+```csharp
+var result = await client.EvaluateAsync(request, cancellationToken);
+
+if (!result.ShouldProceed)
+{
+    return;
+}
+
+await DoWorkAsync(cancellationToken);
+```
+
+`ShouldProceed` is derived exclusively from `ExecutionGuidance`. `Proceed` and
+`ContinueLogOnly` return `true`; every other value, including an unknown future
+value, returns `false`. Callers do not need to inspect runtime mode.
 
 Pending Approval responses include `ApprovalId`, `ApprovalStatus`, `Message`,
 and `RetryGuidance` when available. Seneschal does not retain the original

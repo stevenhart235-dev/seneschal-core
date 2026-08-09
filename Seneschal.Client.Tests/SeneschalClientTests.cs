@@ -210,19 +210,25 @@ public sealed class SeneschalClientTests
     }
 
     [Theory]
-    [InlineData("allow", "Enforce", true)]
-    [InlineData("deny", "Enforce", false)]
-    [InlineData("requires_approval", "Enforce", false)]
-    [InlineData("deny", "LogOnly", true)]
-    public void DecisionResult_ShouldProceedReflectsDecisionAndMode(
-        string decision,
-        string mode,
+    [InlineData("Proceed", true)]
+    [InlineData("proceed", true)]
+    [InlineData("ContinueLogOnly", true)]
+    [InlineData("Block", false)]
+    [InlineData("Pause", false)]
+    [InlineData("Queue", false)]
+    [InlineData("Retry", false)]
+    [InlineData("ExecuteImmediately", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void DecisionResult_ShouldProceedDerivesOnlyFromExecutionGuidance(
+        string? guidance,
         bool expected)
     {
         var result = new DecisionResult
         {
-            Decision = decision,
-            Mode = mode
+            Decision = "allow",
+            Mode = "LogOnly",
+            ExecutionGuidance = guidance!
         };
 
         Assert.Equal(expected, result.ShouldProceed);

@@ -79,10 +79,9 @@ public sealed record DecisionResult
     public string? EventId { get; init; }
 
     /// <summary>
-    /// Gets whether application code should proceed with the governed action.
+    /// Gets whether application code should proceed with the governed action,
+    /// derived exclusively from <see cref="ExecutionGuidance"/>.
     /// </summary>
     public bool ShouldProceed =>
-        string.Equals(Mode, "LogOnly", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(Mode, "Monitor", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(Decision, "allow", StringComparison.OrdinalIgnoreCase);
+        ExecutionGuidanceContract.ShouldProceed(ExecutionGuidance);
 }

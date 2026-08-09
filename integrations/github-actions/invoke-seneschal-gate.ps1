@@ -54,9 +54,9 @@ Write-Host "Execution guidance: $guidance"
 if ($approvalId) { Write-Host "Approval ID: $approvalId" }
 if ($message) { Write-Host "Message: $message" }
 
-$shouldProceed = $decision -eq 'allow' -or $mode -eq 'LogOnly'
+$shouldProceed = $guidance -eq 'Proceed' -or $guidance -eq 'ContinueLogOnly'
 if ($shouldProceed) {
-    if ($decision -ne 'allow') {
+    if ($guidance -eq 'ContinueLogOnly') {
         Write-Host 'Governance gate: proceed (decision observed but not enforced in LogOnly)'
     }
     else {

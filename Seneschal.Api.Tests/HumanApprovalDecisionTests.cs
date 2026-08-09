@@ -26,7 +26,9 @@ public sealed class HumanApprovalDecisionTests
         var next = service.Evaluate(request);
 
         Assert.Equal("requires_approval", pending.Decision);
+        Assert.Equal("Pause", pending.ExecutionGuidance);
         Assert.Equal("allow", resolved.Decision);
+        Assert.Equal("Proceed", resolved.ExecutionGuidance);
         Assert.Equal("requires_approval", next.Decision);
         Assert.Equal(2, approvals.GetAll().Count);
         var consumed = approvals.GetAll().Single(item => item.Id == record.Id);
@@ -48,7 +50,9 @@ public sealed class HumanApprovalDecisionTests
         service.Evaluate(Request("vault-a"));
         var record = Assert.Single(approvals.GetAll());
         approvals.Resolve(record.Id, ApprovalStatus.Rejected, "reviewer", DateTimeOffset.UtcNow);
-        Assert.Equal("deny", service.Evaluate(Request("vault-a")).Decision);
+        var rejected = service.Evaluate(Request("vault-a"));
+        Assert.Equal("deny", rejected.Decision);
+        Assert.Equal("Block", rejected.ExecutionGuidance);
         Assert.Equal("deny", service.Evaluate(Request("vault-a")).Decision);
         Assert.Single(approvals.GetAll());
     }
@@ -76,13 +80,17 @@ public sealed class HumanApprovalDecisionTests
         var approvals = new InMemoryApprovalStore();
         var service = new CoreDecisionService(
             new PolicyLoader(), new Seneschal.Core.Services.PolicyEvaluator(),
-            new InMemoryGovernanceModeStore(new RuntimeSettings()),
+            new InMemoryGovernanceModeStore(new RuntimeSettings
+            {
+                Mode = EnforcementMode.Enforce
+            }),
             governanceWindowStore: new SecretWindowStore(), approvalStore: approvals);
         service.Evaluate(Request("vault-a"));
         var record = Assert.Single(approvals.GetAll());
         approvals.Resolve(record.Id, ApprovalStatus.Approved, "reviewer", DateTimeOffset.UtcNow);
         var result = service.Evaluate(Request("vault-a"));
         Assert.Equal("deny", result.Decision);
+        Assert.Equal("Block", result.ExecutionGuidance);
         Assert.Equal(ApprovalStatus.Consumed, approvals.GetAll().Single().Status);
     }
 
@@ -114,7 +122,10 @@ public sealed class HumanApprovalDecisionTests
 
     private static CoreDecisionService CreateService(InMemoryApprovalStore approvals) =>
         new(new PolicyLoader(), new Seneschal.Core.Services.PolicyEvaluator(),
-            new InMemoryGovernanceModeStore(new RuntimeSettings()),
+            new InMemoryGovernanceModeStore(new RuntimeSettings
+            {
+                Mode = EnforcementMode.Enforce
+            }),
             approvalStore: approvals);
 
     private sealed class SecretWindowStore : Seneschal.Core.Interfaces.IGovernanceWindowStore

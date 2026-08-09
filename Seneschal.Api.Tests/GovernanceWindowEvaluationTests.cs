@@ -25,6 +25,7 @@ public sealed class GovernanceWindowEvaluationTests
             "production.deployment.execute"));
 
         Assert.Equal("allow", result.Decision);
+        Assert.Equal("Proceed", result.ExecutionGuidance);
         var auditEvent = Assert.Single(await auditStore.GetRecentAsync());
         Assert.Equal("Production Freeze", auditEvent.GovernanceWindowName);
         Assert.Equal(DecisionType.Allow, auditEvent.PolicyDecision);
@@ -51,6 +52,7 @@ public sealed class GovernanceWindowEvaluationTests
 
         Assert.Equal("deny", result.Decision);
         Assert.Equal("logged_only", result.EffectiveAction);
+        Assert.Equal("ContinueLogOnly", result.ExecutionGuidance);
         Assert.Equal(
             "Blocked by Governance Window: Production Freeze",
             result.Reason);

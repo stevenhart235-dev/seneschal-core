@@ -186,6 +186,7 @@ public sealed class SeneschalCustomerExperienceHardeningTests
             {
                 Decision = "deny",
                 Mode = "Enforce",
+                ExecutionGuidance = "Block",
                 Reason = "Denied by policy.",
                 PolicyMatched = "deny-policy"
             }),

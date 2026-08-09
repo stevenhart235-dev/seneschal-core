@@ -48,7 +48,7 @@ app.MapPost(
             },
             cancellationToken);
 
-        if (IsAllow(decision.Decision))
+        if (decision.ShouldProceed)
         {
             return Results.Ok(new DeployAcceptedResponse(
                 "Deployment started by manual client evaluation.",
@@ -133,12 +133,6 @@ static IResult AttributeProtectedDeploy()
         "Allow",
         "Seneschal attribute middleware allowed the request.",
         "n/a"));
-}
-
-static bool IsAllow(string decision)
-{
-    return string.Equals(decision, "Allow", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(decision, "allow", StringComparison.OrdinalIgnoreCase);
 }
 
 static bool IsDeny(string decision)

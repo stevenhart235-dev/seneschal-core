@@ -187,6 +187,7 @@ public sealed class SeneschalGoldenPathExtensionsTests
             {
                 Decision = "allow",
                 Mode = "Enforce",
+                ExecutionGuidance = "Proceed",
                 Reason = "Allowed by test."
             });
         }

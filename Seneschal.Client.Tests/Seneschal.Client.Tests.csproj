@@ -21,4 +21,10 @@
     <ProjectReference Include="..\Seneschal.Client\Seneschal.Client.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\integrations\contracts\execution-guidance\execution-guidance-conformance.v1.json"
+             Link="execution-guidance-conformance.v1.json"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

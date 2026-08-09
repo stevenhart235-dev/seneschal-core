@@ -1,0 +1,27 @@
+{
+  "$schema": "./execution-guidance-conformance.schema.json",
+  "contract": "seneschal.execution-guidance",
+  "version": 1,
+  "cases": [
+    { "id": "proceed", "input": { "executionGuidance": "Proceed" }, "expected": { "semantic": "Proceed", "shouldProceed": true } },
+    { "id": "continue-log-only", "input": { "executionGuidance": "ContinueLogOnly" }, "expected": { "semantic": "ContinueLogOnly", "shouldProceed": true } },
+    { "id": "block", "input": { "executionGuidance": "Block" }, "expected": { "semantic": "Block", "shouldProceed": false } },
+    { "id": "pause", "input": { "executionGuidance": "Pause" }, "expected": { "semantic": "Pause", "shouldProceed": false } },
+    { "id": "queue", "input": { "executionGuidance": "Queue" }, "expected": { "semantic": "Queue", "shouldProceed": false } },
+    { "id": "retry", "input": { "executionGuidance": "Retry" }, "expected": { "semantic": "Retry", "shouldProceed": false } },
+
+    { "id": "proceed-case-variant", "input": { "executionGuidance": "pRoCeEd" }, "expected": { "semantic": "Proceed", "shouldProceed": true } },
+    { "id": "continue-log-only-case-variant", "input": { "executionGuidance": "CONTINUELOGONLY" }, "expected": { "semantic": "ContinueLogOnly", "shouldProceed": true } },
+    { "id": "block-case-variant", "input": { "executionGuidance": "block" }, "expected": { "semantic": "Block", "shouldProceed": false } },
+    { "id": "pause-case-variant", "input": { "executionGuidance": "pAuSe" }, "expected": { "semantic": "Pause", "shouldProceed": false } },
+    { "id": "queue-case-variant", "input": { "executionGuidance": "QUEUE" }, "expected": { "semantic": "Queue", "shouldProceed": false } },
+    { "id": "retry-case-variant", "input": { "executionGuidance": "retry" }, "expected": { "semantic": "Retry", "shouldProceed": false } },
+
+    { "id": "unknown-future-value", "input": { "executionGuidance": "ExecuteImmediately" }, "expected": { "semantic": "Unknown", "shouldProceed": false } },
+    { "id": "numeric-looking-unknown", "input": { "executionGuidance": "1" }, "expected": { "semantic": "Unknown", "shouldProceed": false } },
+    { "id": "empty-string", "input": { "executionGuidance": "" }, "expected": { "semantic": "Unknown", "shouldProceed": false } },
+    { "id": "whitespace-only", "input": { "executionGuidance": "   " }, "expected": { "semantic": "Unknown", "shouldProceed": false } },
+    { "id": "null", "input": { "executionGuidance": null }, "expected": { "semantic": "Unknown", "shouldProceed": false } },
+    { "id": "missing-property", "input": {}, "expected": { "semantic": "Unknown", "shouldProceed": false } }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seneschal.dev/contracts/execution-guidance-conformance.schema.json",
+  "title": "Seneschal Execution Guidance Conformance Suite",
+  "type": "object",
+  "required": ["contract", "version", "cases"],
+  "properties": {
+    "contract": { "const": "seneschal.execution-guidance" },
+    "version": { "type": "integer", "minimum": 1 },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "input", "expected"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "input": {
+            "type": "object",
+            "properties": {
+              "executionGuidance": { "type": ["string", "null"] }
+            },
+            "additionalProperties": false
+          },
+          "expected": {
+            "type": "object",
+            "required": ["semantic", "shouldProceed"],
+            "properties": {
+              "semantic": {
+                "enum": ["Unknown", "Proceed", "ContinueLogOnly", "Block", "Pause", "Queue", "Retry"]
+              },
+              "shouldProceed": { "type": "boolean" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

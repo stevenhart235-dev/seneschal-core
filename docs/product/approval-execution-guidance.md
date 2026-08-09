@@ -56,6 +56,17 @@ diagnostics. A future value unknown to the installed SDK deserializes normally,
 is preserved raw, maps to `ExecutionGuidanceKind.Unknown`, and fails closed.
 Missing, null, and blank values behave the same way.
 
+## Language-neutral conformance
+
+All SDKs and integrations should run the versioned fixtures in
+`integrations/contracts/execution-guidance`. The fixtures contain raw JSON input,
+normalized semantic output, and the expected immediate-execution result without
+depending on .NET types or enum numbers.
+
+Callers MUST determine immediate execution from Execution Guidance or a
+conforming SDK helper. Callers MUST NOT independently derive execution
+permission from Decision, EffectiveAction, runtime mode, or approval state.
+
 ## Caller responsibilities
 
 - **Synchronous API:** return `202 Accepted`, stop the current execution, and

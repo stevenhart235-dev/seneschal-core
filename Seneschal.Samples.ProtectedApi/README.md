@@ -1,7 +1,8 @@
 # Seneschal Protected API Sample
 
-This sample shows three ways an ASP.NET Core application can ask Seneschal for
-runtime capability decisions before executing protected work.
+This sample's canonical path is `POST /deploy`: evaluate, check
+`ShouldProceed`, then execute or stop. The attribute and middleware endpoints
+remain as optional examples after the direct path is working.
 
 The sample exposes:
 
@@ -14,18 +15,18 @@ POST /deploy/middleware
 All three paths evaluate the `DeployApplication` capability against a running
 Seneschal instance.
 
-## Configure the Seneschal URL
+## Configure
 
 By default, the sample calls:
 
 ```text
-http://localhost:5000
+http://localhost:5077
 ```
 
 Override it with configuration:
 
 ```powershell
-$env:Seneschal__BaseUrl = "http://localhost:5000"
+$env:Seneschal__BaseUrl = "http://localhost:5077"
 ```
 
 The sample sends the development integration API key configured in
@@ -47,10 +48,10 @@ X-Seneschal-Api-Key: dev-sample-key
 
 ## Run both applications
 
-Start Seneschal:
+Start Seneschal from the repository root:
 
 ```powershell
-dotnet run --project ..\Seneschal.Api --urls http://localhost:5000
+dotnet run --project Seneschal.Api
 ```
 
 Start the protected sample API:
@@ -59,12 +60,13 @@ Start the protected sample API:
 dotnet run --project . --urls http://localhost:5010
 ```
 
-## Manual client evaluation
+## Canonical direct evaluation
 
 `POST /deploy` demonstrates direct use of `ISeneschalClient`.
 
-The endpoint builds a `DecisionRequest`, calls `EvaluateAsync`, and maps the
-returned decision to an HTTP response itself.
+The endpoint builds a `DecisionRequest`, calls `EvaluateAsync`, and uses
+`ShouldProceed` as the execution instruction. Decision and runtime mode are
+diagnostic fields, not execution instructions.
 
 ```powershell
 Invoke-RestMethod `
@@ -74,10 +76,11 @@ Invoke-RestMethod `
   -Body '{"identity":"Developer","environment":"dev","resource":"sample-api"}'
 ```
 
-This style is useful when the application needs full control over request
-construction or custom response mapping.
+For approval-sensitive work, provide a stable `operationId`, stop when guidance
+is `Pause`, and retry evaluation with that same ID after approval. Seneschal
+does not retain or resume the application's work payload.
 
-## Attribute-based protection
+## Optional attribute-based protection
 
 `POST /deploy/attribute` demonstrates endpoint/controller metadata:
 
@@ -85,7 +88,7 @@ construction or custom response mapping.
 [RequiresCapability("DeployApplication")]
 ```
 
-The sample registers `UseSeneschalCapabilityAttributes()`, so endpoints with
+The sample registers `UseSeneschal()`, so endpoints with
 `RequiresCapabilityAttribute` metadata are evaluated automatically before the
 handler runs.
 
@@ -98,7 +101,7 @@ Invoke-RestMethod `
 This style is useful when capability requirements should be declared near the
 endpoint code.
 
-## Middleware-based protection
+## Optional middleware-based protection
 
 `POST /deploy/middleware` demonstrates path-level protection with
 `UseSeneschalCapability(...)`.
@@ -118,8 +121,8 @@ For all three integration styles:
 
 - `Allow` continues the request and returns HTTP 200.
 - `Deny` blocks the request and returns HTTP 403.
-- `PendingApproval` blocks the request and returns HTTP 409 with the reason and
-  obligations.
+- Approval-required guidance stops execution. The direct endpoint can return an
+  application-owned pending response; automatic protection returns HTTP 409.
 - Monitor/log-only mode evaluates and audits the decision but allows the request
   to continue.
 

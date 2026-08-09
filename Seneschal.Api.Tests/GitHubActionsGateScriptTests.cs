@@ -106,6 +106,10 @@ public sealed class GitHubActionsGateScriptTests
             root, "Seneschal.Api", "wwwroot", "developer-quickstart.js"));
 
         Assert.Contains("decision.ShouldProceed", protectedApi);
+        Assert.Contains("builder.Services.AddSeneschal(", protectedApi);
+        Assert.Contains("app.UseSeneschal();", protectedApi);
+        Assert.DoesNotContain("AddHttpClient<ISeneschalClient, SeneschalClient>", protectedApi);
+        Assert.DoesNotContain("Uri.TryCreate", protectedApi);
         Assert.Contains("decision.ShouldProceed", capabilityDemo);
         Assert.Contains("result.ShouldProceed", developerQuickstart);
         Assert.DoesNotContain("switch (result.ExecutionGuidance)", developerQuickstart);

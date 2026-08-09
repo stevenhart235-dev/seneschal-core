@@ -17,24 +17,25 @@ dotnet nuget add source C:\path\to\seneschal-core\artifacts\packages --name Sene
 
 ## Configure
 
+Only `BaseUrl` and `ApiKey` are required:
+
 `appsettings.json`:
 
 ```json
 {
   "Seneschal": {
-    "BaseUrl": "http://localhost:5000",
-    "ApiKey": "dev-sample-key",
-    "DefaultEnvironment": "dev",
-    "FailureBehavior": "FailClosed",
-    "Timeout": "00:00:10"
+    "BaseUrl": "http://localhost:5077",
+    "ApiKey": "<scoped-api-key>"
   }
 }
 ```
 
-`Program.cs`:
+Register once in `Program.cs`:
 
 ```csharp
 using Seneschal.AspNetCore;
+using Seneschal.Client;
+using Seneschal.Client.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,21 +43,66 @@ builder.Services.AddSeneschal(
     builder.Configuration.GetSection("Seneschal"));
 
 var app = builder.Build();
+```
 
-app.UseSeneschal();
+## Evaluate and execute
 
-app.MapPost("/deploy", () => Results.Ok(new { executed = true }))
-    .RequireCapability("production.deployment.execute");
+This is the canonical first integration because it makes the execution contract
+visible:
+
+```csharp
+app.MapPost("/orders/{operationId}", async (
+    string operationId,
+    ISeneschalClient client,
+    CancellationToken cancellationToken) =>
+{
+    var result = await client.EvaluateAsync(new DecisionRequest
+    {
+        Identity = "orders-api",
+        Capability = "orders.submit",
+        OperationId = operationId,
+        Context = new() { ["resource"] = operationId }
+    }, cancellationToken);
+
+    if (!result.ShouldProceed)
+    {
+        return result.Guidance == ExecutionGuidanceKind.Pause
+            ? Results.Accepted($"/operations/{operationId}")
+            : Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    // Execute the governed action only after ShouldProceed is true.
+    return Results.Ok(new { executed = true, operationId });
+});
 
 app.Run();
 ```
 
-Lambda configuration remains available:
+Run the service normally with `dotnet run`. The required path is now install →
+configure two values → register → evaluate → check `ShouldProceed` → execute.
+
+For approval, stop the action when guidance is `Pause`, retain the application
+work locally, and evaluate again with the same `OperationId` after approval.
+Seneschal does not store or resume the work payload.
+
+## Automatic endpoint protection
+
+After the direct path works, endpoints that do not need the decision object can
+use automatic protection:
+
+```csharp
+app.UseSeneschal();
+
+app.MapPost("/deploy", () => Results.Ok(new { executed = true }))
+    .RequireCapability("production.deployment.execute");
+```
+
+Advanced lambda configuration remains available:
 
 ```csharp
 builder.Services.AddSeneschal(options =>
 {
-    options.BaseUrl = new Uri("http://localhost:5000");
+    options.BaseUrl = new Uri("http://localhost:5077");
     options.ApiKey = configuration["Seneschal:ApiKey"];
     options.DefaultEnvironment = "dev";
     options.FailureBehavior = SeneschalFailureBehavior.FailClosed;
@@ -67,7 +113,7 @@ builder.Services.AddSeneschal(options =>
 Startup fails immediately when `BaseUrl`, `ApiKey`, environment, or timeout is
 invalid. API key values are not included in validation errors.
 
-## Protect endpoints
+## Additional endpoint metadata
 
 Fluent metadata:
 

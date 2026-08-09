@@ -114,7 +114,7 @@
     function createSnippets(capability, identity, environment, resource) {
         const safeIdentity = identity || '<configured-identity>';
         const safeResource = resource || '<resource-id>';
-        const commonArguments = `  -BaseUrl http://localhost:5000 \`\n` +
+        const commonArguments = `  -BaseUrl http://localhost:5077 \`\n` +
             `  -ApiKey $env:SENESCHAL_API_KEY \`\n` +
             `  -Identity ${safeIdentity} \`\n` +
             `  -Capability ${capability} \`\n` +
@@ -124,23 +124,23 @@
         if (integration === 'aspnet') {
             return {
                 install: 'dotnet add package Seneschal.AspNetCore --version 0.1.0-alpha.1',
-                configuration: `builder.Services.AddSeneschal(options =>\n{\n    options.BaseUrl = new Uri("http://localhost:5000");\n    options.ApiKey = builder.Configuration["Seneschal:ApiKey"]!;\n    options.IdentityResolver = _ => "${safeIdentity}";\n    options.DefaultEnvironment = "${environment}";\n});\n\napp.UseSeneschal();`,
-                example: `app.MapPost("/governed-operation/{operationId}", async (string operationId, ISeneschalClient client, CancellationToken ct) =>\n{\n    var result = await client.EvaluateAsync(new DecisionRequest\n    {\n        Identity = "${safeIdentity}", Capability = "${capability}", OperationId = operationId,\n        Context = new() { ["environment"] = "${environment}", ["resource"] = "${safeResource}" }\n    }, ct);\n    if (result.ExecutionGuidance == "Pause")\n    {\n        // /operations is an application-owned status endpoint.\n        return Results.Accepted($"/operations/{operationId}", new\n        {\n            approvalId = result.ApprovalId, operationId = result.OperationId,\n            approvalStatus = result.ApprovalStatus, message = result.Message\n        });\n    }\n\n    return result.ShouldProceed\n        ? Results.Ok(new { executed = true })\n        : Results.StatusCode(StatusCodes.Status403Forbidden);\n});`
+                configuration: `builder.Services.AddSeneschal(options =>\n{\n    options.BaseUrl = new Uri("http://localhost:5077");\n    options.ApiKey = builder.Configuration["Seneschal:ApiKey"]!;\n});`,
+                example: `app.MapPost("/governed-operation/{operationId}", async (string operationId, ISeneschalClient client, CancellationToken ct) =>\n{\n    var result = await client.EvaluateAsync(new DecisionRequest\n    {\n        Identity = "${safeIdentity}", Capability = "${capability}", OperationId = operationId,\n        Context = new() { ["environment"] = "${environment}", ["resource"] = "${safeResource}" }\n    }, ct);\n\n    if (!result.ShouldProceed)\n    {\n        return result.Guidance == ExecutionGuidanceKind.Pause\n            ? Results.Accepted($"/operations/{operationId}", new { result.ApprovalId, result.Message })\n            : Results.StatusCode(StatusCodes.Status403Forbidden);\n    }\n\n    return Results.Ok(new { executed = true });\n});`
             };
         }
 
         if (integration === 'client') {
             return {
                 install: 'dotnet add package Seneschal.Client --version 0.1.0-alpha.1',
-                configuration: `builder.Services.Configure<SeneschalClientOptions>(options =>\n{\n    options.BaseUrl = new Uri("http://localhost:5000");\n    options.ApiKey = builder.Configuration["Seneschal:ApiKey"];\n});\nbuilder.Services.AddHttpClient<ISeneschalClient, SeneschalClient>();`,
-                example: `var operationId = existingBusinessOperation.Id; // stable across retries\nvar result = await client.EvaluateAsync(new DecisionRequest\n{\n    Identity = "${safeIdentity}",\n    Capability = "${capability}",\n    OperationId = operationId,\n    Context = new()\n    {\n        ["environment"] = "${environment}",\n        ["resource"] = "${safeResource}"\n    }\n}, cancellationToken);\n\nif (!result.ShouldProceed)\n{\n    if (result.ExecutionGuidance is "Pause" or "Queue")\n    {\n        await SaveLocalCheckpointAsync(result.ApprovalId, operationId, cancellationToken);\n    }\n\n    return;\n}\n\nawait ExecuteAsync(cancellationToken);`
+                configuration: `builder.Services.Configure<SeneschalClientOptions>(options =>\n{\n    options.BaseUrl = new Uri("http://localhost:5077");\n    options.ApiKey = builder.Configuration["Seneschal:ApiKey"];\n});\nbuilder.Services.AddHttpClient<ISeneschalClient, SeneschalClient>();`,
+                example: `var operationId = existingBusinessOperation.Id; // stable across retries\nvar result = await client.EvaluateAsync(new DecisionRequest\n{\n    Identity = "${safeIdentity}",\n    Capability = "${capability}",\n    OperationId = operationId,\n    Context = new()\n    {\n        ["environment"] = "${environment}",\n        ["resource"] = "${safeResource}"\n    }\n}, cancellationToken);\n\nif (!result.ShouldProceed)\n{\n    if (result.Guidance is ExecutionGuidanceKind.Pause or ExecutionGuidanceKind.Queue)\n    {\n        await SaveLocalCheckpointAsync(result.ApprovalId, operationId, cancellationToken);\n    }\n\n    return;\n}\n\nawait ExecuteAsync(cancellationToken);`
             };
         }
 
         if (integration === 'github') {
             return {
                 install: 'Copy integrations/github-actions/invoke-seneschal-gate.ps1 into the workflow workspace.',
-                configuration: `Repository secrets:\nSENESCHAL_URL=http://localhost:5000\nSENESCHAL_API_KEY=<scoped secret>`,
+                configuration: `Repository secrets:\nSENESCHAL_URL=http://localhost:5077\nSENESCHAL_API_KEY=<scoped secret>`,
                 example: `powershell -File integrations/github-actions/invoke-seneschal-gate.ps1 \`\n${commonArguments}\n# Pending Approval exits non-zero in Enforce. Retry the job after approval.`
             };
         }

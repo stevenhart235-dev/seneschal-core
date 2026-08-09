@@ -1,60 +1,44 @@
 # ASP.NET Core Quickstart
 
-Install the packaged SDK, protect one endpoint, and verify `LogOnly` versus
-`Enforce` in about 15 minutes.
+Protect one action in an existing ASP.NET Core service in under ten minutes.
+You need a reachable Seneschal URL, a scoped integration API key, and the
+identity and capability names your Seneschal operator configured.
 
-## 1. Pack and start Seneschal
-
-From the repository root:
-
-```powershell
-dotnet pack Seneschal.AspNetCore/Seneschal.AspNetCore.csproj -c Release
-dotnet run --project Seneschal.Api --urls http://localhost:5000
-```
-
-Verify readiness in another terminal:
+## 1. Install
 
 ```powershell
-Invoke-RestMethod http://localhost:5000/ready
-```
-
-Seneschal starts in `LogOnly`.
-
-## 2. Install the local package
-
-In a .NET 8 ASP.NET Core application:
-
-```powershell
-dotnet nuget add source C:\path\to\seneschal-core\artifacts\packages --name SeneschalLocal
 dotnet add package Seneschal.AspNetCore --version 0.1.0-alpha.1
 ```
 
-`Seneschal.Client` resolves transitively.
+`Seneschal.Client` is included transitively.
 
-## 3. Add configuration
+## 2. Configure two values
 
-`appsettings.json`:
+Add the endpoint and key to `appsettings.json` (use your normal secret store for
+the key outside local development):
 
 ```json
 {
   "Seneschal": {
-    "BaseUrl": "http://localhost:5000",
-    "ApiKey": "dev-sample-key",
-    "DefaultEnvironment": "dev",
-    "FailureBehavior": "FailClosed"
+    "BaseUrl": "http://localhost:5077",
+    "ApiKey": "dev-sample-key"
   }
 }
 ```
 
-The sample key permits identity `anonymous` and capability
-`DeployApplication`.
+The checked-in `dev-sample-key` is local-development only. It is scoped to the
+sample `Developer` identity and `DeployApplication` capability.
+See [Integration API Keys](../security/integration-api-keys.md) for key scope
+and direct HTTP authentication details.
 
-## 4. Register and protect
+## 3. Register and protect one action
 
-`Program.cs`:
+Add this to `Program.cs`:
 
 ```csharp
 using Seneschal.AspNetCore;
+using Seneschal.Client;
+using Seneschal.Client.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,120 +47,100 @@ builder.Services.AddSeneschal(
 
 var app = builder.Build();
 
-app.UseSeneschal();
+app.MapPost("/deploy/{operationId}", async (
+    string operationId,
+    ISeneschalClient client,
+    CancellationToken cancellationToken) =>
+{
+    var result = await client.EvaluateAsync(new DecisionRequest
+    {
+        Identity = "Developer",
+        Capability = "DeployApplication",
+        OperationId = operationId,
+        Context = new()
+        {
+            ["environment"] = "dev",
+            ["resource"] = "sample-api"
+        }
+    }, cancellationToken);
 
-app.MapPost("/governed-operation", () =>
-        Results.Ok(new { executed = true }))
-    .RequireCapability("DeployApplication");
+    if (!result.ShouldProceed)
+    {
+        return result.Guidance == ExecutionGuidanceKind.Pause
+            ? Results.Accepted($"/operations/{operationId}", new
+            {
+                result.ApprovalId,
+                result.Message
+            })
+            : Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    // Replace this response with the governed work.
+    return Results.Ok(new { executed = true, operationId });
+});
 
 app.Run();
 ```
 
-Attribute style is equivalent:
+`ShouldProceed` is the execution instruction. Do not combine Decision, runtime
+mode, EffectiveAction, or approval status to make a separate execution choice.
+
+## 4. Run
+
+Start Seneschal from this repository, then start your service:
+
+```powershell
+dotnet run --project Seneschal.Api
+dotnet run --project path\to\your-service --urls http://localhost:5010
+```
+
+Call the protected action:
+
+```powershell
+Invoke-RestMethod -Method Post `
+  -Uri http://localhost:5010/deploy/release-001
+```
+
+The local sample policy returns an executable result for `Developer` deploying
+to `dev`. A block returns HTTP 403. Connection, authentication, and invalid
+response failures are fail-closed by default.
+
+## Approval behavior
+
+When typed guidance is `Pause`, stop without executing and return or persist an
+application-owned pending response. Keep the request payload in your service,
+have an operator resolve the approval in Seneschal, then call `EvaluateAsync`
+again with the same `OperationId`. Only execute when the retry returns
+`ShouldProceed == true`.
+
+Seneschal stores approval evidence, not your work payload, and does not pause,
+poll, retry, or resume the operation for you. Rejected approvals and unknown
+guidance fail closed.
+
+## Optional automatic endpoint protection
+
+If an endpoint does not need the decision object, the ASP.NET package can apply
+the same canonical contract automatically:
 
 ```csharp
-[RequiresCapability("DeployApplication")]
-static IResult GovernedOperation() =>
-    Results.Ok(new { executed = true });
+app.UseSeneschal();
+
+app.MapPost("/deploy", () => Results.Ok(new { executed = true }))
+    .RequireCapability("DeployApplication");
 ```
 
-Run on port `5010`:
+Automatic protection returns HTTP 403 for a block, HTTP 409 when approval is
+required, and fail-closed error responses for unavailable or invalid runtime
+responses. See the package README for identity mapping, environment metadata,
+and explicit failure-policy overrides.
 
-```powershell
-dotnet run --urls http://localhost:5010
-```
+## Common failures
 
-## 5. Verify LogOnly
-
-```powershell
-curl.exe -i -X POST http://localhost:5010/governed-operation
-```
-
-Expected:
-
-```text
-HTTP/1.1 200 OK
-{"executed":true}
-```
-
-The underlying default deny appears in
-`http://localhost:5000/audit`, but `LogOnly` permits execution.
-
-## 6. Verify Enforce
-
-Open `http://localhost:5000/governance` and select **Enforce**, then repeat:
-
-```powershell
-curl.exe -i -X POST http://localhost:5010/governed-operation
-```
-
-Expected:
-
-```text
-HTTP/1.1 403 Forbidden
-{"decision":"deny","reason":"No matching allow policy found","policyMatched":"default-deny"}
-```
-
-## Troubleshooting
-
-## Handling Pending Approval
-
-`PendingApproval` with `ExecutionGuidance: Pause` means the application should
-stop the current operation. A synchronous API can return `202 Accepted` with
-the approval ID and an application-owned status URL, then re-evaluate after a
-human resolves the approval.
-
-Always provide a stable caller-owned `operationId` for production approvals and
-reuse it when retrying that same business operation. Omitting it uses temporary
-legacy context matching.
-
-Seneschal does not retain the original request payload or automatically pause,
-queue, resume, or retry application work.
-
-### Startup validation failure
-
-- `BaseUrl is required`: add `Seneschal:BaseUrl`.
-- `BaseUrl must be an absolute URI`: include `http://` or `https://`.
-- `ApiKey is required`: configure a non-empty integration key.
-
-Validation errors never print the configured key value.
-
-### HTTP 401: authentication failed
-
-The key is missing or unknown. Compare `Seneschal:ApiKey` with
-`Seneschal.Api/Policies/integration-keys.yaml`.
-
-### HTTP 403: integration forbidden
-
-The key exists but is outside identity, capability, or environment scope.
-This is distinct from a policy-denial 403, whose decision is `deny`.
-
-### HTTP 502: invalid response
-
-Seneschal returned malformed or unsupported decision content. Check the API
-version and API logs.
-
-### HTTP 503: timeout or unavailable API
-
-Verify the configured port and readiness:
-
-```powershell
-Invoke-RestMethod http://localhost:5000/ready
-```
-
-`FailClosed` blocks by default. `FailOpen` must be selected explicitly and
-allows governed operations to continue during evaluation failures.
-
-### Wrong BaseUrl
-
-- Seneschal: `http://localhost:5000`
-- Application: `http://localhost:5010`
-- `Seneschal:BaseUrl` must point to Seneschal, not the application.
-
-## Success checklist
-
-- [ ] Package installs without source project references.
-- [ ] Invalid configuration fails during registration.
-- [ ] `LogOnly` records deny and returns HTTP 200.
-- [ ] `Enforce` blocks the same request with HTTP 403.
-- [ ] Audit shows identity, capability, environment, policy, and mode.
+| Symptom | Check |
+|---|---|
+| Startup says `BaseUrl` is required or invalid | Configure an absolute Seneschal URL, including `http://` or `https://`. |
+| Startup says `ApiKey` is required | Provide a non-empty scoped key through configuration or secrets. |
+| HTTP 401 | The key is missing or unknown. |
+| HTTP 403 before evaluation | The key is not scoped to the requested identity, capability, or environment. |
+| HTTP 403 after evaluation | Guidance blocked the action. Inspect Decision and Reason for evidence. |
+| HTTP 502/503 | The response was invalid, timed out, or Seneschal was unavailable; default behavior is fail closed. |

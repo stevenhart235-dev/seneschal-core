@@ -4,29 +4,12 @@ using Seneschal.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var seneschalBaseUrl = builder.Configuration["Seneschal:BaseUrl"] ??
-    "http://localhost:5000";
-
-if (!Uri.TryCreate(
-        seneschalBaseUrl,
-        UriKind.Absolute,
-        out var seneschalUri))
-{
-    throw new InvalidOperationException(
-        "Seneschal:BaseUrl must be an absolute URL.");
-}
-
-builder.Services.Configure<SeneschalClientOptions>(options =>
-{
-    options.BaseUrl = seneschalUri;
-    options.ApiKey = builder.Configuration["Seneschal:ApiKey"];
-});
-builder.Services.AddHttpClient<ISeneschalClient, SeneschalClient>();
+builder.Services.AddSeneschal(
+    builder.Configuration.GetSection("Seneschal"));
 
 var app = builder.Build();
 
-app.UseRouting();
-app.UseSeneschalCapabilityAttributes();
+app.UseSeneschal();
 
 app.MapPost(
     "/deploy",
@@ -52,7 +35,7 @@ app.MapPost(
         {
             return Results.Ok(new DeployAcceptedResponse(
                 "Deployment started by manual client evaluation.",
-                "Allow",
+                decision.Decision,
                 decision.Reason,
                 string.IsNullOrWhiteSpace(decision.PolicyMatched)
                     ? "n/a"

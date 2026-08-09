@@ -61,6 +61,31 @@ public sealed class DeveloperQuickstartPageTests :
         Assert.Contains("navigator.clipboard", script);
         Assert.Contains("keyRevealed", script);
         Assert.Contains("docs/quickstart/aspnet-core-quickstart.md", script);
+        Assert.Contains("options.BaseUrl = new Uri(\"http://localhost:5077\")", script);
+        Assert.Contains("if (!result.ShouldProceed)", script);
+        Assert.Contains("result.Guidance == ExecutionGuidanceKind.Pause", script);
+        Assert.DoesNotContain("result.ExecutionGuidance == \"Pause\"", script);
+        Assert.DoesNotContain("options.IdentityResolver", script);
+        Assert.DoesNotContain("options.DefaultEnvironment", script);
         Assert.DoesNotContain("apiKey: 'dev-", script);
+    }
+
+    [Fact]
+    public void CanonicalAspNetQuickstartHasOneShortRequiredPath()
+    {
+        var path = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..",
+            "docs", "quickstart", "aspnet-core-quickstart.md"));
+        var quickstart = File.ReadAllText(path);
+
+        Assert.Contains("## 1. Install", quickstart);
+        Assert.Contains("## 2. Configure two values", quickstart);
+        Assert.Contains("## 3. Register and protect one action", quickstart);
+        Assert.Contains("## 4. Run", quickstart);
+        Assert.Contains("if (!result.ShouldProceed)", quickstart);
+        Assert.Contains("ExecutionGuidanceKind.Pause", quickstart);
+        Assert.DoesNotContain("## 5.", quickstart);
+        Assert.DoesNotContain("## 6.", quickstart);
     }
 }

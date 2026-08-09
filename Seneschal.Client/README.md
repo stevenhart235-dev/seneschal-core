@@ -3,18 +3,52 @@
 `Seneschal.Client` is the .NET client for requesting capability decisions from
 a running Seneschal API.
 
+## Install
+
+```powershell
+dotnet add package Seneschal.Client --version 0.1.0-alpha.1
+```
+
+You need two connection values: the Seneschal base URL and a scoped integration
+API key. Keep the key in environment variables or your normal secret store.
+
+## Configure
+
 ```csharp
 using Seneschal.Client;
 
 builder.Services.Configure<SeneschalClientOptions>(options =>
 {
-    options.BaseUrl = new Uri("http://localhost:5000");
+    options.BaseUrl = new Uri("http://localhost:5077");
     options.ApiKey = builder.Configuration["Seneschal:ApiKey"];
 });
 builder.Services.AddHttpClient<ISeneschalClient, SeneschalClient>();
 ```
 
 This package requires .NET 8 or later and a reachable Seneschal runtime.
+
+## Evaluate one action
+
+```csharp
+var result = await client.EvaluateAsync(new DecisionRequest
+{
+    Identity = "my-service",
+    Capability = "orders.submit",
+    OperationId = order.Id,
+    Context = new() { ["resource"] = order.Id }
+}, cancellationToken);
+
+if (!result.ShouldProceed)
+{
+    return;
+}
+
+await SubmitOrderAsync(order, cancellationToken);
+```
+
+The API key must be scoped to the identity and capability sent in the request.
+`OperationId` is required only when the action may enter an approval flow; keep
+it stable when re-evaluating the same business operation.
 
 ## Execution guidance
 

@@ -6,6 +6,12 @@ namespace Seneschal.Client;
 /// </summary>
 public static class ExecutionGuidanceContract
 {
+    /// <summary>The language-neutral conformance contract implemented by this SDK.</summary>
+    public const string ConformanceVersion = "v1";
+
+    /// <summary>The newest v1 fixture revision exercised by this SDK.</summary>
+    public const int ConformanceRevision = 1;
+
     /// <summary>Guidance indicating that the governed action may execute.</summary>
     public const string Proceed = "Proceed";
 

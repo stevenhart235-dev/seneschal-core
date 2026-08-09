@@ -1,0 +1,8 @@
+{
+  "contract": "seneschal.execution-guidance",
+  "contractVersion": "v1",
+  "fixtureRevision": 1,
+  "fixture": "execution-guidance-conformance.v1.json",
+  "schema": "execution-guidance-conformance.schema.json",
+  "semanticSha256": "9705d037f61664dd0b12d58f0729615d9fc967f3b44a6effa63f1be7547d3dc9"
+}

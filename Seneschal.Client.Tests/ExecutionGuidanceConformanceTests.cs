@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Seneschal.Client.Models;
@@ -8,8 +9,11 @@ namespace Seneschal.Client.Tests;
 
 public sealed class ExecutionGuidanceConformanceTests
 {
-    private static readonly string FixturePath = Path.Combine(
+    private static readonly string ContractDirectory = Path.Combine(
         AppContext.BaseDirectory,
+        "execution-guidance-contracts");
+    private static readonly string FixturePath = Path.Combine(
+        ContractDirectory,
         "execution-guidance-conformance.v1.json");
 
     [Fact]
@@ -19,7 +23,8 @@ public sealed class ExecutionGuidanceConformanceTests
         var root = fixture.RootElement;
 
         Assert.Equal("seneschal.execution-guidance", root.GetProperty("contract").GetString());
-        Assert.Equal(1, root.GetProperty("version").GetInt32());
+        Assert.Equal("v1", root.GetProperty("contractVersion").GetString());
+        Assert.Equal(1, root.GetProperty("revision").GetInt32());
 
         foreach (var testCase in root.GetProperty("cases").EnumerateArray())
         {
@@ -40,6 +45,48 @@ public sealed class ExecutionGuidanceConformanceTests
                 $"Fixture case '{id}' produced an unexpected ShouldProceed value.");
             AssertRawValuePreserved(id!, input, result.RawExecutionGuidance);
         }
+    }
+
+    [Fact]
+    public void V1MetadataIsConsistentAndSemanticEditsRequireManifestUpdate()
+    {
+        using var fixture = JsonDocument.Parse(File.ReadAllText(FixturePath));
+        using var schema = JsonDocument.Parse(File.ReadAllText(Path.Combine(
+            ContractDirectory,
+            "execution-guidance-conformance.schema.json")));
+        using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(
+            ContractDirectory,
+            "execution-guidance-contract.json")));
+
+        var fixtureRoot = fixture.RootElement;
+        var schemaRoot = schema.RootElement;
+        var manifestRoot = manifest.RootElement;
+        var version = fixtureRoot.GetProperty("contractVersion").GetString();
+        var revision = fixtureRoot.GetProperty("revision").GetInt32();
+
+        Assert.Equal("v1", version);
+        Assert.Equal(version, schemaRoot
+            .GetProperty("properties")
+            .GetProperty("contractVersion")
+            .GetProperty("const")
+            .GetString());
+        Assert.Contains("/v1/", schemaRoot.GetProperty("$id").GetString());
+        Assert.Equal(version, manifestRoot.GetProperty("contractVersion").GetString());
+        Assert.Equal(revision, manifestRoot.GetProperty("fixtureRevision").GetInt32());
+        Assert.Equal(Path.GetFileName(FixturePath), manifestRoot.GetProperty("fixture").GetString());
+        Assert.Equal(
+            ExecutionGuidanceContract.ConformanceVersion,
+            version);
+        Assert.Equal(
+            ExecutionGuidanceContract.ConformanceRevision,
+            revision);
+
+        Assert.Equal(
+            manifestRoot.GetProperty("semanticSha256").GetString(),
+            SemanticChecksum(fixtureRoot));
+
+        var changelog = File.ReadAllText(Path.Combine(ContractDirectory, "CHANGELOG.md"));
+        Assert.Contains($"## {version} revision {revision}", changelog);
     }
 
     [Fact]
@@ -73,6 +120,13 @@ public sealed class ExecutionGuidanceConformanceTests
             : string.Empty;
 
         return $"{{\"decision\":\"allow\",\"mode\":\"LogOnly\"{guidanceProperty}}}";
+    }
+
+    private static string SemanticChecksum(JsonElement fixture)
+    {
+        var canonicalJson = JsonSerializer.Serialize(fixture);
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(canonicalJson));
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     private static async Task<DecisionResult> EvaluateResponseAsync(string responseJson)

@@ -53,6 +53,12 @@ the typed guidance contract: `Proceed` and `ContinueLogOnly` return `true`;
 every other typed state returns `false`. Callers do not need to inspect Decision
 or runtime mode.
 
+This SDK declares conformance with Execution Guidance contract `v1`, fixture
+revision 1, through `ExecutionGuidanceContract.ConformanceVersion` and
+`ConformanceRevision`. The version is a build-time/documentation declaration;
+it does not add runtime negotiation or API headers. The shared fixture and
+versioning policy live under `integrations/contracts/execution-guidance`.
+
 Pending Approval responses include `ApprovalId`, `ApprovalStatus`, `Message`,
 and `RetryGuidance` when available. Seneschal does not retain the original
 application request payload.

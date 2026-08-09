@@ -17,10 +17,7 @@ internal static class SeneschalDecisionHandler
             SeneschalEnforcementBehavior.Monitor => true,
             SeneschalEnforcementBehavior.Enforce =>
                 decision.ShouldProceed &&
-                !string.Equals(
-                    decision.ExecutionGuidance,
-                    ExecutionGuidanceContract.ContinueLogOnly,
-                    StringComparison.OrdinalIgnoreCase),
+                decision.Guidance != ExecutionGuidanceKind.ContinueLogOnly,
             _ => decision.ShouldProceed
         };
     }

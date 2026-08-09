@@ -27,6 +27,12 @@ work.
 ```csharp
 var result = await client.EvaluateAsync(request, cancellationToken);
 
+if (result.Guidance == ExecutionGuidanceKind.Pause)
+{
+    await SaveApprovalCheckpointAsync(result.ApprovalId, cancellationToken);
+    return;
+}
+
 if (!result.ShouldProceed)
 {
     return;
@@ -35,9 +41,17 @@ if (!result.ShouldProceed)
 await DoWorkAsync(cancellationToken);
 ```
 
-`ShouldProceed` is derived exclusively from `ExecutionGuidance`. `Proceed` and
-`ContinueLogOnly` return `true`; every other value, including an unknown future
-value, returns `false`. Callers do not need to inspect runtime mode.
+`Guidance` is the typed `ExecutionGuidanceKind` recognized by this SDK version.
+`ExecutionGuidance` remains the source-compatible raw wire property, and
+`RawExecutionGuidance` makes raw-value access explicit. This preserves an
+unknown future server value for logging and diagnostics without failing JSON
+deserialization.
+
+Unknown, missing, null, and blank values map to
+`ExecutionGuidanceKind.Unknown`. `ShouldProceed` is derived exclusively from
+the typed guidance contract: `Proceed` and `ContinueLogOnly` return `true`;
+every other typed state returns `false`. Callers do not need to inspect Decision
+or runtime mode.
 
 Pending Approval responses include `ApprovalId`, `ApprovalStatus`, `Message`,
 and `RetryGuidance` when available. Seneschal does not retain the original

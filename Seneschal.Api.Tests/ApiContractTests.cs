@@ -96,6 +96,32 @@ public sealed class ApiContractTests :
     }
 
     [Fact]
+    public async Task Evaluate_ResponseIsCompatibleWithTypedClientContract()
+    {
+        var client = Seneschal.Client.SeneschalClient.Create(
+            _client,
+            _client.BaseAddress ?? throw new InvalidOperationException(
+                "The test client requires a base address."));
+
+        var result = await client.EvaluateAsync(new Seneschal.Client.Models.DecisionRequest
+        {
+            Identity = $"TypedClient-{Guid.NewGuid():N}",
+            Capability = "DeployApplication",
+            Context = new Dictionary<string, string>
+            {
+                ["environment"] = "dev",
+                ["resource"] = "typed-client-contract"
+            }
+        });
+
+        Assert.Equal("ContinueLogOnly", result.RawExecutionGuidance);
+        Assert.Equal(
+            Seneschal.Client.ExecutionGuidanceKind.ContinueLogOnly,
+            result.Guidance);
+        Assert.True(result.ShouldProceed);
+    }
+
+    [Fact]
     public async Task Policies_ReturnCurrentDtoShape()
     {
         using var response = await _client.GetAsync("/policies");

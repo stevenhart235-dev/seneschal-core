@@ -153,6 +153,25 @@ public sealed class SeneschalCapabilityMiddlewareTests
         Assert.Equal(StatusCodes.Status502BadGateway, context.Response.StatusCode);
     }
 
+    [Fact]
+    public async Task InvokeAsync_UsesTypedGuidanceInsteadOfDecisionOrMode()
+    {
+        var nextCalled = false;
+        var middleware = CreateMiddleware(
+            new FakeSeneschalClient(new DecisionResult
+            {
+                Decision = "deny",
+                Mode = "Enforce",
+                ExecutionGuidance = "Proceed",
+                Reason = "Contradictory diagnostic evidence"
+            }),
+            _ => { nextCalled = true; return Task.CompletedTask; });
+
+        await middleware.InvokeAsync(CreateContext());
+
+        Assert.True(nextCalled);
+    }
+
     private static SeneschalCapabilityMiddleware CreateMiddleware(
         ISeneschalClient client,
         RequestDelegate next)

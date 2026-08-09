@@ -144,7 +144,9 @@ if (decision.ShouldProceed)
 Use `ExecutionGuidance` / `ShouldProceed` to determine whether to execute.
 `Decision` describes the governance result; it is not by itself an execution
 instruction. `ShouldProceed` is derived exclusively from guidance, so direct
-callers do not need to inspect runtime mode.
+callers do not need to inspect runtime mode. `decision.Guidance` exposes the
+typed `ExecutionGuidanceKind`; `decision.RawExecutionGuidance` preserves the
+server value when typed guidance is `Unknown`.
 
 ## Advanced compatibility
 

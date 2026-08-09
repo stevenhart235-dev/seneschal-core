@@ -71,6 +71,9 @@ public sealed class SeneschalClientTests
         Assert.Equal("allow", result.EffectiveAction);
         Assert.Equal("LogOnly", result.Mode);
         Assert.Equal("Proceed", result.ExecutionGuidance);
+        Assert.Equal("Proceed", result.RawExecutionGuidance);
+        Assert.Equal(ExecutionGuidanceKind.Proceed, result.Guidance);
+        Assert.True(result.ShouldProceed);
         Assert.Equal("approval-1", result.ApprovalId);
         Assert.Equal("Pending", result.ApprovalStatus);
         Assert.Equal("release-001", result.OperationId);
@@ -210,18 +213,22 @@ public sealed class SeneschalClientTests
     }
 
     [Theory]
-    [InlineData("Proceed", true)]
-    [InlineData("proceed", true)]
-    [InlineData("ContinueLogOnly", true)]
-    [InlineData("Block", false)]
-    [InlineData("Pause", false)]
-    [InlineData("Queue", false)]
-    [InlineData("Retry", false)]
-    [InlineData("ExecuteImmediately", false)]
-    [InlineData("", false)]
-    [InlineData(null, false)]
-    public void DecisionResult_ShouldProceedDerivesOnlyFromExecutionGuidance(
+    [InlineData("Proceed", ExecutionGuidanceKind.Proceed, true)]
+    [InlineData("proceed", ExecutionGuidanceKind.Proceed, true)]
+    [InlineData("ContinueLogOnly", ExecutionGuidanceKind.ContinueLogOnly, true)]
+    [InlineData("continuelogonly", ExecutionGuidanceKind.ContinueLogOnly, true)]
+    [InlineData("Block", ExecutionGuidanceKind.Block, false)]
+    [InlineData("Pause", ExecutionGuidanceKind.Pause, false)]
+    [InlineData("Queue", ExecutionGuidanceKind.Queue, false)]
+    [InlineData("Retry", ExecutionGuidanceKind.Retry, false)]
+    [InlineData("ExecuteImmediately", ExecutionGuidanceKind.Unknown, false)]
+    [InlineData("1", ExecutionGuidanceKind.Unknown, false)]
+    [InlineData("", ExecutionGuidanceKind.Unknown, false)]
+    [InlineData("   ", ExecutionGuidanceKind.Unknown, false)]
+    [InlineData(null, ExecutionGuidanceKind.Unknown, false)]
+    public void DecisionResult_ParsesTypedGuidanceAndDerivesShouldProceed(
         string? guidance,
+        ExecutionGuidanceKind expectedGuidance,
         bool expected)
     {
         var result = new DecisionResult
@@ -231,7 +238,56 @@ public sealed class SeneschalClientTests
             ExecutionGuidance = guidance!
         };
 
+        Assert.Equal(guidance, result.RawExecutionGuidance);
+        Assert.Equal(expectedGuidance, result.Guidance);
         Assert.Equal(expected, result.ShouldProceed);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_UnknownFutureGuidanceDeserializesAndFailsClosed()
+    {
+        var handler = new StubHttpMessageHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent(
+                    """{"decision":"allow","mode":"LogOnly","executionGuidance":"ExecuteImmediately"}""")
+            });
+        using var httpClient = new HttpClient(handler);
+        var client = SeneschalClient.Create(
+            httpClient,
+            new Uri("https://seneschal.example"));
+
+        var result = await client.EvaluateAsync(CreateRequest());
+
+        Assert.Equal("ExecuteImmediately", result.ExecutionGuidance);
+        Assert.Equal("ExecuteImmediately", result.RawExecutionGuidance);
+        Assert.Equal(ExecutionGuidanceKind.Unknown, result.Guidance);
+        Assert.False(result.ShouldProceed);
+    }
+
+    [Theory]
+    [InlineData("{\"decision\":\"allow\",\"mode\":\"LogOnly\"}", "")]
+    [InlineData("{\"decision\":\"allow\",\"mode\":\"LogOnly\",\"executionGuidance\":null}", null)]
+    [InlineData("{\"decision\":\"allow\",\"mode\":\"LogOnly\",\"executionGuidance\":\"   \"}", "   ")]
+    public async Task EvaluateAsync_MissingNullOrBlankGuidanceFailsClosed(
+        string json,
+        string? expectedRawValue)
+    {
+        var handler = new StubHttpMessageHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent(json)
+            });
+        using var httpClient = new HttpClient(handler);
+        var client = SeneschalClient.Create(
+            httpClient,
+            new Uri("https://seneschal.example"));
+
+        var result = await client.EvaluateAsync(CreateRequest());
+
+        Assert.Equal(expectedRawValue, result.RawExecutionGuidance);
+        Assert.Equal(ExecutionGuidanceKind.Unknown, result.Guidance);
+        Assert.False(result.ShouldProceed);
     }
 
     private static DecisionRequest CreateRequest()

@@ -40,6 +40,19 @@ public sealed record DecisionResult
     /// </summary>
     public string ExecutionGuidance { get; init; } = "";
 
+    /// <summary>
+    /// Gets the original guidance value returned by the server. The value is
+    /// retained even when this SDK does not recognize it.
+    /// </summary>
+    public string? RawExecutionGuidance => ExecutionGuidance;
+
+    /// <summary>
+    /// Gets the guidance state understood by this SDK. Unknown, missing, null,
+    /// and blank raw values produce <see cref="ExecutionGuidanceKind.Unknown"/>.
+    /// </summary>
+    public ExecutionGuidanceKind Guidance =>
+        ExecutionGuidanceContract.Parse(ExecutionGuidance);
+
     /// <summary>Gets the related approval identifier, when applicable.</summary>
     public string? ApprovalId { get; init; }
 
@@ -80,8 +93,8 @@ public sealed record DecisionResult
 
     /// <summary>
     /// Gets whether application code should proceed with the governed action,
-    /// derived exclusively from <see cref="ExecutionGuidance"/>.
+    /// derived exclusively from <see cref="Guidance"/>.
     /// </summary>
     public bool ShouldProceed =>
-        ExecutionGuidanceContract.ShouldProceed(ExecutionGuidance);
+        ExecutionGuidanceContract.ShouldProceed(Guidance);
 }

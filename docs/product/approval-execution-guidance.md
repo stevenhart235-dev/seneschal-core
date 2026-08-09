@@ -27,6 +27,35 @@ evidence. Callers do not need to interpret runtime mode.
 | `Retry` | `false` |
 | Missing, unknown, or unsupported | `false` |
 
+## Typed .NET guidance
+
+`Seneschal.Client` exposes the known values through `result.Guidance`, an
+`ExecutionGuidanceKind`. Use the typed state for guidance-specific handling and
+`ShouldProceed` for the execution decision:
+
+```csharp
+var result = await client.EvaluateAsync(request, cancellationToken);
+
+if (result.Guidance == ExecutionGuidanceKind.Pause)
+{
+    await SaveApprovalCheckpointAsync(result.ApprovalId, cancellationToken);
+    return;
+}
+
+if (!result.ShouldProceed)
+{
+    return;
+}
+
+await DoWorkAsync(cancellationToken);
+```
+
+The existing `ExecutionGuidance` property retains the raw server string for
+source compatibility. `RawExecutionGuidance` is an explicit nullable alias for
+diagnostics. A future value unknown to the installed SDK deserializes normally,
+is preserved raw, maps to `ExecutionGuidanceKind.Unknown`, and fails closed.
+Missing, null, and blank values behave the same way.
+
 ## Caller responsibilities
 
 - **Synchronous API:** return `202 Accepted`, stop the current execution, and

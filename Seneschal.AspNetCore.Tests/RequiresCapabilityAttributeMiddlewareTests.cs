@@ -185,6 +185,26 @@ public sealed class RequiresCapabilityAttributeMiddlewareTests
         Assert.Equal(StatusCodes.Status502BadGateway, context.Response.StatusCode);
     }
 
+    [Fact]
+    public async Task InvokeAsync_UsesTypedGuidanceInsteadOfDecisionOrMode()
+    {
+        var nextCalled = false;
+        var middleware = CreateMiddleware(
+            new FakeSeneschalClient(new DecisionResult
+            {
+                Decision = "deny",
+                Mode = "Enforce",
+                ExecutionGuidance = "Proceed",
+                Reason = "Contradictory diagnostic evidence"
+            }),
+            _ => { nextCalled = true; return Task.CompletedTask; });
+        var context = CreateContext(new RequiresCapabilityAttribute("app.deploy"));
+
+        await middleware.InvokeAsync(context);
+
+        Assert.True(nextCalled);
+    }
+
     private static SeneschalCapabilityAttributeMiddleware CreateMiddleware(
         ISeneschalClient client,
         RequestDelegate next)

@@ -4,7 +4,7 @@ using Seneschal.Core.Models;
 using Seneschal.Core.Repositories;
 using Seneschal.Core.Services;
 
-if (args.Length == 0)
+if (args.Length == 0 || IsHelp(args[0]))
 {
     WriteUsage();
     return;
@@ -14,6 +14,12 @@ var command = args[0];
 
 if (command.Equals("preflight", StringComparison.OrdinalIgnoreCase))
 {
+    if (args.Length == 2 && IsHelp(args[1]))
+    {
+        WritePreflightUsage();
+        return;
+    }
+
     Environment.ExitCode = await PreflightCommand.RunAsync(args[1..]);
     return;
 }
@@ -435,3 +441,16 @@ static void WriteUsage()
     Console.WriteLine("  seneschal evaluate <identity> <capability> <environment>");
     Console.WriteLine("  seneschal capability show <capabilityId>");
 }
+
+static void WritePreflightUsage()
+{
+    Console.WriteLine("Usage:");
+    Console.WriteLine("  seneschal preflight --url <url> --api-key <key> --identity <id> --capability <id> [--environment <name>] [--resource <id>]");
+    Console.WriteLine();
+    Console.WriteLine("Validates connectivity, credentials, scope, and Execution Guidance without executing the governed action.");
+}
+
+static bool IsHelp(string value) =>
+    value.Equals("--help", StringComparison.OrdinalIgnoreCase) ||
+    value.Equals("-h", StringComparison.OrdinalIgnoreCase) ||
+    value.Equals("help", StringComparison.OrdinalIgnoreCase);

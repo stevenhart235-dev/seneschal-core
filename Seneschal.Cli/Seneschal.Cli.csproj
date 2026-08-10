@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Seneschal.Client\Seneschal.Client.csproj" />
     <ProjectReference Include="..\Seneschal.Core\Seneschal.Core.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -10,6 +11,23 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>seneschal</ToolCommandName>
+    <IsPackable>true</IsPackable>
+    <PackageId>Seneschal.Cli</PackageId>
+    <Version>0.1.0-alpha.1</Version>
+    <Authors>Steven Hart</Authors>
+    <Company>Seneschal</Company>
+    <Description>Command-line tools for validating and exploring Seneschal capability governance integrations.</Description>
+    <PackageTags>seneschal;cli;dotnet-tool;capability-governance;preflight</PackageTags>
+    <RepositoryUrl>https://github.com/stevenhart235-dev/seneschal-core</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)..\artifacts\packages</PackageOutputPath>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
 </Project>

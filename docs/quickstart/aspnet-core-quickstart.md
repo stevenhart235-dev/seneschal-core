@@ -36,7 +36,8 @@ and direct HTTP authentication details.
 From a `seneschal-core` checkout, validate the connection and scope:
 
 ```powershell
-dotnet run --project Seneschal.Cli -- preflight `
+dotnet tool install --global Seneschal.Cli
+seneschal preflight `
   --url http://localhost:5077 `
   --api-key dev-sample-key `
   --identity Developer `

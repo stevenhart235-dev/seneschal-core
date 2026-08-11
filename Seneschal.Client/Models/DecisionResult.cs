@@ -76,6 +76,18 @@ public sealed record DecisionResult
     /// </summary>
     public List<string> MatchedPolicies { get; init; } = new();
 
+    /// <summary>Gets the applicable governance-window name, when one matched.</summary>
+    public string? GovernanceWindowName { get; init; }
+
+    /// <summary>Gets the applicable governance-window mode, when one matched.</summary>
+    public string? GovernanceWindowMode { get; init; }
+
+    /// <summary>Gets the applicable governance-window reason, when one matched.</summary>
+    public string? GovernanceWindowReason { get; init; }
+
+    /// <summary>Gets whether the governance window changed the resolved result.</summary>
+    public bool GovernanceWindowInfluencedResult { get; init; }
+
     /// <summary>
     /// Gets obligations attached to the decision.
     /// </summary>

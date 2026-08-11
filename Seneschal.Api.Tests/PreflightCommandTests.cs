@@ -104,6 +104,61 @@ public sealed class PreflightCommandTests
         Assert.Contains("Integration:    Not ready", report.Lines);
     }
 
+    [Theory]
+    [InlineData("allow", "Proceed", 0, PreflightFailureCategory.None, "Yes")]
+    [InlineData("deny", "Block", 0, PreflightFailureCategory.EvaluationDenied, "No")]
+    [InlineData("requires_approval", "Pause", 0, PreflightFailureCategory.ApprovalRequired, "No")]
+    [InlineData("deny", "ContinueLogOnly", 0, PreflightFailureCategory.EvaluationDenied, "Yes")]
+    public async Task PolicySimulation_PresentsGovernanceOutcomeAsValid(
+        string decision,
+        string guidance,
+        int expectedExitCode,
+        PreflightFailureCategory expectedCategory,
+        string wouldExecute)
+    {
+        var report = await PolicySimulationRunner.RunAsync(
+            Options,
+            FakeTransport.Result(decision, guidance, governanceWindow: true));
+
+        Assert.Equal(expectedExitCode, report.ExitCode);
+        Assert.Equal(expectedCategory, report.Category);
+        Assert.Contains($"ShouldProceed/Would execute: {wouldExecute}", report.Lines);
+        Assert.Contains("Matched policies:", report.Lines);
+        Assert.Contains("  - policy-a", report.Lines);
+        Assert.Contains("  Name: Production Freeze", report.Lines);
+        Assert.Contains("  Mode: Enforce", report.Lines);
+        Assert.Contains("  Influenced result: Yes", report.Lines);
+        Assert.Contains(report.Lines, line => line.StartsWith("Reason:"));
+        Assert.Contains(report.Lines, line => line.StartsWith("Approval status:"));
+        Assert.DoesNotContain(report.Lines, line => line.Contains(Options.ApiKey));
+    }
+
+    [Fact]
+    public async Task PolicySimulation_UnknownGuidanceFailsClosed()
+    {
+        var report = await PolicySimulationRunner.RunAsync(
+            Options,
+            FakeTransport.Result("allow", "ExecuteImmediately"));
+
+        Assert.Equal(2, report.ExitCode);
+        Assert.Equal(PreflightFailureCategory.MalformedGuidance, report.Category);
+        Assert.Contains(report.Lines, line => line.Contains("fail closed"));
+    }
+
+    [Theory]
+    [InlineData(PreflightFailureCategory.AuthenticationFailure)]
+    [InlineData(PreflightFailureCategory.ScopeMismatch)]
+    public async Task PolicySimulation_AuthAndScopeFailuresAreNonZero(
+        PreflightFailureCategory category)
+    {
+        var report = await PolicySimulationRunner.RunAsync(
+            Options,
+            FakeTransport.Failure(category));
+
+        Assert.Equal(2, report.ExitCode);
+        Assert.Equal(category, report.Category);
+    }
+
     private sealed class FakeTransport : IPreflightTransport
     {
         private readonly ServiceProbe _health;
@@ -123,13 +178,24 @@ public sealed class PreflightCommandTests
             _failure = failure;
         }
 
-        public static FakeTransport Result(string decision, string guidance) => new(
+        public static FakeTransport Result(
+            string decision,
+            string guidance,
+            bool governanceWindow = false) => new(
             new ServiceProbe(true, "Healthy"),
             new ServiceProbe(true, "Ready"),
             new DecisionResult
             {
                 Decision = decision,
-                ExecutionGuidance = guidance
+                EffectiveAction = decision,
+                ExecutionGuidance = guidance,
+                Reason = "Policy explanation",
+                ApprovalStatus = decision == "requires_approval" ? "Pending" : null,
+                MatchedPolicies = ["policy-a"],
+                GovernanceWindowName = governanceWindow ? "Production Freeze" : null,
+                GovernanceWindowMode = governanceWindow ? "Enforce" : null,
+                GovernanceWindowReason = governanceWindow ? "Release freeze" : null,
+                GovernanceWindowInfluencedResult = governanceWindow
             });
 
         public static FakeTransport Failure(PreflightFailureCategory category) => new(

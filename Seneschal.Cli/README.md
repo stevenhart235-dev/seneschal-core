@@ -35,6 +35,33 @@ Preflight uses the read-only `/preflight` endpoint. It does not execute the
 governed action or create approvals, audit evidence, incidents, policies,
 runtime-mode changes, or governance-window changes.
 
+## Policy simulation
+
+Explain the policy outcome for a specific request without executing or recording
+it:
+
+```powershell
+seneschal policy simulate `
+  --url http://localhost:5077 `
+  --api-key <key> `
+  --identity deployment-worker `
+  --capability production.deployment.execute `
+  --environment production `
+  --resource northwind-api
+```
+
+Simulation is a thin presenter over the same non-mutating `/preflight` endpoint.
+It displays request identity, capability, environment and resource; the decision,
+effective action, canonical Execution Guidance and `ShouldProceed` result; every
+matched policy; the reason and approval status; and any matching governance
+window's name, mode, reason, and influence on the result.
+
+Allow, Deny, and RequireApproval are all successful simulation outcomes. Whether
+the hypothetical caller would execute is derived only from the canonical
+Execution Guidance contract. Unknown guidance returns a non-zero exit code and
+fails closed. Simulation creates no audit, approval, activity, metric, incident,
+runtime-mode, policy, or governance-window state.
+
 ## Versions and local package testing
 
 Pin a published version when reproducibility matters:

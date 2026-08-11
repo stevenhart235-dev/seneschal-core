@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Seneschal.Api.Models;
 
 public class DecisionResult
@@ -15,4 +17,14 @@ public class DecisionResult
     public string? ApprovalCorrelationMode { get; set; }
     public string? Message { get; set; }
     public string? RetryGuidance { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public List<string>? MatchedPolicies { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? GovernanceWindowName { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? GovernanceWindowMode { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? GovernanceWindowReason { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool? GovernanceWindowInfluencedResult { get; set; }
 }

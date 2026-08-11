@@ -7,6 +7,7 @@ using Seneschal.Api.Models;
 using Seneschal.Api.Services;
 using Seneschal.Core.Interfaces;
 using Seneschal.Core.Enums;
+using Seneschal.Core.Repositories;
 using Xunit;
 
 namespace Seneschal.Api.Tests;
@@ -25,8 +26,15 @@ public sealed class PreflightEndpointTests : IClassFixture<ApiApplicationFactory
         var approvals = factory.Services.GetRequiredService<IApprovalStore>();
         var audit = factory.Services.GetRequiredService<IAuditEventStore>();
         var incidents = factory.Services.GetRequiredService<IGovernanceIncidentStore>();
+        var activity = factory.Services.GetRequiredService<IActivityStore>();
+        var metrics = Assert.IsType<InMemoryDecisionMetrics>(
+            factory.Services.GetRequiredService<IDecisionMetrics>());
+        var window = factory.Services.GetRequiredService<IGovernanceWindowStore>();
         var beforeAudit = (await audit.GetRecentAsync()).Count;
         var beforeIncidents = (await incidents.GetAllAsync()).Count;
+        var beforeActivity = await activity.GetSnapshotAsync();
+        var beforeMetrics = metrics.RenderPrometheus();
+        var beforeWindow = window.GetWindow();
 
         using var response = await PostAsync(
             client,
@@ -40,9 +48,54 @@ public sealed class PreflightEndpointTests : IClassFixture<ApiApplicationFactory
             Seneschal.Api.Models.DecisionResult>();
         Assert.Equal("requires_approval", result?.Decision);
         Assert.Equal("ContinueLogOnly", result?.ExecutionGuidance);
+        Assert.NotEmpty(result?.MatchedPolicies ?? []);
         Assert.Empty(approvals.GetAll());
         Assert.Equal(beforeAudit, (await audit.GetRecentAsync()).Count);
         Assert.Equal(beforeIncidents, (await incidents.GetAllAsync()).Count);
+        var afterActivity = await activity.GetSnapshotAsync();
+        Assert.Equal(beforeActivity.Capabilities.Count, afterActivity.Capabilities.Count);
+        Assert.Equal(beforeActivity.Identities.Count, afterActivity.Identities.Count);
+        Assert.Equal(beforeActivity.Policies.Count, afterActivity.Policies.Count);
+        Assert.Equal(beforeMetrics, metrics.RenderPrometheus());
+        var afterWindow = window.GetWindow();
+        Assert.Equal(beforeWindow.Enabled, afterWindow.Enabled);
+        Assert.Equal(beforeWindow.Mode, afterWindow.Mode);
+        Assert.Equal(beforeWindow.Version, afterWindow.Version);
+    }
+
+    [Theory]
+    [InlineData(GovernanceWindowMode.Observe, "allow", false)]
+    [InlineData(GovernanceWindowMode.Enforce, "deny", true)]
+    public async Task GovernanceWindowExplanation_ReportsParticipationAndInfluence(
+        GovernanceWindowMode mode,
+        string expectedDecision,
+        bool expectedInfluence)
+    {
+        var window = new InMemoryGovernanceWindowStore();
+        window.SetState(true, mode);
+        await using var factory = new ApiApplicationFactory().WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<IGovernanceWindowStore>();
+                services.AddSingleton<IGovernanceWindowStore>(window);
+            });
+        });
+        using var client = factory.CreateClient();
+
+        using var response = await PostAsync(
+            client,
+            "deployment-worker",
+            "production.deployment.execute",
+            "production");
+
+        var result = await response.Content.ReadFromJsonAsync<DecisionResult>();
+        Assert.Equal(expectedDecision, result?.Decision);
+        Assert.Equal("Production Freeze", result?.GovernanceWindowName);
+        Assert.Equal(mode.ToString(), result?.GovernanceWindowMode);
+        Assert.False(string.IsNullOrWhiteSpace(result?.GovernanceWindowReason));
+        Assert.Equal(expectedInfluence, result?.GovernanceWindowInfluencedResult);
+        Assert.NotEmpty(result?.MatchedPolicies ?? []);
     }
 
     [Fact]

@@ -24,6 +24,20 @@ if (command.Equals("preflight", StringComparison.OrdinalIgnoreCase))
     return;
 }
 
+if (command.Equals("policy", StringComparison.OrdinalIgnoreCase) &&
+    args.Length > 1 &&
+    args[1].Equals("simulate", StringComparison.OrdinalIgnoreCase))
+{
+    if (args.Length == 3 && IsHelp(args[2]))
+    {
+        WritePolicySimulationUsage();
+        return;
+    }
+
+    Environment.ExitCode = await PolicySimulationCommand.RunAsync(args[2..]);
+    return;
+}
+
 if (command.Equals("evaluate", StringComparison.OrdinalIgnoreCase))
 {
     await EvaluateAsync(args);
@@ -438,8 +452,17 @@ static void WriteUsage()
 {
     Console.WriteLine("Usage:");
     Console.WriteLine("  seneschal preflight --url <url> --api-key <key> --identity <id> --capability <id> [--environment <name>]");
+    Console.WriteLine("  seneschal policy simulate --url <url> --api-key <key> --identity <id> --capability <id> [--environment <name>] [--resource <id>]");
     Console.WriteLine("  seneschal evaluate <identity> <capability> <environment>");
     Console.WriteLine("  seneschal capability show <capabilityId>");
+}
+
+static void WritePolicySimulationUsage()
+{
+    Console.WriteLine("Usage:");
+    Console.WriteLine("  seneschal policy simulate --url <url> --api-key <key> --identity <id> --capability <id> [--environment <name>] [--resource <id>]");
+    Console.WriteLine();
+    Console.WriteLine("Simulates policy through the non-mutating /preflight endpoint and presents the complete explanation.");
 }
 
 static void WritePreflightUsage()

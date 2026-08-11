@@ -39,7 +39,8 @@ public sealed record PreflightOptions(
     public static bool TryParse(
         string[] args,
         out PreflightOptions? options,
-        out string error)
+        out string error,
+        string defaultResource = "preflight")
     {
         options = null;
         error = "";
@@ -65,7 +66,7 @@ public sealed record PreflightOptions(
         }
 
         values.TryGetValue("environment", out var environment);
-        var resource = values.GetValueOrDefault("resource", "preflight");
+        var resource = values.GetValueOrDefault("resource", defaultResource);
         options = new PreflightOptions(
             baseUrl,
             apiKey,

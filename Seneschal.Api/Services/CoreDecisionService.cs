@@ -93,6 +93,7 @@ public sealed class CoreDecisionService
             coreRequest,
             ref coreResult,
             out var approvalMutation);
+        var decisionBeforeWindow = coreResult.Decision;
         var windowEvaluation = EvaluateGovernanceWindow(
             coreRequest.Capability.Id,
             ref coreResult);
@@ -126,7 +127,12 @@ public sealed class CoreDecisionService
 
         return DecisionResultMapper.ToApi(
             coreResult,
-            stopwatch.ElapsedMilliseconds);
+            stopwatch.ElapsedMilliseconds,
+            windowEvaluation?.Name,
+            windowEvaluation?.Mode.ToString(),
+            windowEvaluation?.Reason,
+            windowEvaluation is not null && decisionBeforeWindow != coreResult.Decision,
+            includeSimulationExplanation: !commit);
     }
 
     private static void PopulateDecisionActivity(

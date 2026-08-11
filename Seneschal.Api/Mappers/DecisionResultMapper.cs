@@ -9,7 +9,12 @@ public static class DecisionResultMapper
 {
     public static ApiDecisionResult ToApi(
         CoreDecisionResult result,
-        long durationMs)
+        long durationMs,
+        string? governanceWindowName = null,
+        string? governanceWindowMode = null,
+        string? governanceWindowReason = null,
+        bool governanceWindowInfluencedResult = false,
+        bool includeSimulationExplanation = false)
     {
         ArgumentNullException.ThrowIfNull(result);
 
@@ -34,6 +39,21 @@ public static class DecisionResultMapper
             ,ApprovalCorrelationMode = result.ApprovalCorrelationMode
             ,Message = result.CallerMessage
             ,RetryGuidance = result.RetryGuidance
+            ,MatchedPolicies = includeSimulationExplanation
+                ? result.MatchedPolicies.ToList()
+                : null
+            ,GovernanceWindowName = includeSimulationExplanation
+                ? governanceWindowName
+                : null
+            ,GovernanceWindowMode = includeSimulationExplanation
+                ? governanceWindowMode
+                : null
+            ,GovernanceWindowReason = includeSimulationExplanation
+                ? governanceWindowReason
+                : null
+            ,GovernanceWindowInfluencedResult = includeSimulationExplanation
+                ? governanceWindowInfluencedResult
+                : null
         };
     }
 }

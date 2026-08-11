@@ -5,9 +5,16 @@ a running Seneschal API.
 
 ## Install
 
+This package is not yet published to NuGet.org. After publication, install it
+with:
+
 ```powershell
 dotnet add package Seneschal.Client --version 0.1.0-alpha.1
 ```
+
+Repository-local feeds are for development and release validation only. See
+the [package distribution guide](https://github.com/stevenhart235-dev/seneschal-core/blob/main/docs/package-distribution.md)
+for the local packaging workflow.
 
 You need two connection values: the Seneschal base URL and a scoped integration
 API key. Keep the key in environment variables or your normal secret store.

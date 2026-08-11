@@ -3,6 +3,9 @@
 For an existing ASP.NET Core service, follow the canonical
 [ASP.NET Core quickstart](quickstart/aspnet-core-quickstart.md):
 
+The public packages are not yet on NuGet.org. Until publication, maintainers
+must use the [isolated local packaging workflow](package-distribution.md).
+
 1. Install `Seneschal.AspNetCore`.
 2. Configure `BaseUrl` and `ApiKey`.
 3. Run the read-only `seneschal preflight` check.

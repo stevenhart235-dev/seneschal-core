@@ -6,6 +6,10 @@ identity and capability names your Seneschal operator configured.
 
 ## 1. Install
 
+The packages are not yet published to NuGet.org. The following is the intended
+command after publication; maintainers currently use the isolated-feed workflow
+in the [package distribution guide](../package-distribution.md).
+
 ```powershell
 dotnet add package Seneschal.AspNetCore --version 0.1.0-alpha.1
 ```
@@ -33,9 +37,10 @@ and direct HTTP authentication details.
 
 ### Run preflight before editing code
 
-From a `seneschal-core` checkout, validate the connection and scope:
+After the CLI is published, validate the connection and scope:
 
 ```powershell
+# After Seneschal.Cli is published to NuGet.org:
 dotnet tool install --global Seneschal.Cli
 seneschal preflight `
   --url http://localhost:5077 `

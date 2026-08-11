@@ -1,6 +1,6 @@
 # Seneschal CLI
 
-Install the released .NET global tool:
+This tool is not yet published to NuGet.org. After publication, install it with:
 
 ```powershell
 dotnet tool install --global Seneschal.Cli
@@ -14,7 +14,7 @@ Guidance contract without executing work or creating governance state:
 ```powershell
 seneschal preflight `
   --url http://localhost:5077 `
-  --api-key dev-sample-key `
+  --api-key <key> `
   --identity Developer `
   --capability DeployApplication `
   --environment dev
@@ -37,7 +37,7 @@ runtime-mode changes, or governance-window changes.
 
 ## Versions and local package testing
 
-Pin a released version when reproducibility matters:
+Pin a published version when reproducibility matters:
 
 ```powershell
 dotnet tool install --global Seneschal.Cli --version 0.1.0-alpha.1

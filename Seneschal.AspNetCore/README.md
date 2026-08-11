@@ -5,14 +5,17 @@ Capability governance middleware for ASP.NET Core. The package installs
 
 ## Install
 
+This package is not yet published to NuGet.org. After publication, install it
+with:
+
 ```powershell
 dotnet add package Seneschal.AspNetCore --version 0.1.0-alpha.1
 ```
 
-For local packages, add the generated feed first:
+For development-only local package validation, use an isolated generated feed:
 
 ```powershell
-dotnet nuget add source C:\path\to\seneschal-core\artifacts\packages --name SeneschalLocal
+dotnet add package Seneschal.AspNetCore --source C:\path\to\isolated-feed --version 0.1.0-alpha.1
 ```
 
 ## Configure
@@ -35,7 +38,7 @@ Register once in `Program.cs`:
 Before editing code, you can validate these values with:
 
 ```powershell
-dotnet tool install --global Seneschal.Cli
+dotnet tool install --global Seneschal.Cli # available after publication
 seneschal preflight --url http://localhost:5077 --api-key <scoped-api-key> --identity <identity> --capability <capability> --environment <environment>
 ```
 

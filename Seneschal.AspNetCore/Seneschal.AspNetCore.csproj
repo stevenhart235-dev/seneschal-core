@@ -9,12 +9,18 @@
     <PackageId>Seneschal.AspNetCore</PackageId>
     <Version>0.1.0-alpha.1</Version>
     <Authors>Steven Hart</Authors>
+    <Company>Seneschal</Company>
+    <Copyright>Copyright (c) 2026 Steven Hart</Copyright>
     <Description>ASP.NET Core middleware and endpoint metadata for Seneschal capability governance.</Description>
     <PackageTags>seneschal;aspnetcore;capability-governance;authorization;middleware</PackageTags>
+    <PackageProjectUrl>https://github.com/stevenhart235-dev/seneschal-core</PackageProjectUrl>
     <RepositoryUrl>https://github.com/stevenhart235-dev/seneschal-core</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageReleaseNotes>Pre-release package. See the repository release history for changes.</PackageReleaseNotes>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageOutputPath>$(MSBuildThisFileDirectory)..\artifacts\packages</PackageOutputPath>
+    <DebugType Condition="'$(Configuration)' == 'Release'">embedded</DebugType>
+    <PathMap Condition="'$(Configuration)' == 'Release'">$(MSBuildProjectDirectory)=/_/Seneschal.AspNetCore</PathMap>
   </PropertyGroup>
 
   <ItemGroup>

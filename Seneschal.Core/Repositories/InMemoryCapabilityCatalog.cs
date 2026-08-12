@@ -5,8 +5,9 @@ namespace Seneschal.Core.Repositories;
 
 public sealed class InMemoryCapabilityCatalog : ICapabilityCatalog
 {
-    private readonly IReadOnlyCollection<CapabilityCatalogEntry> _entries;
-    private readonly IReadOnlyDictionary<string, CapabilityCatalogEntry> _entriesById;
+    private IReadOnlyCollection<CapabilityCatalogEntry> _entries = [];
+    private IReadOnlyDictionary<string, CapabilityCatalogEntry> _entriesById =
+        new Dictionary<string, CapabilityCatalogEntry>();
 
     public InMemoryCapabilityCatalog(IEnumerable<Capability> capabilities)
     {
@@ -15,14 +16,38 @@ public sealed class InMemoryCapabilityCatalog : ICapabilityCatalog
         var entries = capabilities
             .Select(capability => new CapabilityCatalogEntry
             {
-                Capability = capability
-            })
-            .ToList();
+                Capability = capability,
+                Provenance =
+                [
+                    new CapabilityProvenance
+                    {
+                        Kind = "LocalCatalog"
+                    }
+                ]
+            });
+        Initialize(entries);
+    }
 
-        _entriesById = entries.ToDictionary(
+    private InMemoryCapabilityCatalog(
+        IEnumerable<CapabilityCatalogEntry> entries,
+        bool preserveEntries)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+        Initialize(entries);
+    }
+
+    public static InMemoryCapabilityCatalog FromEntries(
+        IEnumerable<CapabilityCatalogEntry> entries) =>
+        new(entries, preserveEntries: true);
+
+    private void Initialize(IEnumerable<CapabilityCatalogEntry> entries)
+    {
+        var materialized = entries.ToList();
+
+        _entriesById = materialized.ToDictionary(
             entry => entry.Capability.Id,
             StringComparer.OrdinalIgnoreCase);
-        _entries = entries;
+        _entries = materialized;
     }
 
     public Task<CapabilityCatalogEntry?> GetByIdAsync(

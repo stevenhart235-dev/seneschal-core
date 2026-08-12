@@ -53,11 +53,22 @@ if (!string.Equals(builder.Configuration["Seneschal:Persistence:Provider"],
 }
 builder.Services.AddSingleton<PolicyProjector>();
 builder.Services.AddSingleton<ICapabilityCatalog>(services =>
-    new InMemoryCapabilityCatalog(
+    InMemoryCapabilityCatalog.FromEntries(
         services
             .GetRequiredService<CapabilityLoader>()
-            .GetCapabilities()
-            .Select(CapabilityMapper.ToCore)));
+            .GetCatalogDefinitions()
+            .Select(definition => new Seneschal.Core.Models.CapabilityCatalogEntry
+            {
+                Capability = CapabilityMapper.ToCore(definition.Capability),
+                Provenance = definition.Sources.Select(source =>
+                    new Seneschal.Core.Models.CapabilityProvenance
+                    {
+                        Kind = source.Kind,
+                        PackId = source.PackId,
+                        PackVersion = source.PackVersion,
+                        Path = source.Path
+                    }).ToList()
+            })));
 builder.Services.AddSingleton<IGovernanceGraph>(services =>
     new InMemoryGovernanceGraph(
         services

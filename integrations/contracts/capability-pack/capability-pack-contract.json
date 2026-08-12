@@ -1,0 +1,7 @@
+{
+  "contract": "seneschal.capability-pack",
+  "contractVersion": "v1",
+  "schemaRevision": 1,
+  "schema": "capability-pack.v1.schema.json",
+  "schemaSha256": "1ee6c30a91203939db62b794290f219edb1c44ba2db1f90b8aeea8bab85002f7"
+}

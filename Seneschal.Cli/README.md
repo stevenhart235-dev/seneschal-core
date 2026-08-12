@@ -149,3 +149,11 @@ dotnet tool uninstall --global Seneschal.Cli
 
 Publishing `Seneschal.Cli` to NuGet is a separate release concern; local
 packaging and installation do not publish anything.
+
+## Capability Packs
+
+Validate a local Capability Pack v1 document without installing or modifying it:
+
+`powershell
+seneschal capability pack validate .\CapabilityPacks\postgres.yaml
+`

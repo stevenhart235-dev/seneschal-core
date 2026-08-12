@@ -66,6 +66,20 @@ if (command.Equals("policy", StringComparison.OrdinalIgnoreCase) &&
     return;
 }
 
+if (command.Equals("capability", StringComparison.OrdinalIgnoreCase) &&
+    args.Length > 2 &&
+    args[1].Equals("pack", StringComparison.OrdinalIgnoreCase) &&
+    args[2].Equals("validate", StringComparison.OrdinalIgnoreCase))
+{
+    if (args.Length == 4 && IsHelp(args[3]))
+    {
+        WriteCapabilityPackValidationUsage();
+        return;
+    }
+
+    Environment.ExitCode = await CapabilityPackValidationCommand.RunAsync(args[3..]);
+    return;
+}
 if (command.Equals("evaluate", StringComparison.OrdinalIgnoreCase))
 {
     await EvaluateAsync(args);
@@ -485,8 +499,16 @@ static void WriteUsage()
     Console.WriteLine("  seneschal policy simulate --url <url> --api-key <key> --identity <id> --capability <id> [--environment <name>] [--resource <id>]");
     Console.WriteLine("  seneschal evaluate <identity> <capability> <environment>");
     Console.WriteLine("  seneschal capability show <capabilityId>");
+    Console.WriteLine("  seneschal capability pack validate <path>");
 }
 
+static void WriteCapabilityPackValidationUsage()
+{
+    Console.WriteLine("Usage:");
+    Console.WriteLine("  seneschal capability pack validate <path>");
+    Console.WriteLine();
+    Console.WriteLine("Validates one local Capability Pack v1 file without installing or modifying it.");
+}
 static void WritePolicyInitUsage()
 {
     Console.WriteLine("Usage:");

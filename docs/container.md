@@ -86,6 +86,7 @@ particular:
 | `Seneschal__Persistence__Provider` | Selects `InMemory` (default) or opt-in `PostgreSql` persistence. |
 | `ConnectionStrings__SeneschalPostgreSql` | Supplies the connection string when PostgreSQL is selected. |
 | `Seneschal__Configuration__CapabilitiesPath` | Selects an alternate capabilities YAML file. |
+| Seneschal__Configuration__CapabilityPacksPath | Selects one local Capability Pack file or a directory of packs. |
 | `Seneschal__Configuration__IdentitiesPath` | Selects an alternate identities YAML file. |
 | `Seneschal__Configuration__PoliciesPath` | Selects an alternate policies YAML file. |
 | `Seneschal__Configuration__IntegrationKeysPath` | Selects an alternate integration-key YAML file. |

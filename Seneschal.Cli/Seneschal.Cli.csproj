@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\Seneschal.Api\Seneschal.Api.csproj" />
@@ -36,7 +36,11 @@
 
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
-    <None Include="..\integrations\contracts\policy\policy-schema.v1.json"
+    <None Include="..\integrations\contracts\capability-pack\capability-pack.v1.schema.json"
+          Link="contracts\capability-pack\capability-pack.v1.schema.json"
+          CopyToOutputDirectory="PreserveNewest"
+          Pack="true"
+          PackagePath="contracts\capability-pack\" />    <None Include="..\integrations\contracts\policy\policy-schema.v1.json"
           Link="contracts\policy\policy-schema.v1.json"
           CopyToOutputDirectory="PreserveNewest"
           Pack="true"

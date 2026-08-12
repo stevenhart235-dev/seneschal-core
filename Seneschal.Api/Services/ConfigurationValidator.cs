@@ -64,6 +64,15 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         };
     }
 
+    public static ConfigurationValidationResult ValidateCapabilities(
+        IReadOnlyCollection<ApiCapability> capabilities)
+    {
+        var findings = new List<ConfigurationValidationFinding>();
+        AddLoadFinding(findings, "Capabilities", capabilities.Count);
+        ValidateCapabilityMetadata(findings, capabilities);
+        ValidateDuplicateCapabilities(findings, capabilities);
+        return new ConfigurationValidationResult { Findings = findings };
+    }
     private static void ValidateCapabilityMetadata(
         ICollection<ConfigurationValidationFinding> findings,
         IReadOnlyCollection<ApiCapability> capabilities)

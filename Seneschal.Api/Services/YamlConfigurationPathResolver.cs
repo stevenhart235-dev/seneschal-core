@@ -4,6 +4,8 @@ internal static class YamlConfigurationPathResolver
 {
     public const string CapabilitiesPathKey =
         "Seneschal:Configuration:CapabilitiesPath";
+    public const string CapabilityPacksPathKey =
+        "Seneschal:Configuration:CapabilityPacksPath";
     public const string IdentitiesPathKey =
         "Seneschal:Configuration:IdentitiesPath";
     public const string PoliciesPathKey =
@@ -11,6 +13,15 @@ internal static class YamlConfigurationPathResolver
     public const string IntegrationKeysPathKey =
         "Seneschal:Configuration:IntegrationKeysPath";
 
+    public static string? ResolveOptional(
+        string contentRootPath,
+        string? configuredPath)
+    {
+        if (string.IsNullOrWhiteSpace(configuredPath)) return null;
+        return Path.IsPathRooted(configuredPath)
+            ? Path.GetFullPath(configuredPath)
+            : Path.GetFullPath(configuredPath, contentRootPath);
+    }
     public static string Resolve(
         string contentRootPath,
         string? configuredPath,

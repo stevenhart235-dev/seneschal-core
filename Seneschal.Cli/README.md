@@ -6,6 +6,22 @@ This tool is not yet published to NuGet.org. After publication, install it with:
 dotnet tool install --global Seneschal.Cli
 ```
 
+## Policy authoring
+
+Create a minimal Policy Schema v1 document using identifiers from the canonical
+development catalogs:
+
+    seneschal policy init .\Policies\policies.yaml
+
+The command creates missing destination directories but does not overwrite an
+existing file. Use `--force` only when replacement is intentional:
+
+    seneschal policy init .\Policies\policies.yaml --force
+
+`policy init` writes only the requested policy file. It does not create or
+modify identities, capabilities, policies in a running Seneschal instance, or
+runtime state.
+
 ## Policy validation
 
 Validate policy structure and references before simulation or enforcement:
@@ -46,9 +62,10 @@ A failing entry with an unknown capability:
         decision: allow
         reason: Production deployment
 
-Use the authoring workflow in order: validate configuration, simulate a
-representative request, observe the result in non-enforcing operation, then
-enable enforcement through the existing runtime governance controls.
+Use the authoring workflow in order: initialize a starting document, validate
+configuration, simulate a representative request, observe the result in
+non-enforcing operation, then enable enforcement through the existing runtime
+governance controls.
 
 ## Integration preflight
 

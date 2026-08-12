@@ -26,6 +26,20 @@ if (command.Equals("preflight", StringComparison.OrdinalIgnoreCase))
 
 if (command.Equals("policy", StringComparison.OrdinalIgnoreCase) &&
     args.Length > 1 &&
+    args[1].Equals("init", StringComparison.OrdinalIgnoreCase))
+{
+    if (args.Length == 3 && IsHelp(args[2]))
+    {
+        WritePolicyInitUsage();
+        return;
+    }
+
+    Environment.ExitCode = await PolicyInitCommand.RunAsync(args[2..]);
+    return;
+}
+
+if (command.Equals("policy", StringComparison.OrdinalIgnoreCase) &&
+    args.Length > 1 &&
     args[1].Equals("validate", StringComparison.OrdinalIgnoreCase))
 {
     if (args.Length == 3 && IsHelp(args[2]))
@@ -466,10 +480,19 @@ static void WriteUsage()
 {
     Console.WriteLine("Usage:");
     Console.WriteLine("  seneschal preflight --url <url> --api-key <key> --identity <id> --capability <id> [--environment <name>]");
+    Console.WriteLine("  seneschal policy init <path> [--force]");
     Console.WriteLine("  seneschal policy validate <path>");
     Console.WriteLine("  seneschal policy simulate --url <url> --api-key <key> --identity <id> --capability <id> [--environment <name>] [--resource <id>]");
     Console.WriteLine("  seneschal evaluate <identity> <capability> <environment>");
     Console.WriteLine("  seneschal capability show <capabilityId>");
+}
+
+static void WritePolicyInitUsage()
+{
+    Console.WriteLine("Usage:");
+    Console.WriteLine("  seneschal policy init <path> [--force]");
+    Console.WriteLine();
+    Console.WriteLine("Creates a minimal Policy Schema v1 document. Existing files require explicit --force.");
 }
 
 static void WritePolicyValidationUsage()

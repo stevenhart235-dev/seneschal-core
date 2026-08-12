@@ -171,14 +171,17 @@ A Policy MAY:
 
 ## Authoring workflow
 
-Move a policy through validate -> simulate -> observe -> enforce:
+Move a policy through init -> validate -> simulate -> observe -> enforce:
 
-1. Run `seneschal policy validate .\Policies\policies.yaml` to check YAML,
+1. Run `seneschal policy init .\Policies\policies.yaml` to scaffold a minimal
+   Policy Schema v1 document. It writes only that file and creates no catalog
+   entries or runtime state.
+2. Run `seneschal policy validate .\Policies\policies.yaml` to check YAML,
    required fields, identifiers, decisions, and catalog references.
-2. Run `seneschal policy simulate` for representative identities,
+3. Run `seneschal policy simulate` for representative identities,
    capabilities, environments, and resources.
-3. Observe decisions under the existing non-enforcing runtime mode.
-4. Enable enforcement only after the observed results match the intended
+4. Observe decisions under the existing non-enforcing runtime mode.
+5. Enable enforcement only after the observed results match the intended
    policy behavior.
 
 The validator first applies the versioned

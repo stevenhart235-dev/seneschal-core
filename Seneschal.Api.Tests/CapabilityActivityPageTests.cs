@@ -96,6 +96,29 @@ public sealed class CapabilityActivityPageTests :
     }
 
     [Fact]
+    public async Task SelectedCatalogCapability_RendersDescriptiveMetadata()
+    {
+        using var evaluationResponse = await _client.PostAsJsonAsync(
+            "/evaluate",
+            new
+            {
+                identity = "Developer",
+                capability = "DeployApplication",
+                context = new { environment = "dev", resource = "metadata-test" }
+            });
+        Assert.Equal(HttpStatusCode.OK, evaluationResponse.StatusCode);
+
+        var html = await _client.GetStringAsync(
+            "/capability-activity?capabilityId=DeployApplication");
+
+        Assert.Contains("Deploy Application", html);
+        Assert.Contains("Deploy an application to a managed environment.", html);
+        Assert.Contains("Medium risk", html);
+        Assert.Contains("Deployment", html);
+        Assert.Contains("<code>DeployApplication</code>", html);
+    }
+
+    [Fact]
     public async Task Dashboard_LinksToCapabilityActivity()
     {
         using var response = await _client.GetAsync("/dashboard");

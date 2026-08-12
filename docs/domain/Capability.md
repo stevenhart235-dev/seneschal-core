@@ -18,15 +18,26 @@ By treating capabilities as first-class objects, organizations gain visibility i
 
 ## Catalog Fields
 
-- `name` — stable unique identifier
-- `displayName` — operator-facing name
-- `description` — governed operation
-- `owner` — accountable team
-- `risk` — Low, Medium, High, or Critical
-- `technology` — explicit Technology Explorer classification
-- `category` — logical grouping
-- `lifecycle` — catalog state
+- `name` — required, stable unique identifier used by requests and policies
+- `displayName` — optional operator-facing name
+- `description` — optional explanation of the governed operation
+- `owner` — optional accountable team
+- `risk` — optional `Low`, `Medium`, `High`, or `Critical` classification
+- `technology` — optional explicit Technology Explorer classification
+- `category` — optional logical grouping
+- `lifecycle` — optional catalog state
+- `documentationUrl` — optional HTTP or HTTPS operator reference
 - `tags` — optional search and fallback-classification metadata
+
+`name` is the capability identity. Changing descriptive metadata does not create a
+new capability, and changing `name` can break policy and audit references. When
+metadata is omitted, catalog projections use compatibility defaults for display;
+policy matching and evaluation continue to use only the stable identifier.
+
+Category, technology, risk, lifecycle, ownership, documentation, and tags support
+discovery and investigation. They do not grant permission, select a policy, or
+change a decision. Invalid risk values are configuration errors. Invalid
+operator references and tag hygiene issues are reported as warnings.
 
 ## Conceptual Shape
 
@@ -63,3 +74,4 @@ tags: [azure, key-vault, secret]
 - Capabilities should not contain authorization logic or embedded policy rules.
 - Capabilities should be discoverable, searchable, and versionable as an organization's capability catalog grows.
 - Capabilities form the foundation of Seneschal's governance, observability, and audit model.
+- Parent/child, related-capability, replacement, and pack provenance metadata are not part of the current catalog contract. Capability packs may compose this same catalog in a future milestone without replacing stable capability IDs.

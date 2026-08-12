@@ -56,8 +56,15 @@ The YAML catalog uses `name` as the stable capability identifier.
 | `documentationUrl` | Optional reference material |
 | `tags` | Optional searchable and classification metadata |
 
-Legacy records with fewer fields remain valid. Enterprise catalog entries
-should supply all operator-facing metadata.
+All fields except `name` are optional descriptive metadata. Legacy records with
+fewer fields remain valid and use display defaults in catalog projections.
+Enterprise catalog entries should supply the metadata operators need for
+discovery and investigation.
+
+Policies, requests, and audit evidence reference `name`; it remains the stable
+evaluation key. Display name, description, owner, risk, technology, category,
+lifecycle, documentation, and tags do not grant permission, match policies, or
+change decisions. They are not runtime risk inputs.
 
 ---
 
@@ -233,6 +240,7 @@ Future versions may support:
 - Capability dependencies
 - Capability version history
 - Capability approval workflows
+- Capability packs and catalog provenance
 
 These features are intentionally outside the scope of Version 1.
 

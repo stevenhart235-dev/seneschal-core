@@ -10,18 +10,11 @@ public static class CapabilityMapper
     {
         ArgumentNullException.ThrowIfNull(capability);
 
-        var configuredRisk = string.IsNullOrWhiteSpace(capability.Risk)
-            ? nameof(RiskLevel.Low)
-            : capability.Risk;
-
-        if (!Enum.TryParse<RiskLevel>(
-                configuredRisk,
-                ignoreCase: true,
-                out var riskLevel))
+        if (!TryParseRiskLevel(capability.Risk, out var riskLevel))
         {
             throw new InvalidOperationException(
                 $"Capability '{capability.Name}' has invalid risk level " +
-                $"'{configuredRisk}'.");
+                $"'{capability.Risk}'.");
         }
 
         return new CoreCapability
@@ -45,5 +38,14 @@ public static class CapabilityMapper
             Technology = capability.Technology,
             Tags = capability.Tags?.ToList() ?? []
         };
+    }
+
+    public static bool TryParseRiskLevel(string? configuredRisk, out RiskLevel riskLevel)
+    {
+        var value = string.IsNullOrWhiteSpace(configuredRisk)
+            ? nameof(RiskLevel.Low)
+            : configuredRisk;
+        return Enum.TryParse(value, ignoreCase: true, out riskLevel) &&
+            Enum.IsDefined(riskLevel);
     }
 }

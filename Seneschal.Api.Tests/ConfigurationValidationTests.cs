@@ -126,6 +126,61 @@ public sealed class ConfigurationValidationTests :
     }
 
     [Fact]
+    public void DuplicateCapabilityIds_ProduceErrorFinding()
+    {
+        var result = Validate(
+            capabilities: [Capability("deploy"), Capability("DEPLOY")],
+            identities: [Identity("operator")],
+            policies: [Policy("policy-1", "operator", "deploy")]);
+
+        var finding = Assert.Single(result.Findings, finding =>
+            finding.Category == "CapabilityIdentity");
+
+        Assert.False(result.IsValid);
+        Assert.Equal("Error", finding.Severity);
+        Assert.Contains("Duplicate capability id", finding.Message);
+    }
+
+    [Fact]
+    public void MissingCapabilityIdAndInvalidRisk_ProduceDeterministicErrors()
+    {
+        var capability = Capability(string.Empty);
+        capability.Risk = "Severe";
+
+        var result = Validate(
+            capabilities: [capability],
+            identities: [Identity("operator")],
+            policies: [Policy("policy-1", "operator", "missing")]);
+
+        Assert.Contains(result.Findings, finding =>
+            finding.Category == "CapabilityIdentity" &&
+            finding.Severity == "Error" &&
+            finding.Message.Contains("missing required field 'name'"));
+        Assert.Contains(result.Findings, finding =>
+            finding.Category == "CapabilityMetadata" &&
+            finding.Severity == "Error" &&
+            finding.Message.Contains("invalid risk level 'Severe'"));
+    }
+
+    [Fact]
+    public void InvalidOptionalMetadata_ProducesWarningsWithoutFailing()
+    {
+        var capability = Capability("deploy");
+        capability.DocumentationUrl = "not-a-url";
+        capability.Tags = ["deployment", "DEPLOYMENT", " "];
+
+        var result = Validate(
+            capabilities: [capability],
+            identities: [Identity("operator")],
+            policies: [Policy("policy-1", "operator", "deploy")]);
+
+        Assert.True(result.IsValid);
+        Assert.Equal(3, result.WarningCount);
+        Assert.All(result.Findings, finding =>
+            Assert.Equal("CapabilityMetadata", finding.Category));
+    }
+
+    [Fact]
     public async Task Ready_IncludesValidationSummary()
     {
         using var response = await _client.GetAsync("/ready");

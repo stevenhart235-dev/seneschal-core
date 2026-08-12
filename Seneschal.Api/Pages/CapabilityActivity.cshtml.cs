@@ -9,13 +9,16 @@ public sealed class CapabilityActivityModel : PageModel
 {
     private readonly IInvestigationActivityReader _investigationActivity;
     private readonly IApprovalStore _approvalStore;
+    private readonly ICapabilityCatalog _capabilityCatalog;
 
     public CapabilityActivityModel(
         IInvestigationActivityReader investigationActivity,
-        IApprovalStore approvalStore)
+        IApprovalStore approvalStore,
+        ICapabilityCatalog capabilityCatalog)
     {
         _investigationActivity = investigationActivity;
         _approvalStore = approvalStore;
+        _capabilityCatalog = capabilityCatalog;
     }
 
     public string? CapabilityId { get; private set; }
@@ -26,6 +29,7 @@ public sealed class CapabilityActivityModel : PageModel
     public string? RuntimeModeFilter { get; private set; }
     public IReadOnlyCollection<CapabilityActivity> Capabilities { get; private set; } = [];
     public CapabilityActivity? SelectedCapability { get; private set; }
+    public Capability? SelectedCatalogCapability { get; private set; }
     public IReadOnlyCollection<CapabilityOperationGroup> OperationGroups { get; private set; } = [];
     public IReadOnlyCollection<CapabilityTimelineEvent> LegacyEvents { get; private set; } = [];
     public IReadOnlyCollection<string> AvailableIdentities { get; private set; } = [];
@@ -61,6 +65,8 @@ public sealed class CapabilityActivityModel : PageModel
             .ThenBy(item => item.CapabilityId).ToList();
 
         if (string.IsNullOrWhiteSpace(capabilityId)) return;
+        SelectedCatalogCapability = (await _capabilityCatalog.GetByIdAsync(
+            capabilityId, cancellationToken))?.Capability;
         var investigation = await _investigationActivity.GetCapabilityAsync(
             capabilityId, 100, cancellationToken);
         SelectedCapability = investigation?.Activity;

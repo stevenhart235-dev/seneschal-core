@@ -48,6 +48,8 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         AddLoadFinding(findings, "Identities", identities.Count);
         AddLoadFinding(findings, "Policies", policies.Count);
         ValidateRuntimeSettings(findings, runtimeSettings);
+        ValidateCapabilityMetadata(findings, capabilities);
+        ValidateDuplicateCapabilities(findings, capabilities);
         ValidateIdentityMetadata(findings, identities);
         ValidateDuplicateIdentities(findings, identities);
         ValidatePolicyReferences(findings, capabilities, identities, policies);
@@ -60,6 +62,103 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         {
             Findings = findings
         };
+    }
+
+    private static void ValidateCapabilityMetadata(
+        ICollection<ConfigurationValidationFinding> findings,
+        IReadOnlyCollection<ApiCapability> capabilities)
+    {
+        foreach (var capability in capabilities)
+        {
+            var capabilityId = string.IsNullOrWhiteSpace(capability.Name)
+                ? "<unknown>"
+                : capability.Name;
+
+            if (string.IsNullOrWhiteSpace(capability.Name))
+            {
+                findings.Add(new ConfigurationValidationFinding
+                {
+                    Severity = "Error",
+                    Category = "CapabilityIdentity",
+                    Message = "Capability is missing required field 'name'.",
+                    RelatedObjectId = capabilityId
+                });
+            }
+
+            if (!CapabilityMapper.TryParseRiskLevel(capability.Risk, out _))
+            {
+                findings.Add(new ConfigurationValidationFinding
+                {
+                    Severity = "Error",
+                    Category = "CapabilityMetadata",
+                    Message =
+                        $"Capability '{capabilityId}' uses invalid risk level " +
+                        $"'{capability.Risk}'. Expected Low, Medium, High, or Critical.",
+                    RelatedObjectId = capabilityId
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(capability.DocumentationUrl) &&
+                (!Uri.TryCreate(capability.DocumentationUrl, UriKind.Absolute,
+                    out var documentationUri) ||
+                 documentationUri.Scheme is not ("http" or "https")))
+            {
+                findings.Add(new ConfigurationValidationFinding
+                {
+                    Severity = "Warning",
+                    Category = "CapabilityMetadata",
+                    Message =
+                        $"Capability '{capabilityId}' has an invalid documentationUrl.",
+                    RelatedObjectId = capabilityId
+                });
+            }
+
+            var tags = capability.Tags ?? [];
+            if (tags.Any(string.IsNullOrWhiteSpace))
+            {
+                findings.Add(new ConfigurationValidationFinding
+                {
+                    Severity = "Warning",
+                    Category = "CapabilityMetadata",
+                    Message = $"Capability '{capabilityId}' contains a blank tag.",
+                    RelatedObjectId = capabilityId
+                });
+            }
+
+            if (tags
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .GroupBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+                .Any(group => group.Count() > 1))
+            {
+                findings.Add(new ConfigurationValidationFinding
+                {
+                    Severity = "Warning",
+                    Category = "CapabilityMetadata",
+                    Message = $"Capability '{capabilityId}' contains duplicate tags.",
+                    RelatedObjectId = capabilityId
+                });
+            }
+        }
+    }
+
+    private static void ValidateDuplicateCapabilities(
+        ICollection<ConfigurationValidationFinding> findings,
+        IReadOnlyCollection<ApiCapability> capabilities)
+    {
+        foreach (var duplicateCapability in capabilities
+            .Where(capability => !string.IsNullOrWhiteSpace(capability.Name))
+            .GroupBy(capability => capability.Name, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1))
+        {
+            findings.Add(new ConfigurationValidationFinding
+            {
+                Severity = "Error",
+                Category = "CapabilityIdentity",
+                Message =
+                    $"Duplicate capability id '{duplicateCapability.Key}' detected.",
+                RelatedObjectId = duplicateCapability.Key
+            });
+        }
     }
 
     private static void ValidateRequiredPolicyFields(

@@ -1,6 +1,7 @@
 using Seneschal.Api.Services;
 using Seneschal.Core.Enums;
 using Seneschal.Core.Models;
+using System.Text.Json;
 using YamlDotNet.Core;
 
 public static class PolicyValidationCommand
@@ -20,7 +21,9 @@ public static class PolicyValidationCommand
         var capabilityPath = Path.Combine(directory, "capabilities.yaml");
         var loadFindings = new List<(string File, string Issue)>();
 
-        var policies = TryLoad(policyPath, () => new PolicyLoader(policyPath, rejectUnmatchedProperties: true).GetPolicies(), loadFindings);
+        IReadOnlyList<Seneschal.Api.Models.Policy>? policies = null;
+        if (TryReadAndValidateSchema(policyPath, loadFindings))
+            policies = TryLoad(policyPath, () => new PolicyLoader(policyPath).GetPolicies(), loadFindings);
         var identities = TryLoad(identityPath, () => new IdentityLoader(identityPath).GetIdentities(), loadFindings);
         var capabilities = TryLoad(capabilityPath, () => new CapabilityLoader(capabilityPath).GetCapabilities(), loadFindings);
 
@@ -56,6 +59,42 @@ public static class PolicyValidationCommand
 
         await output.WriteLineAsync($"{errorCount} {Plural(errorCount, "error")}, {warningCount} {Plural(warningCount, "warning")}");
         return errorCount == 0 ? 0 : 2;
+    }
+
+    private static bool TryReadAndValidateSchema(
+        string path,
+        ICollection<(string File, string Issue)> findings)
+    {
+        if (!File.Exists(path))
+        {
+            findings.Add((path, "Configuration file could not be loaded because it does not exist."));
+            return false;
+        }
+
+        try
+        {
+            var schemaFindings = PolicySchemaValidator.Validate(File.ReadAllText(path));
+            foreach (var finding in schemaFindings)
+            {
+                findings.Add((
+                    path,
+                    $"Policy Schema v1 violation at {finding.Path}: {finding.Issue}"));
+            }
+            return schemaFindings.Count == 0;
+        }
+        catch (YamlDotNet.Core.YamlException exception)
+        {
+            findings.Add((path,
+                $"Malformed YAML at line {exception.Start.Line}, column {exception.Start.Column}."));
+            return false;
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or
+                JsonException or InvalidOperationException)
+        {
+            findings.Add((path, "Policy Schema v1 validation could not be completed."));
+            return false;
+        }
     }
 
     private static T? TryLoad<T>(string path, Func<T> load, ICollection<(string File, string Issue)> findings)

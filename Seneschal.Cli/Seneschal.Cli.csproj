@@ -5,6 +5,7 @@
     <ProjectReference Include="..\Seneschal.Client\Seneschal.Client.csproj" />
     <ProjectReference Include="..\Seneschal.Core\Seneschal.Core.csproj" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.1" />
+    <PackageReference Include="JsonSchema.Net" Version="9.4.0" />
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
 
@@ -35,6 +36,11 @@
 
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="..\integrations\contracts\policy\policy-schema.v1.json"
+          Link="contracts\policy\policy-schema.v1.json"
+          CopyToOutputDirectory="PreserveNewest"
+          Pack="true"
+          PackagePath="contracts\policy\" />
   </ItemGroup>
 
 </Project>

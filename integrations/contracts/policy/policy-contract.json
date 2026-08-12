@@ -1,0 +1,7 @@
+{
+  "contract": "seneschal.policy-authoring",
+  "contractVersion": "v1",
+  "schemaRevision": 1,
+  "schema": "policy-schema.v1.json",
+  "schemaSha256": "1a7bd9391348a7768e6e956de867e1c68156dca5f70452d7925327d237d2ecc0"
+}

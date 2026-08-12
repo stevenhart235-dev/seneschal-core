@@ -181,8 +181,32 @@ Move a policy through validate -> simulate -> observe -> enforce:
 4. Enable enforcement only after the observed results match the intended
    policy behavior.
 
-The validator reads `identities.yaml` and `capabilities.yaml` beside the
-supplied policy file. Warnings do not fail validation; errors do.
+The validator first applies the versioned
+[Policy Schema v1](../../integrations/contracts/policy/README.md), then uses the
+existing loader and semantic validator. It reads `identities.yaml` and
+`capabilities.yaml` beside the supplied policy file. Schema-valid does not mean
+operationally valid: unique IDs and configured identity and capability
+references are separate checks. Warnings do not fail validation; errors do.
+
+## Current YAML authoring shape
+
+Policy Schema v1 requires a non-empty root `policies` array. Each policy
+requires a non-blank `name`, `reason`, and `decision`, plus at least one value
+from each scalar-or-plural target family:
+
+- `identity` or `identities`
+- `capability` or `capabilities`
+- `environment` or `environments`
+
+Supported decisions are `allow`, `deny`, `warn`, `log_only`, and
+`requires_approval`. Optional string metadata is `displayName`, `description`,
+`owner`, `severity`, and `rationale`. Unknown properties and malformed types
+are rejected. The current authoring contract does not expose arbitrary
+conditions, operators, actions, resources, environment catalogs, or time
+windows.
+
+See [Policy Schema Contract](../../integrations/contracts/policy/README.md) for
+versioning and editor association.
 
 Valid:
 

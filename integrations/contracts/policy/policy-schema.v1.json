@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seneschal.dev/contracts/policy/policy-schema.v1.json",
+  "title": "Seneschal Policy Authoring Contract v1",
+  "description": "The YAML policy document shape accepted by Seneschal Policy Schema v1.",
+  "type": "object",
+  "required": ["policies"],
+  "properties": {
+    "policies": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/policy" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "nonBlankString": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "targetList": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/nonBlankString" }
+    },
+    "policy": {
+      "type": "object",
+      "required": ["name", "decision", "reason"],
+      "properties": {
+        "name": { "$ref": "#/$defs/nonBlankString" },
+        "displayName": { "type": "string" },
+        "description": { "type": "string" },
+        "owner": { "type": "string" },
+        "severity": { "type": "string" },
+        "rationale": { "type": "string" },
+        "identity": { "$ref": "#/$defs/nonBlankString" },
+        "identities": { "$ref": "#/$defs/targetList" },
+        "capability": { "$ref": "#/$defs/nonBlankString" },
+        "capabilities": { "$ref": "#/$defs/targetList" },
+        "environment": { "$ref": "#/$defs/nonBlankString" },
+        "environments": { "$ref": "#/$defs/targetList" },
+        "decision": {
+          "type": "string",
+          "enum": ["allow", "deny", "warn", "log_only", "requires_approval"]
+        },
+        "reason": { "$ref": "#/$defs/nonBlankString" }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        { "anyOf": [{ "required": ["identity"] }, { "required": ["identities"] }] },
+        { "anyOf": [{ "required": ["capability"] }, { "required": ["capabilities"] }] },
+        { "anyOf": [{ "required": ["environment"] }, { "required": ["environments"] }] }
+      ]
+    }
+  }
+}

@@ -25,7 +25,7 @@ public sealed class PolicyValidationCommandTests : IDisposable
         var result = await RunAsync("policies:\n  - name: [unterminated\n    apiKey: do-not-print");
 
         Assert.Equal(2, result.ExitCode);
-        Assert.Contains("Malformed or unsupported YAML", result.Output);
+        Assert.Contains("Malformed YAML", result.Output);
         Assert.DoesNotContain("do-not-print", result.Output);
     }
 
@@ -62,7 +62,7 @@ public sealed class PolicyValidationCommandTests : IDisposable
         var result = await RunAsync(ValidPolicy(extra: "    conditions: identity =="));
 
         Assert.Equal(2, result.ExitCode);
-        Assert.Contains("Malformed or unsupported YAML", result.Output);
+        Assert.Contains("Policy Schema v1 violation", result.Output);
     }
 
     [Theory]
@@ -73,7 +73,7 @@ public sealed class PolicyValidationCommandTests : IDisposable
         var result = await RunAsync(ValidPolicy(extra: unsupportedField));
 
         Assert.Equal(2, result.ExitCode);
-        Assert.Contains("Malformed or unsupported YAML", result.Output);
+        Assert.Contains("Policy Schema v1 violation", result.Output);
     }
 
     [Fact]
@@ -97,17 +97,23 @@ public sealed class PolicyValidationCommandTests : IDisposable
                 identity: missing-identity
                 capability: missing-capability
                 environment: dev
-                decision: explode
+                decision: allow
+                reason: first broken policy
+              - name: broken-policy
+                identity: known-identity
+                capability: known-capability
+                environment: dev
+                decision: deny
+                reason: duplicate policy ID
             """;
 
         var result = await RunAsync(policy);
 
         Assert.Equal(2, result.ExitCode);
-        Assert.Contains("missing required field 'reason'", result.Output);
         Assert.Contains("unknown identity", result.Output);
         Assert.Contains("unknown capability", result.Output);
-        Assert.Contains("invalid decision", result.Output);
-        Assert.Contains("4 errors", result.Output);
+        Assert.Contains("Duplicate policy id", result.Output);
+        Assert.Contains("3 errors", result.Output);
     }
 
     [Fact]

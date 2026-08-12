@@ -12,9 +12,19 @@ Validate policy structure and references before simulation or enforcement:
 
     seneschal policy validate .\Policies\policies.yaml
 
-The policy file is validated against identities.yaml and capabilities.yaml in
-the same directory. Validation is read-only. Errors return a non-zero exit
-code; warnings are displayed but do not fail validation.
+Validation parses YAML, applies
+[Policy Schema v1](../integrations/contracts/policy/README.md), loads the
+existing policy model, and then validates against `identities.yaml` and
+`capabilities.yaml` in the same directory. Schema-valid does not mean
+operationally valid: duplicate IDs and unknown catalog references are checked
+after structural validation. Validation is read-only. Errors return a non-zero
+exit code; warnings are displayed but do not fail validation.
+
+Schema-aware YAML editors can associate the versioned contract through their
+normal schema mapping, or with this portable modeline after adjusting the
+relative path:
+
+    # yaml-language-server: $schema=../integrations/contracts/policy/policy-schema.v1.json
 
 A valid policy entry:
 

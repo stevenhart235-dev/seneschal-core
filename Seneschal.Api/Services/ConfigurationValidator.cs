@@ -51,6 +51,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         ValidateIdentityMetadata(findings, identities);
         ValidateDuplicateIdentities(findings, identities);
         ValidatePolicyReferences(findings, capabilities, identities, policies);
+        ValidateRequiredPolicyFields(findings, policies);
         ValidatePolicyDecisions(findings, policies);
         ValidateDuplicatePolicies(findings, policies);
         ValidateOrphans(findings, capabilities, identities, policies);
@@ -60,6 +61,59 @@ public sealed class ConfigurationValidator : IConfigurationValidator
             Findings = findings
         };
     }
+
+    private static void ValidateRequiredPolicyFields(
+        ICollection<ConfigurationValidationFinding> findings,
+        IReadOnlyCollection<ApiPolicy> policies)
+    {
+        foreach (var policy in policies)
+        {
+            AddRequiredPolicyFinding(findings, policy, "name", policy.Name);
+            AddRequiredPolicyFinding(findings, policy, "decision", policy.Decision);
+            AddRequiredPolicyFinding(findings, policy, "reason", policy.Reason);
+
+            if (policy.EffectiveIdentities.Count == 0)
+                AddMissingPolicyTargetFinding(findings, policy, "identity");
+            if (policy.EffectiveCapabilities.Count == 0)
+                AddMissingPolicyTargetFinding(findings, policy, "capability");
+            if (policy.EffectiveEnvironments.Count == 0)
+                AddMissingPolicyTargetFinding(findings, policy, "environment");
+        }
+    }
+
+    private static void AddRequiredPolicyFinding(
+        ICollection<ConfigurationValidationFinding> findings,
+        ApiPolicy policy,
+        string field,
+        string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value)) return;
+
+        findings.Add(new ConfigurationValidationFinding
+        {
+            Severity = "Error",
+            Category = "PolicyStructure",
+            Message = $"Policy '{PolicyId(policy)}' is missing required field '{field}'.",
+            RelatedObjectId = PolicyId(policy)
+        });
+    }
+
+    private static void AddMissingPolicyTargetFinding(
+        ICollection<ConfigurationValidationFinding> findings,
+        ApiPolicy policy,
+        string target)
+    {
+        findings.Add(new ConfigurationValidationFinding
+        {
+            Severity = "Error",
+            Category = "PolicyStructure",
+            Message = $"Policy '{PolicyId(policy)}' must reference at least one {target}.",
+            RelatedObjectId = PolicyId(policy)
+        });
+    }
+
+    private static string PolicyId(ApiPolicy policy) =>
+        string.IsNullOrWhiteSpace(policy.Name) ? "<unknown>" : policy.Name;
 
     private static void ValidateDuplicateIdentities(
         ICollection<ConfigurationValidationFinding> findings,

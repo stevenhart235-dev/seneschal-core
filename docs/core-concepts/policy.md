@@ -169,6 +169,41 @@ A Policy MAY:
 
 # Examples
 
+## Authoring workflow
+
+Move a policy through validate -> simulate -> observe -> enforce:
+
+1. Run `seneschal policy validate .\Policies\policies.yaml` to check YAML,
+   required fields, identifiers, decisions, and catalog references.
+2. Run `seneschal policy simulate` for representative identities,
+   capabilities, environments, and resources.
+3. Observe decisions under the existing non-enforcing runtime mode.
+4. Enable enforcement only after the observed results match the intended
+   policy behavior.
+
+The validator reads `identities.yaml` and `capabilities.yaml` beside the
+supplied policy file. Warnings do not fail validation; errors do.
+
+Valid:
+
+    policies:
+      - name: production-deployment
+        identity: deployment-worker
+        capability: production.deployment.execute
+        environment: production
+        decision: allow
+        reason: Approved release automation may deploy to production
+
+Invalid because the capability is not present in `capabilities.yaml`:
+
+    policies:
+      - name: invalid-production-deployment
+        identity: deployment-worker
+        capability: production.deployment.missing
+        environment: production
+        decision: allow
+        reason: Production deployment
+
 Finance Refund Policy
 
 Capability:

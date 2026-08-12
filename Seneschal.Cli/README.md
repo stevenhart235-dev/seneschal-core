@@ -6,6 +6,40 @@ This tool is not yet published to NuGet.org. After publication, install it with:
 dotnet tool install --global Seneschal.Cli
 ```
 
+## Policy validation
+
+Validate policy structure and references before simulation or enforcement:
+
+    seneschal policy validate .\Policies\policies.yaml
+
+The policy file is validated against identities.yaml and capabilities.yaml in
+the same directory. Validation is read-only. Errors return a non-zero exit
+code; warnings are displayed but do not fail validation.
+
+A valid policy entry:
+
+    policies:
+      - name: production-deployment
+        identity: deployment-worker
+        capability: production.deployment.execute
+        environment: production
+        decision: allow
+        reason: Approved release automation may deploy to production
+
+A failing entry with an unknown capability:
+
+    policies:
+      - name: invalid-production-deployment
+        identity: deployment-worker
+        capability: production.deployment.missing
+        environment: production
+        decision: allow
+        reason: Production deployment
+
+Use the authoring workflow in order: validate configuration, simulate a
+representative request, observe the result in non-enforcing operation, then
+enable enforcement through the existing runtime governance controls.
+
 ## Integration preflight
 
 Validate an endpoint, scoped API key, catalog identifiers, and the Execution

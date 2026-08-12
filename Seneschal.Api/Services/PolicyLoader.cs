@@ -32,6 +32,11 @@ public class PolicyLoader
     }
 
     public PolicyLoader(string path)
+        : this(path, rejectUnmatchedProperties: false)
+    {
+    }
+
+    public PolicyLoader(string path, bool rejectUnmatchedProperties)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
@@ -40,10 +45,11 @@ public class PolicyLoader
 
         var yaml = File.ReadAllText(path);
 
-        var deserializer = new DeserializerBuilder()
-            .WithNamingConvention(CamelCaseNamingConvention.Instance)
-            .IgnoreUnmatchedProperties()
-            .Build();
+        var builder = new DeserializerBuilder()
+            .WithNamingConvention(CamelCaseNamingConvention.Instance);
+        if (!rejectUnmatchedProperties)
+            builder = builder.IgnoreUnmatchedProperties();
+        var deserializer = builder.Build();
 
         var policyFile = deserializer.Deserialize<PolicyFile>(yaml);
 

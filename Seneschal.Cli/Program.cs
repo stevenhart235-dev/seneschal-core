@@ -26,6 +26,20 @@ if (command.Equals("preflight", StringComparison.OrdinalIgnoreCase))
 
 if (command.Equals("policy", StringComparison.OrdinalIgnoreCase) &&
     args.Length > 1 &&
+    args[1].Equals("validate", StringComparison.OrdinalIgnoreCase))
+{
+    if (args.Length == 3 && IsHelp(args[2]))
+    {
+        WritePolicyValidationUsage();
+        return;
+    }
+
+    Environment.ExitCode = await PolicyValidationCommand.RunAsync(args[2..]);
+    return;
+}
+
+if (command.Equals("policy", StringComparison.OrdinalIgnoreCase) &&
+    args.Length > 1 &&
     args[1].Equals("simulate", StringComparison.OrdinalIgnoreCase))
 {
     if (args.Length == 3 && IsHelp(args[2]))
@@ -452,9 +466,18 @@ static void WriteUsage()
 {
     Console.WriteLine("Usage:");
     Console.WriteLine("  seneschal preflight --url <url> --api-key <key> --identity <id> --capability <id> [--environment <name>]");
+    Console.WriteLine("  seneschal policy validate <path>");
     Console.WriteLine("  seneschal policy simulate --url <url> --api-key <key> --identity <id> --capability <id> [--environment <name>] [--resource <id>]");
     Console.WriteLine("  seneschal evaluate <identity> <capability> <environment>");
     Console.WriteLine("  seneschal capability show <capabilityId>");
+}
+
+static void WritePolicyValidationUsage()
+{
+    Console.WriteLine("Usage:");
+    Console.WriteLine("  seneschal policy validate <path>");
+    Console.WriteLine();
+    Console.WriteLine("Validates policy YAML against sibling identities.yaml and capabilities.yaml files without changing runtime state.");
 }
 
 static void WritePolicySimulationUsage()

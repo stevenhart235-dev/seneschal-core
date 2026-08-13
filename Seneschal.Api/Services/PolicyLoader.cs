@@ -55,7 +55,7 @@ public class PolicyLoader
 
         _policies = policyFile.Policies;
         _corePolicies = new Lazy<IReadOnlyList<CorePolicy>>(
-            ProjectCorePolicies);
+            () => ProjectCorePolicies(_policies));
     }
 
     public IReadOnlyList<ApiPolicy> GetPolicies()
@@ -68,9 +68,9 @@ public class PolicyLoader
         return _corePolicies.Value;
     }
 
-    private IReadOnlyList<CorePolicy> ProjectCorePolicies()
+    public static IReadOnlyList<CorePolicy> ProjectCorePolicies(IReadOnlyList<ApiPolicy> policies)
     {
-        var projectedPolicies = _policies
+        var projectedPolicies = policies
             .SelectMany((policy, index) =>
                 from identity in policy.EffectiveIdentities
                 from capability in policy.EffectiveCapabilities
@@ -81,7 +81,7 @@ public class PolicyLoader
                     Name = policy.Name,
                     Effect = DecisionTypeMapper.ToCore(policy.Decision),
                     Reason = policy.Reason,
-                    Priority = _policies.Count - index,
+                    Priority = policies.Count - index,
                     Conditions = new Dictionary<string, string>
                     {
                         ["identity.id"] = identity,

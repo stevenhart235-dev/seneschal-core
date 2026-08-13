@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seneschal.dev/contracts/proposed-governance-change/proposed-governance-change.v1.schema.json",
+  "title": "Seneschal Proposed Governance Change v1",
+  "type": "object",
+  "required": ["contractVersion", "revision", "proposalId", "baseGovernanceConfigurationFingerprint", "source", "change"],
+  "properties": {
+    "contractVersion": { "const": "v1" },
+    "revision": { "const": 1 },
+    "proposalId": { "type": "string", "pattern": "\\S" },
+    "baseGovernanceConfigurationFingerprint": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "source": {
+      "type": "object",
+      "required": ["recommendationType", "findingType", "identity", "capability", "observationWindow", "evidenceCoverage"],
+      "properties": {
+        "recommendationType": { "const": "ReviewCurrentGovernanceRelationship" },
+        "findingType": { "const": "HighRiskConfiguredNotObserved" },
+        "identity": { "type": "string", "pattern": "\\S" },
+        "capability": { "type": "string", "pattern": "\\S" },
+        "observationWindow": {
+          "type": "object",
+          "required": ["startUtc", "endUtc"],
+          "properties": {
+            "startUtc": { "type": "string", "format": "date-time" },
+            "endUtc": { "type": "string", "format": "date-time" }
+          },
+          "additionalProperties": false
+        },
+        "evidenceCoverage": { "enum": ["Full", "Partial"] }
+      },
+      "additionalProperties": false
+    },
+    "change": {
+      "type": "object",
+      "required": ["operation", "policy", "capability"],
+      "properties": {
+        "operation": { "const": "RemoveCapabilityFromPolicy" },
+        "policy": { "type": "string", "pattern": "\\S" },
+        "capability": { "type": "string", "pattern": "\\S" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

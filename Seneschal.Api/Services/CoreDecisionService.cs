@@ -58,14 +58,42 @@ public sealed class CoreDecisionService
     }
 
     public ApiDecisionResult Evaluate(ApiDecisionRequest request)
-        => Evaluate(request, commit: true);
+        => Evaluate(request, commit: true, CurrentConfiguration(),
+            Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow, null, false);
 
     public ApiDecisionResult Preview(ApiDecisionRequest request)
-        => Evaluate(request, commit: false);
+        => Evaluate(request, commit: false, CurrentConfiguration(),
+            Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow, null, false);
+
+    public EvaluationConfiguration CurrentConfiguration()
+    {
+        var window = _governanceWindowStore?.GetWindow();
+        var mode = _governanceModeStore.GetMode();
+        var policies = _policyLoader.GetCorePolicies();
+        return new EvaluationConfiguration(policies, mode, window,
+            GovernanceConfigurationFingerprintService.Compute(policies, mode, window),
+            EvaluationConfigurationKind.Current);
+    }
+
+    public (ApiDecisionResult Current, ApiDecisionResult Proposed, DateTimeOffset Timestamp)
+        ComparePreview(ApiDecisionRequest request, EvaluationConfiguration proposed)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var current = CurrentConfiguration();
+        var timestamp = DateTimeOffset.UtcNow;
+        var requestId = Guid.NewGuid().ToString("N");
+        var environment = request.Context.GetValueOrDefault("environment", string.Empty);
+        var resource = request.Context.GetValueOrDefault("resource", string.Empty);
+        var approval = _approvalStore?.Find(request.Identity, request.Capability,
+            environment, resource, request.OperationId);
+        return (Evaluate(request, false, current, requestId, timestamp, approval, true),
+            Evaluate(request, false, proposed, requestId, timestamp, approval, true), timestamp);
+    }
 
     private ApiDecisionResult Evaluate(
-        ApiDecisionRequest request,
-        bool commit)
+        ApiDecisionRequest request, bool commit, EvaluationConfiguration configuration,
+        string requestId, DateTimeOffset timestamp, ApprovalRecord? approvalSnapshot,
+        bool useApprovalSnapshot)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -73,7 +101,7 @@ public sealed class CoreDecisionService
             request,
             Guid.NewGuid().ToString("N"),
             DateTimeOffset.UtcNow);
-        var corePolicies = _policyLoader.GetCorePolicies();
+        var corePolicies = configuration.Policies;
 
         using var activity = DecisionActivitySource.StartActivity(
             "seneschal.evaluate",
@@ -89,17 +117,16 @@ public sealed class CoreDecisionService
         var coreResult = _policyEvaluator.Evaluate(
             coreRequest,
             corePolicies,
-            _governanceModeStore.GetMode());
+            configuration.Mode);
         var policyDecision = coreResult.Decision;
         var policyReason = coreResult.Reason;
         var approvalEvaluation = PlanApproval(
             coreRequest,
             ref coreResult,
-            out var approvalMutation);
+            out var approvalMutation, approvalSnapshot, useApprovalSnapshot);
         var decisionBeforeWindow = coreResult.Decision;
         var windowEvaluation = EvaluateGovernanceWindow(
-            coreRequest.Capability.Id,
-            ref coreResult);
+            coreRequest.Capability.Id, ref coreResult, configuration.GovernanceWindow);
         coreResult = coreResult with
         {
             ExecutionGuidance = ResolveExecutionGuidance(
@@ -246,7 +273,8 @@ public sealed class CoreDecisionService
     private ApprovalEvaluation? PlanApproval(
         DecisionRequest request,
         ref DecisionResult result,
-        out ApprovalMutation? mutation)
+        out ApprovalMutation? mutation, ApprovalRecord? approvalSnapshot,
+        bool useApprovalSnapshot)
     {
         mutation = null;
         if (_approvalStore is null || result.Decision != DecisionType.RequireApproval)
@@ -256,7 +284,7 @@ public sealed class CoreDecisionService
         var operationId = string.IsNullOrWhiteSpace(request.OperationId)
             ? null
             : request.OperationId.Trim();
-        var record = _approvalStore.Find(
+        var record = useApprovalSnapshot ? approvalSnapshot : _approvalStore.Find(
             request.Identity.Id,
             request.Capability.Id,
             request.Resource.Environment ?? string.Empty,
@@ -402,16 +430,10 @@ public sealed class CoreDecisionService
         _ => ExecutionGuidance.Block
     };
 
-    private GovernanceWindowEvaluation? EvaluateGovernanceWindow(
-        string capabilityId,
-        ref DecisionResult result)
+    private static GovernanceWindowEvaluation? EvaluateGovernanceWindow(
+        string capabilityId, ref DecisionResult result, GovernanceWindow? window)
     {
-        if (_governanceWindowStore is null)
-        {
-            return null;
-        }
-
-        var window = _governanceWindowStore.GetWindow();
+        if (window is null) return null;
         if (!window.Enabled || !window.AffectedCapabilities.Contains(
                 capabilityId,
                 StringComparer.OrdinalIgnoreCase))
@@ -519,3 +541,11 @@ internal sealed record GovernanceWindowEvaluation(
 internal sealed record ApprovalEvaluation(
     ApprovalRecord Record,
     string Action);
+
+public enum EvaluationConfigurationKind { Current, Proposed }
+public sealed record EvaluationConfiguration(
+    IReadOnlyList<Seneschal.Core.Models.Policy> Policies,
+    EnforcementMode Mode,
+    GovernanceWindow? GovernanceWindow,
+    string Fingerprint,
+    EvaluationConfigurationKind Kind);

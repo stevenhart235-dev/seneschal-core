@@ -1,0 +1,22 @@
+{
+  "contractVersion": "v1",
+  "revision": 1,
+  "proposalId": "proposal-contractors-secret-modify",
+  "baseGovernanceConfigurationFingerprint": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "source": {
+    "recommendationType": "ReviewCurrentGovernanceRelationship",
+    "findingType": "HighRiskConfiguredNotObserved",
+    "identity": "contractor",
+    "capability": "kubernetes.secret.modify",
+    "observationWindow": {
+      "startUtc": "2026-07-01T00:00:00Z",
+      "endUtc": "2026-08-01T00:00:00Z"
+    },
+    "evidenceCoverage": "Full"
+  },
+  "change": {
+    "operation": "RemoveCapabilityFromPolicy",
+    "policy": "contractor-production",
+    "capability": "kubernetes.secret.modify"
+  }
+}

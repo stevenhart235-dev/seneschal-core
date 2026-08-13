@@ -82,6 +82,10 @@ builder.Services.AddSingleton<OperatorGovernanceContextService>();
 builder.Services.AddSingleton<IdentityExposureAnalysisService>();
 builder.Services.AddSingleton<IdentityExposureFindingService>();
 builder.Services.AddSingleton<IdentityExposureRecommendationService>();
+builder.Services.AddSingleton<ProposedGovernanceChangeContractValidator>();
+builder.Services.AddSingleton<ProposedPolicyConfigurationService>();
+builder.Services.AddSingleton<ProposedGovernanceChangeCandidateService>();
+builder.Services.AddSingleton<ProposedGovernanceChangeSimulationService>();
 builder.Services.AddSingleton<GovernanceConfigurationFingerprintService>();
 builder.Services.AddSingleton<GraphBuilder>();
 builder.Services.AddSingleton<TechnologyClassifier>();
@@ -226,6 +230,45 @@ app.MapPost("/preflight", (
     return Results.Ok(decisionService.Preview(request));
 });
 
+
+app.MapPost("/policy-changes/simulate", (
+    System.Text.Json.JsonElement body,
+    HttpRequest httpRequest,
+    IntegrationApiKeyAuthorizer apiKeyAuthorizer,
+    ProposedGovernanceChangeContractValidator contractValidator,
+    ProposedGovernanceChangeSimulationService simulationService,
+    IdentityLoader identityLoader, CapabilityLoader capabilityLoader) =>
+{
+    var authentication = apiKeyAuthorizer.Authenticate(httpRequest);
+    if (!authentication.IsAllowed)
+        return Results.Json(new { code = "authentication_failure", reason = authentication.Reason },
+            statusCode: authentication.StatusCode);
+    if (!body.TryGetProperty("proposal", out var proposalJson))
+        return Results.BadRequest(new { code = "invalid_proposal", errors = new[] { "Missing proposal." } });
+    var contractErrors = contractValidator.Validate(proposalJson);
+    if (contractErrors.Count > 0)
+        return Results.BadRequest(new { code = "invalid_proposal", errors = contractErrors });
+    ProposedGovernanceChangeSimulationRequest? request;
+    try { request = System.Text.Json.JsonSerializer.Deserialize<ProposedGovernanceChangeSimulationRequest>(
+        body.GetRawText(), new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)); }
+    catch (System.Text.Json.JsonException exception)
+    { return Results.BadRequest(new { code = "invalid_request", errors = new[] { exception.Message } }); }
+    if (request is null) return Results.BadRequest(new { code = "invalid_request" });
+    if (!identityLoader.GetIdentities().Any(item => string.Equals(item.Name,
+        request.Identity, StringComparison.OrdinalIgnoreCase)))
+        return Results.BadRequest(new { code = "invalid_identity" });
+    if (!capabilityLoader.GetCapabilities().Any(item => string.Equals(item.Name,
+        request.Capability, StringComparison.OrdinalIgnoreCase)))
+        return Results.BadRequest(new { code = "invalid_capability" });    var decisionRequest = new DecisionRequest { Identity = request.Identity,
+        Capability = request.Capability, OperationId = request.OperationId,
+        Context = request.Context };
+    var scope = apiKeyAuthorizer.AuthorizeScope(authentication.IntegrationKey!, decisionRequest);
+    if (!scope.IsAllowed)
+        return Results.Json(new { code = "scope_mismatch", reason = scope.Reason },
+            statusCode: scope.StatusCode);
+    var result = simulationService.Simulate(request);
+    return result.IsValid ? Results.Ok(result) : Results.BadRequest(result);
+});
 app.MapGet("/health", () =>
 {
     return Results.Ok(new

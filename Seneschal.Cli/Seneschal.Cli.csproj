@@ -40,7 +40,8 @@
           Link="contracts\capability-pack\capability-pack.v1.schema.json"
           CopyToOutputDirectory="PreserveNewest"
           Pack="true"
-          PackagePath="contracts\capability-pack\" />    <None Include="..\integrations\contracts\policy\policy-schema.v1.json"
+          PackagePath="contracts\capability-pack\" />    <None Include="..\integrations\contracts\proposed-governance-change\proposed-governance-change.v1.schema.json" Link="contracts\proposed-governance-change\proposed-governance-change.v1.schema.json" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="contracts\proposed-governance-change\" />
+    <None Include="..\integrations\contracts\policy\policy-schema.v1.json"
           Link="contracts\policy\policy-schema.v1.json"
           CopyToOutputDirectory="PreserveNewest"
           Pack="true"

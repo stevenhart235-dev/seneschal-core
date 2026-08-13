@@ -23,7 +23,13 @@ public sealed class GovernanceConfigurationFingerprintService
 
     public string GetCurrentFingerprint()
     {
-        var policies = _policies.GetCorePolicies()
+        return Compute(_policies.GetCorePolicies(), _mode.GetMode(), _window?.GetWindow());
+    }
+
+    public static string Compute(IEnumerable<Seneschal.Core.Models.Policy> corePolicies,
+        Seneschal.Core.Enums.EnforcementMode mode, Seneschal.Core.Models.GovernanceWindow? governanceWindow)
+    {
+        var policies = corePolicies
             .Select(policy => new
             {
                 policy.Id,
@@ -36,12 +42,12 @@ public sealed class GovernanceConfigurationFingerprintService
             .OrderBy(policy => policy.Id, StringComparer.Ordinal)
             .ThenBy(policy => JsonSerializer.Serialize(policy), StringComparer.Ordinal)
             .ToList();
-        var window = _window?.GetWindow();
+        var window = governanceWindow;
         var semantic = new
         {
             Version = 1,
             Policies = policies,
-            RuntimeMode = _mode.GetMode().ToString(),
+            RuntimeMode = mode.ToString(),
             GovernanceWindow = window is null ? null : new
             {
                 window.Name,

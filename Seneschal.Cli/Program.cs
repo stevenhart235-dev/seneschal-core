@@ -53,6 +53,13 @@ if (command.Equals("policy", StringComparison.OrdinalIgnoreCase) &&
 }
 
 if (command.Equals("policy", StringComparison.OrdinalIgnoreCase) &&
+    args.Length > 2 && args[1].Equals("change", StringComparison.OrdinalIgnoreCase) &&
+    args[2].Equals("simulate", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = await PolicyChangeSimulationCommand.RunAsync(args[3..]);
+    return;
+}
+if (command.Equals("policy", StringComparison.OrdinalIgnoreCase) &&
     args.Length > 1 &&
     args[1].Equals("simulate", StringComparison.OrdinalIgnoreCase))
 {

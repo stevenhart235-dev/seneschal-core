@@ -157,3 +157,7 @@ Validate a local Capability Pack v1 document without installing or modifying it:
 `powershell
 seneschal capability pack validate .\CapabilityPacks\postgres.yaml
 `
+
+## Proposed governance change simulation
+
+Run seneschal policy change simulate <proposal-path> --url <url> --api-key <key> --identity <id> --capability <id> --environment <name> to compare current governance with one validated hypothetical RemoveCapabilityFromPolicy proposal. The command is read-only and never writes or installs policy.

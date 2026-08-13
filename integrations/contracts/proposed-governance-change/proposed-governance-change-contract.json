@@ -1,0 +1,7 @@
+{
+  "contract": "seneschal.proposed-governance-change",
+  "contractVersion": "v1",
+  "schemaRevision": 1,
+  "schema": "proposed-governance-change.v1.schema.json",
+  "schemaSha256": "71f054bb8efab2ef92c21b0fd5825edba09059bed786895a0452202cc3dd08e9"
+}

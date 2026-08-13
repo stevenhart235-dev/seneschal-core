@@ -189,7 +189,7 @@ capabilities:
     tags: [github, pull-request, approval]
 
   - name: github.workflow.dispatch
-    technology: github
+    technology: github-actions
     displayName: Dispatch GitHub Workflow
     description: Manually dispatch an approved GitHub Actions workflow.
     owner: Release Engineering

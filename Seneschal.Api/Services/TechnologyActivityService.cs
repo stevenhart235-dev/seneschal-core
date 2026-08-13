@@ -31,7 +31,11 @@ public sealed class TechnologyClassifier
 
         if (!string.IsNullOrWhiteSpace(capability?.Technology))
         {
-            var explicitKey = capability.Technology.Trim().ToLowerInvariant();
+            var explicitKey = capability.Technology.Trim().ToLowerInvariant() switch
+            {
+                "github-actions" => "github",
+                var key => key
+            };
             return Definitions.TryGetValue(explicitKey, out var explicitDefinition)
                 ? explicitDefinition
                 : Definitions["unclassified"];

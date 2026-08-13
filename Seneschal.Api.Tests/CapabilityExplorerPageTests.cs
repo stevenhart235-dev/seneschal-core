@@ -86,6 +86,27 @@ public sealed class CapabilityExplorerPageTests : IClassFixture<ApiApplicationFa
     }
 
     [Fact]
+    public async Task BuiltInGitHubActionsCapabilityRendersPackProvenance()
+    {
+        var repositoryRoot = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", ".."));
+        var packPath = Path.Combine(repositoryRoot, "capability-packs",
+            "github-actions", "github-actions.capability-pack.yaml");
+        using var client = _factory.WithWebHostBuilder(builder =>
+            builder.UseSetting(
+                "Seneschal:Configuration:CapabilityPacksPath", packPath))
+            .CreateClient();
+
+        var html = await Get(client,
+            "/capability-explorer?capabilityId=github.deployment.create");
+
+        Assert.Contains("Create GitHub Deployment", html);
+        Assert.Contains("github.deployment.create", html);
+        Assert.Contains("github-actions 1.0.0", html);
+        Assert.DoesNotContain("Capability not found", html);
+    }
+
+    [Fact]
     public async Task RelationshipGroupsAndImpactUseExistingRelationships()
     {
         var html = await Get("/capability-explorer?capabilityId=DeployApplication");

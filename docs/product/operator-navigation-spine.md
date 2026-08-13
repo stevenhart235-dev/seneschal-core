@@ -41,7 +41,7 @@ The capability catalog supports an optional `technology` field containing a stab
 | Technology | Classification evidence |
 |---|---|
 | Azure | `azure` provider/tag or `azure.*` capability namespace |
-| GitHub | `github` provider/tag, `github.*`, or catalog documentation under `/github-actions/` |
+| GitHub | `github` or `github-actions` technology/provider/tag, `github.*`, or catalog documentation under `/github-actions/` |
 | Terraform | `terraform`/`opentofu` tag or provider, `terraform.*`, or catalog documentation under `/terraform/` |
 | Kubernetes | `kubernetes` provider/tag, `kubernetes.*`, `k8s.*`, or `aks.*` |
 | OpenAI | `openai` provider/tag or `openai.*` |

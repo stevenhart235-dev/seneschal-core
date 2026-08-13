@@ -1,0 +1,176 @@
+pack:
+  id: github-actions
+  version: 1.0.0
+  description: Curated GitHub Actions and software-delivery capabilities for deterministic governance and investigation.
+  provider: Seneschal
+
+capabilities:
+  - name: github.workflow.read
+    technology: github-actions
+    displayName: Read GitHub Workflow
+    description: Read the definition and configuration of a GitHub Actions workflow.
+    owner: Release Engineering
+    risk: Low
+    category: Workflow Observation
+    lifecycle: Active
+    tags: [github, github-actions, workflow, read]
+
+  - name: github.workflow.runs.read
+    technology: github-actions
+    displayName: Read GitHub Workflow Runs
+    description: Read GitHub Actions workflow run status, history, and logs.
+    owner: Release Engineering
+    risk: Low
+    category: Workflow Observation
+    lifecycle: Active
+    tags: [github, github-actions, workflow-run, logs, read]
+
+  - name: github.workflow.dispatch
+    technology: github-actions
+    displayName: Dispatch GitHub Workflow
+    description: Manually dispatch an approved GitHub Actions workflow.
+    owner: Release Engineering
+    risk: Medium
+    category: Automation
+    lifecycle: Active
+    tags: [github, workflow, automation]
+
+  - name: github.workflow.modify
+    technology: github-actions
+    displayName: Modify GitHub Workflow
+    description: Create, update, or delete a GitHub Actions workflow definition.
+    owner: Release Engineering
+    risk: High
+    category: Workflow Management
+    lifecycle: Restricted
+    tags: [github, github-actions, workflow, modify]
+
+  - name: github.workflow.cancel
+    technology: github-actions
+    displayName: Cancel GitHub Workflow Run
+    description: Cancel an in-progress GitHub Actions workflow run.
+    owner: Release Engineering
+    risk: Medium
+    category: Workflow Execution
+    lifecycle: Active
+    tags: [github, github-actions, workflow-run, cancel]
+
+  - name: github.deployment.create
+    technology: github-actions
+    displayName: Create GitHub Deployment
+    description: Create a deployment for a reviewed repository reference and environment.
+    owner: Release Engineering
+    risk: High
+    category: Deployment
+    lifecycle: Active
+    tags: [github, github-actions, deployment, create]
+
+  - name: github.deployment.approve
+    technology: github-actions
+    displayName: Approve GitHub Deployment
+    description: Approve a protected GitHub deployment for execution.
+    owner: Release Engineering
+    risk: High
+    category: Deployment
+    lifecycle: Restricted
+    tags: [github, github-actions, deployment, approval]
+
+  - name: github.environment.read
+    technology: github-actions
+    displayName: Read GitHub Environment
+    description: Read GitHub environment configuration and protection settings.
+    owner: Release Engineering
+    risk: Low
+    category: Environment Protection
+    lifecycle: Active
+    tags: [github, github-actions, environment, read]
+
+  - name: github.environment.modify
+    technology: github-actions
+    displayName: Modify GitHub Environment
+    description: Change GitHub environment configuration or deployment protection settings.
+    owner: Release Engineering
+    risk: Critical
+    category: Environment Protection
+    lifecycle: Restricted
+    tags: [github, github-actions, environment, protection, modify]
+
+  - name: github.artifact.read
+    technology: github-actions
+    displayName: Read GitHub Actions Artifact
+    description: Download or inspect an artifact produced by a GitHub Actions workflow run.
+    owner: Release Engineering
+    risk: Low
+    category: Artifacts
+    lifecycle: Active
+    tags: [github, github-actions, artifact, read]
+
+  - name: github.artifact.delete
+    technology: github-actions
+    displayName: Delete GitHub Actions Artifact
+    description: Delete an artifact retained from a GitHub Actions workflow run.
+    owner: Release Engineering
+    risk: High
+    category: Artifacts
+    lifecycle: Restricted
+    tags: [github, github-actions, artifact, delete]
+
+  - name: github.secret.read
+    technology: github-actions
+    displayName: Read GitHub Actions Secret
+    description: Access secret material made available to a governed GitHub Actions workflow.
+    owner: Security Engineering
+    risk: Critical
+    category: Secrets
+    lifecycle: Restricted
+    tags: [github, github-actions, secret, read, sensitive]
+
+  - name: github.secret.modify
+    technology: github-actions
+    displayName: Modify GitHub Actions Secret
+    description: Create, update, or delete secret material used by GitHub Actions workflows.
+    owner: Security Engineering
+    risk: Critical
+    category: Secrets
+    lifecycle: Restricted
+    tags: [github, github-actions, secret, modify, sensitive]
+
+  - name: github.repository.read
+    technology: github-actions
+    displayName: Read GitHub Repository
+    description: Read repository metadata, contents, and delivery configuration.
+    owner: Developer Experience
+    risk: Low
+    category: Repository Administration
+    lifecycle: Active
+    tags: [github, repository, read]
+
+  - name: github.repository.modify
+    technology: github-actions
+    displayName: Modify GitHub Repository
+    description: Change repository contents or delivery configuration outside protected controls.
+    owner: Developer Experience
+    risk: High
+    category: Repository Administration
+    lifecycle: Restricted
+    tags: [github, repository, modify]
+
+  - name: github.branch.protection.modify
+    technology: github-actions
+    displayName: Modify GitHub Branch Protection
+    description: Change required reviews, checks, or other protection rules for a GitHub branch.
+    owner: Developer Experience
+    risk: Critical
+    category: Repository Administration
+    lifecycle: Restricted
+    tags: [github, branch, protection, modify]
+
+  - name: github.branch.delete
+    technology: github-actions
+    displayName: Delete GitHub Branch
+    description: Delete a branch from a GitHub repository.
+    owner: Developer Experience
+    risk: Critical
+    category: Repository Administration
+    lifecycle: Restricted
+    tags: [github, branch, delete, destructive]

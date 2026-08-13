@@ -38,6 +38,7 @@ Maintained built-in packs live under `capability-packs/`:
 
 - [PostgreSQL](../capability-packs/postgres/README.md): `postgres` version `1.0.0`
 - [Kubernetes](../capability-packs/kubernetes/README.md): `kubernetes` version `1.0.0`
+- [GitHub Actions](../capability-packs/github-actions/README.md): `github-actions` version `1.0.0`
 
 Built-in means maintained and validated in this repository. Packs remain
 explicit local inputs and are not enabled, installed, or downloaded

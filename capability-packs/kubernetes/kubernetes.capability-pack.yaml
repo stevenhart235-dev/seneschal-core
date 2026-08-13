@@ -1,0 +1,156 @@
+pack:
+  id: kubernetes
+  version: 1.0.0
+  description: Curated Kubernetes operational capabilities for deterministic workload governance and investigation.
+  provider: Seneschal
+
+capabilities:
+  - name: kubernetes.workload.read
+    technology: kubernetes
+    displayName: Read Kubernetes Workload
+    description: Inspect the status and specification of a Kubernetes workload.
+    owner: Platform Engineering
+    risk: Low
+    category: Workload Observation
+    lifecycle: Active
+    tags: [kubernetes, workload, read, status]
+
+  - name: kubernetes.pod.logs.read
+    technology: kubernetes
+    displayName: Read Kubernetes Pod Logs
+    description: Read operational logs from a Kubernetes pod.
+    owner: Platform Engineering
+    risk: Low
+    category: Observability
+    lifecycle: Active
+    tags: [kubernetes, aks, pod, logs, read]
+
+  - name: kubernetes.workload.deploy
+    technology: kubernetes
+    displayName: Deploy Kubernetes Workload
+    description: Create a governed workload from an approved Kubernetes specification.
+    owner: Platform Engineering
+    risk: High
+    category: Workload Management
+    lifecycle: Active
+    tags: [kubernetes, workload, deploy, change]
+
+  - name: kubernetes.workload.update
+    technology: kubernetes
+    displayName: Update Kubernetes Workload
+    description: Change the specification of an existing Kubernetes workload.
+    owner: Platform Engineering
+    risk: High
+    category: Workload Management
+    lifecycle: Active
+    tags: [kubernetes, workload, update, change]
+
+  - name: kubernetes.workload.scale
+    technology: kubernetes
+    displayName: Scale Kubernetes Workload
+    description: Change the replica count of a Kubernetes workload.
+    owner: Platform Engineering
+    risk: High
+    category: Workload Management
+    lifecycle: Active
+    tags: [kubernetes, workload, scale, change]
+
+  - name: kubernetes.deployment.rollout
+    technology: kubernetes
+    displayName: Roll Out Kubernetes Deployment
+    description: Start or resume a governed rollout of a Kubernetes deployment.
+    owner: Platform Engineering
+    risk: High
+    category: Workload Management
+    lifecycle: Active
+    tags: [kubernetes, deployment, rollout, change]
+
+  - name: kubernetes.workload.delete
+    technology: kubernetes
+    displayName: Delete Kubernetes Workload
+    description: Delete a Kubernetes workload and its managed runtime objects.
+    owner: Platform Engineering
+    risk: Critical
+    category: Workload Management
+    lifecycle: Restricted
+    tags: [kubernetes, workload, delete, destructive]
+
+  - name: kubernetes.pod.exec
+    technology: kubernetes
+    displayName: Execute Command in Kubernetes Pod
+    description: Open an interactive command session in a running pod.
+    owner: Platform Engineering
+    risk: High
+    category: Privileged Access
+    lifecycle: Restricted
+    tags: [kubernetes, aks, pod, exec]
+
+  - name: kubernetes.config.read
+    technology: kubernetes
+    displayName: Read Kubernetes Configuration
+    description: Read non-secret Kubernetes configuration used by governed workloads.
+    owner: Platform Engineering
+    risk: Low
+    category: Configuration
+    lifecycle: Active
+    tags: [kubernetes, config, configmap, read]
+
+  - name: kubernetes.config.modify
+    technology: kubernetes
+    displayName: Modify Kubernetes Configuration
+    description: Create, update, or delete non-secret Kubernetes configuration.
+    owner: Platform Engineering
+    risk: High
+    category: Configuration
+    lifecycle: Active
+    tags: [kubernetes, config, configmap, modify]
+
+  - name: kubernetes.secret.read
+    technology: kubernetes
+    displayName: Read Kubernetes Secret
+    description: Read secret material stored in a Kubernetes namespace.
+    owner: Security Engineering
+    risk: High
+    category: Secrets
+    lifecycle: Restricted
+    tags: [kubernetes, aks, secret, read]
+
+  - name: kubernetes.secret.modify
+    technology: kubernetes
+    displayName: Modify Kubernetes Secret
+    description: Create, update, or delete secret material in a Kubernetes namespace.
+    owner: Security Engineering
+    risk: Critical
+    category: Secrets
+    lifecycle: Restricted
+    tags: [kubernetes, secret, modify, sensitive]
+
+  - name: kubernetes.namespace.read
+    technology: kubernetes
+    displayName: Read Kubernetes Namespace
+    description: Inspect a Kubernetes namespace and its resource inventory.
+    owner: Platform Engineering
+    risk: Low
+    category: Namespace Management
+    lifecycle: Active
+    tags: [kubernetes, namespace, read]
+
+  - name: kubernetes.namespace.create
+    technology: kubernetes
+    displayName: Create Kubernetes Namespace
+    description: Create an isolated Kubernetes namespace.
+    owner: Platform Engineering
+    risk: Medium
+    category: Cluster Administration
+    lifecycle: Active
+    tags: [kubernetes, aks, namespace, create]
+
+  - name: kubernetes.namespace.delete
+    technology: kubernetes
+    displayName: Delete Kubernetes Namespace
+    description: Delete a Kubernetes namespace and all contained resources.
+    owner: Platform Engineering
+    risk: Critical
+    category: Cluster Administration
+    lifecycle: Restricted
+    tags: [kubernetes, aks, namespace, destructive]

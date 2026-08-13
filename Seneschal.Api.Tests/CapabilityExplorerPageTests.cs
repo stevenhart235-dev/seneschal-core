@@ -65,6 +65,27 @@ public sealed class CapabilityExplorerPageTests : IClassFixture<ApiApplicationFa
     }
 
     [Fact]
+    public async Task BuiltInKubernetesCapabilityRendersPackProvenance()
+    {
+        var repositoryRoot = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", ".."));
+        var packPath = Path.Combine(repositoryRoot, "capability-packs",
+            "kubernetes", "kubernetes.capability-pack.yaml");
+        using var client = _factory.WithWebHostBuilder(builder =>
+            builder.UseSetting(
+                "Seneschal:Configuration:CapabilityPacksPath", packPath))
+            .CreateClient();
+
+        var html = await Get(client,
+            "/capability-explorer?capabilityId=kubernetes.workload.deploy");
+
+        Assert.Contains("Deploy Kubernetes Workload", html);
+        Assert.Contains("kubernetes.workload.deploy", html);
+        Assert.Contains("kubernetes 1.0.0", html);
+        Assert.DoesNotContain("Capability not found", html);
+    }
+
+    [Fact]
     public async Task RelationshipGroupsAndImpactUseExistingRelationships()
     {
         var html = await Get("/capability-explorer?capabilityId=DeployApplication");

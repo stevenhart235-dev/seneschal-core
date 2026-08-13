@@ -118,7 +118,44 @@ public sealed class IdentityExposureAnalysisServiceTests : IDisposable
         Assert.Equal(0, result.Summary.ConfiguredCount);
         Assert.Equal(1, result.Summary.ObservedCount);
     }
-    private (IdentityExposureAnalysisService Service, InMemoryAuditEventStore Audit) CreateService()
+    [Theory]
+    [InlineData(-31, IdentityEvidenceCoverageStatus.Full)]
+    [InlineData(-30, IdentityEvidenceCoverageStatus.Full)]
+    [InlineData(-11, IdentityEvidenceCoverageStatus.Partial)]
+    [InlineData(1, IdentityEvidenceCoverageStatus.Partial)]
+    public async Task Analyze_ReportsProvableCoverageBoundary(
+        int boundaryDays, IdentityEvidenceCoverageStatus expected)
+    {
+        var (service, _) = CreateService(_end.AddDays(boundaryDays));
+        var result = await service.AnalyzeAsync(Query());
+        Assert.Equal(expected, result.Coverage.Status);
+        Assert.Equal(_end.AddDays(boundaryDays), result.Coverage.CompleteSinceUtc);
+    }
+
+    [Fact]
+    public async Task Analyze_ReportsUnknownCoverageWithoutStoreBoundary()
+    {
+        var (service, _) = CreateService();
+        var result = await service.AnalyzeAsync(Query());
+        Assert.Equal(IdentityEvidenceCoverageStatus.Unknown, result.Coverage.Status);
+    }
+
+    [Fact]
+    public async Task Analyze_SummarizesAvailableAndMissingConfigurationProvenance()
+    {
+        var (service, audit) = CreateService(_end.AddDays(-31));
+        await audit.WriteAsync(new AuditEvent { Id = "known", TimestampUtc = _end,
+            IdentityId = "operator", CapabilityId = "db.read", Decision = DecisionType.Allow,
+            EnforcementMode = EnforcementMode.LogOnly, Reason = "known",
+            GovernanceConfigurationFingerprint = "sha256:known" });
+        await Write(audit, "legacy", "db.read", _end.AddDays(-1));
+        var result = await service.AnalyzeAsync(Query());
+        Assert.Equal(["sha256:known"], result.ConfigurationProvenance.ObservedFingerprints);
+        Assert.Equal(1, result.ConfigurationProvenance.UnavailableEventCount);
+        Assert.Equal(_end.AddDays(-1), result.Coverage.EarliestRelevantEvidenceUtc);
+        Assert.Equal(_end, result.Coverage.LatestRelevantEvidenceUtc);
+    }
+    private (IdentityExposureAnalysisService Service, InMemoryAuditEventStore Audit) CreateService(DateTimeOffset? completeSinceUtc = null)
     {
         var policyPath = Path.Combine(_directory, $"policies-{Guid.NewGuid():N}.yaml");
         File.WriteAllText(policyPath, """
@@ -154,7 +191,7 @@ public sealed class IdentityExposureAnalysisServiceTests : IDisposable
             Entry("db.restore", "postgresql", RiskLevel.Critical, "recovery", "postgres"),
             Entry("github.workflow.run", "github-actions", RiskLevel.Low, "automation", "github-actions")
         ]);
-        var audit = new InMemoryAuditEventStore();
+        var audit = new InMemoryAuditEventStore(completeSinceUtc: completeSinceUtc);
         var context = new OperatorGovernanceContextService(new PolicyLoader(policyPath), catalog);
         return (new IdentityExposureAnalysisService(context, catalog, audit), audit);
     }

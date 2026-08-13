@@ -14,11 +14,14 @@ public sealed class InMemoryAuditEventStore : IAuditEventStore
         new(StringComparer.OrdinalIgnoreCase);
     private readonly object _gate = new();
     private readonly Func<AuditEvent, Exception?>? _appendFailure;
+    private readonly DateTimeOffset? _completeSinceUtc;
 
     public InMemoryAuditEventStore(
-        Func<AuditEvent, Exception?>? appendFailure = null)
+        Func<AuditEvent, Exception?>? appendFailure = null,
+        DateTimeOffset? completeSinceUtc = null)
     {
         _appendFailure = appendFailure;
+        _completeSinceUtc = completeSinceUtc;
     }
 
     internal object SyncRoot => _gate;
@@ -57,6 +60,18 @@ public sealed class InMemoryAuditEventStore : IAuditEventStore
         }
     }
 
+    public Task<AuditEvidenceCoverageBoundary> GetCoverageBoundaryAsync(
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(_completeSinceUtc.HasValue
+            ? new AuditEvidenceCoverageBoundary
+            {
+                CompleteSinceUtc = _completeSinceUtc,
+                Reason = "The in-memory evidence store has retained all writes since initialization."
+            }
+            : AuditEvidenceCoverageBoundary.Unknown);
+    }
     public Task<AuditEvent?> GetByIdAsync(
         string id,
         CancellationToken cancellationToken = default)

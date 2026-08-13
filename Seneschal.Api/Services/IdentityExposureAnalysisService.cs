@@ -9,15 +9,18 @@ public sealed class IdentityExposureAnalysisService
     private readonly OperatorGovernanceContextService _governanceContext;
     private readonly ICapabilityCatalog _capabilities;
     private readonly IAuditEventStore _audit;
+    private readonly GovernanceConfigurationFingerprintService? _fingerprint;
 
     public IdentityExposureAnalysisService(
         OperatorGovernanceContextService governanceContext,
         ICapabilityCatalog capabilities,
-        IAuditEventStore audit)
+        IAuditEventStore audit,
+        GovernanceConfigurationFingerprintService? fingerprint = null)
     {
         _governanceContext = governanceContext;
         _capabilities = capabilities;
         _audit = audit;
+        _fingerprint = fingerprint;
     }
 
     public async Task<IdentityExposureAnalysis> AnalyzeAsync(
@@ -29,6 +32,9 @@ public sealed class IdentityExposureAnalysisService
         if (query.WindowStartUtc > query.WindowEndUtc)
             throw new ArgumentException("Observation window start must not follow its end.");
 
+        var boundary = await _audit.GetCoverageBoundaryAsync(cancellationToken);
+        var coverage = Coverage(query, boundary);
+        var currentFingerprint = _fingerprint?.GetCurrentFingerprint();
         var configured = await _governanceContext.GetIdentityCapabilitiesAsync(
             query.IdentityId, cancellationToken);
         var evidence = (await _audit.GetRecentAsync(int.MaxValue, cancellationToken))
@@ -38,6 +44,11 @@ public sealed class IdentityExposureAnalysisService
                 item.TimestampUtc <= query.WindowEndUtc)
             .Where(item => item.ApprovalAction is not ("Approved" or "Rejected"))
             .ToList();
+        coverage = coverage with
+        {
+            EarliestRelevantEvidenceUtc = evidence.Select(item => (DateTimeOffset?)item.TimestampUtc).Min(),
+            LatestRelevantEvidenceUtc = evidence.Select(item => (DateTimeOffset?)item.TimestampUtc).Max()
+        };
 
         var configuredByCapability = configured.GroupBy(item => item.CapabilityId,
             StringComparer.OrdinalIgnoreCase).ToDictionary(group => group.Key,
@@ -86,11 +97,29 @@ public sealed class IdentityExposureAnalysisService
         var filtered = allItems.Where(item => Matches(query.State, item.State) &&
                 Matches(query.Risk, item.Risk) &&
                 Matches(query.Technology, item.Technology)).ToList();
+        var fingerprints = evidence.Select(item => item.GovernanceConfigurationFingerprint)
+            .Where(value => !string.IsNullOrWhiteSpace(value)).Cast<string>()
+            .Distinct(StringComparer.Ordinal).OrderBy(value => value, StringComparer.Ordinal).ToList();
+        var provenance = new IdentityExposureConfigurationProvenance(currentFingerprint,
+            fingerprints, evidence.Count(item => string.IsNullOrWhiteSpace(
+                item.GovernanceConfigurationFingerprint)));
         return new IdentityExposureAnalysis(query.IdentityId, query.WindowStartUtc,
-            query.WindowEndUtc, allItems, filtered,
-            BuildSummary(allItems));
+            query.WindowEndUtc, allItems, filtered, BuildSummary(allItems), coverage, provenance);
     }
 
+    private static IdentityExposureCoverage Coverage(IdentityExposureQuery query,
+        AuditEvidenceCoverageBoundary boundary)
+    {
+        if (!boundary.CompleteSinceUtc.HasValue)
+            return new(IdentityEvidenceCoverageStatus.Unknown, null, boundary.Reason);
+        if (boundary.CompleteSinceUtc.Value <= query.WindowStartUtc)
+            return new(IdentityEvidenceCoverageStatus.Full, boundary.CompleteSinceUtc,
+                "The evidence source proves continuous retention for the complete requested period.");
+        return new(IdentityEvidenceCoverageStatus.Partial, boundary.CompleteSinceUtc,
+            boundary.CompleteSinceUtc.Value <= query.WindowEndUtc
+                ? "Retained evidence begins after the requested period starts; earlier activity cannot be determined."
+                : "The evidence source cannot prove coverage for any part of the requested period.");
+    }
     private static IdentityExposureSummary BuildSummary(
         IReadOnlyCollection<IdentityExposureItem> items) => new(
         items.Count(item => item.State is IdentityExposureState.ConfiguredAndObserved or IdentityExposureState.ConfiguredNotObserved),
@@ -146,4 +175,15 @@ public sealed record IdentityExposureAnalysis(string IdentityId,
     DateTimeOffset WindowStartUtc, DateTimeOffset WindowEndUtc,
     IReadOnlyCollection<IdentityExposureItem> AllItems,
     IReadOnlyCollection<IdentityExposureItem> Items,
-    IdentityExposureSummary Summary);
+    IdentityExposureSummary Summary, IdentityExposureCoverage Coverage,
+    IdentityExposureConfigurationProvenance ConfigurationProvenance);
+public enum IdentityEvidenceCoverageStatus { Full, Partial, Unknown }
+public sealed record IdentityExposureCoverage(IdentityEvidenceCoverageStatus Status,
+    DateTimeOffset? CompleteSinceUtc, string Reason)
+{
+    public DateTimeOffset? EarliestRelevantEvidenceUtc { get; init; }
+    public DateTimeOffset? LatestRelevantEvidenceUtc { get; init; }
+}
+public sealed record IdentityExposureConfigurationProvenance(string? CurrentFingerprint,
+    IReadOnlyCollection<string> ObservedFingerprints, int UnavailableEventCount)
+{ public bool AllAvailableMatchCurrent => CurrentFingerprint is not null && ObservedFingerprints.Count > 0 && UnavailableEventCount == 0 && ObservedFingerprints.All(value => string.Equals(value, CurrentFingerprint, StringComparison.Ordinal)); }

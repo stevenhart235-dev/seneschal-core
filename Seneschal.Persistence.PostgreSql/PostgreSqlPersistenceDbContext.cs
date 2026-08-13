@@ -9,6 +9,7 @@ public sealed class PostgreSqlPersistenceDbContext(
         Set<EvaluationEvidenceEntity>();
 
     internal DbSet<ApprovalEntity> Approvals => Set<ApprovalEntity>();
+    internal DbSet<EvidenceCoverageMetadataEntity> EvidenceCoverageMetadata => Set<EvidenceCoverageMetadataEntity>();
     internal DbSet<RuntimeGovernanceStateEntity> RuntimeGovernanceStates => Set<RuntimeGovernanceStateEntity>();
     internal DbSet<GovernanceWindowStateEntity> GovernanceWindowStates => Set<GovernanceWindowStateEntity>();
     internal DbSet<IncidentOperatorStateEntity> IncidentOperatorStates => Set<IncidentOperatorStateEntity>();
@@ -44,6 +45,13 @@ public sealed class PostgreSqlPersistenceDbContext(
             entity.HasIndex(item => item.CapabilityId);
         });
 
+        modelBuilder.Entity<EvidenceCoverageMetadataEntity>(entity =>
+        {
+            entity.ToTable("evidence_coverage_metadata");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Id).HasColumnName("id");
+            entity.Property(item => item.CompleteSinceUtc).HasColumnName("complete_since_utc");
+        });
         modelBuilder.Entity<ApprovalEntity>(entity =>
         {
             entity.ToTable("approvals", table => table.HasCheckConstraint(
@@ -162,6 +170,11 @@ internal sealed class EvaluationEvidenceEntity
     public required string Payload { get; set; }
 }
 
+internal sealed class EvidenceCoverageMetadataEntity
+{
+    public short Id { get; set; }
+    public DateTimeOffset CompleteSinceUtc { get; set; }
+}
 internal sealed class ApprovalEntity
 {
     public required string Id { get; set; }

@@ -25,4 +25,8 @@ public interface IAuditEventStore : IAuditSink
     Task<IReadOnlyCollection<AuditEvent>> GetRecentAsync(
         int count = 100,
         CancellationToken cancellationToken = default);
+
+    Task<AuditEvidenceCoverageBoundary> GetCoverageBoundaryAsync(
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(AuditEvidenceCoverageBoundary.Unknown);
 }

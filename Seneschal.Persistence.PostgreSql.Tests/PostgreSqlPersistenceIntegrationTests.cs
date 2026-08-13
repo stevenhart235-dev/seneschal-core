@@ -26,6 +26,8 @@ public sealed class PostgreSqlPersistenceIntegrationTests(
             await context.Database.GetAppliedMigrationsAsync());
         Assert.Contains("20260802132300_PersistIncidentOperatorState",
             await context.Database.GetAppliedMigrationsAsync());
+        Assert.Contains("20260813162802_AddEvidenceCoverageMetadata",
+            await context.Database.GetAppliedMigrationsAsync());
     }
 
     [Fact]
@@ -555,6 +557,28 @@ public sealed class PostgreSqlPersistenceIntegrationTests(
         RequestedAt = new DateTimeOffset(2026, 8, 1, 12, 0, 0, TimeSpan.Zero)
     };
 
+    [Fact]
+    public async Task AuditEvidence_RoundTripsConfigurationFingerprint()
+    {
+        var store = new PostgreSqlAuditEventStore(fixture.CreateFactory());
+        var evidence = CreateIncidentEvidence("fingerprint-roundtrip") with
+        { GovernanceConfigurationFingerprint = "sha256:test-fingerprint" };
+        await store.WriteAsync(evidence);
+        var loaded = await store.GetByIdAsync(evidence.Id);
+        Assert.Equal("sha256:test-fingerprint",
+            loaded?.GovernanceConfigurationFingerprint);
+    }
+
+    [Fact]
+    public async Task CoverageBoundary_IsPersistedAcrossStoreRecreation()
+    {
+        var first = await new PostgreSqlAuditEventStore(fixture.CreateFactory())
+            .GetCoverageBoundaryAsync();
+        var second = await new PostgreSqlAuditEventStore(fixture.CreateFactory())
+            .GetCoverageBoundaryAsync();
+        Assert.NotNull(first.CompleteSinceUtc);
+        Assert.Equal(first.CompleteSinceUtc, second.CompleteSinceUtc);
+    }
     private static PolicyEvaluation CreatePolicyEvaluation(
         string firstKey, string secondKey) => new()
     {

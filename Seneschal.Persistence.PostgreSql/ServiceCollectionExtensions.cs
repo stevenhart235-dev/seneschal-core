@@ -18,7 +18,8 @@ public static class ServiceCollectionExtensions
         {
             services.AddSingleton<IPersistenceReadiness,
                 InMemoryPersistenceReadiness>();
-            services.AddSingleton<InMemoryAuditEventStore>();
+            services.AddSingleton(_ => new InMemoryAuditEventStore(
+                completeSinceUtc: DateTimeOffset.UtcNow));
             services.AddSingleton<IAuditEventStore>(sp =>
                 sp.GetRequiredService<InMemoryAuditEventStore>());
             services.AddSingleton<IAuditSink>(sp =>

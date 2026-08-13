@@ -80,6 +80,7 @@ builder.Services.AddSingleton<IGovernanceGraph>(services =>
 builder.Services.AddSingleton<ICapabilityExplorer, CapabilityExplorer>();
 builder.Services.AddSingleton<OperatorGovernanceContextService>();
 builder.Services.AddSingleton<IdentityExposureAnalysisService>();
+builder.Services.AddSingleton<GovernanceConfigurationFingerprintService>();
 builder.Services.AddSingleton<GraphBuilder>();
 builder.Services.AddSingleton<TechnologyClassifier>();
 builder.Services.AddSingleton<TechnologyActivityService>();

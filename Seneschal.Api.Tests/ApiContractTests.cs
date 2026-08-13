@@ -250,6 +250,7 @@ public sealed class ApiContractTests :
             "approvalConsumedByDecisionId",
             "approvalOperationId",
             "approvalCorrelationMode",
+            "governanceConfigurationFingerprint",
             "executionGuidance",
             "callerMessage",
             "retryGuidance");

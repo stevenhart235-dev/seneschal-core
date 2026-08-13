@@ -27,6 +27,7 @@ public sealed class CoreDecisionService
     private readonly IGovernanceIncidentStore? _governanceIncidentStore;
     private readonly IGovernanceWindowStore? _governanceWindowStore;
     private readonly IApprovalStore? _approvalStore;
+    private readonly GovernanceConfigurationFingerprintService? _configurationFingerprint;
 
     public CoreDecisionService(
         PolicyLoader policyLoader,
@@ -39,7 +40,8 @@ public sealed class CoreDecisionService
         IGovernanceIncidentStore? governanceIncidentStore = null,
         IGovernanceWindowStore? governanceWindowStore = null,
         IApprovalStore? approvalStore = null,
-        IEvaluationCommitCoordinator? evaluationCommitCoordinator = null)
+        IEvaluationCommitCoordinator? evaluationCommitCoordinator = null,
+        GovernanceConfigurationFingerprintService? configurationFingerprint = null)
     {
         _policyLoader = policyLoader;
         _policyEvaluator = policyEvaluator;
@@ -52,6 +54,7 @@ public sealed class CoreDecisionService
         _governanceIncidentStore = governanceIncidentStore;
         _governanceWindowStore = governanceWindowStore;
         _approvalStore = approvalStore;
+        _configurationFingerprint = configurationFingerprint;
     }
 
     public ApiDecisionResult Evaluate(ApiDecisionRequest request)
@@ -225,6 +228,7 @@ public sealed class CoreDecisionService
             ,RetryGuidance = result.RetryGuidance
             ,ApprovalOperationId = approvalEvaluation?.Record.OperationId
             ,ApprovalCorrelationMode = approvalEvaluation?.Record.CorrelationMode.ToString()
+            ,GovernanceConfigurationFingerprint = _configurationFingerprint?.GetCurrentFingerprint()
         };
 
         _evaluationCommitCoordinator.CommitAsync(new EvaluationCommit

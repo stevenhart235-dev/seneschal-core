@@ -33,7 +33,7 @@ public sealed class PostgreSqlMigrationStrategyTests(PostgreSqlFixture fixture)
             await using var context = await factory.CreateDbContextAsync();
             var migrations = context.GetService<IMigrationsAssembly>()
                 .Migrations.ToList();
-            Assert.Equal(4, migrations.Count);
+            Assert.Equal(5, migrations.Count);
             await context.Database.ExecuteSqlRawAsync(context
                 .GetService<IHistoryRepository>().GetCreateScript());
 
@@ -62,6 +62,8 @@ public sealed class PostgreSqlMigrationStrategyTests(PostgreSqlFixture fixture)
             await ApplyMigrationAsync(context, migrations[3]);
             await context.Database.ExecuteSqlRawAsync(
                 "INSERT INTO incident_operator_state (incident_id, status, version, updated_at) VALUES ('incident-upgrade', 1, 1, TIMESTAMPTZ '2026-08-02 12:00:00Z')");
+
+            await ApplyMigrationAsync(context, migrations[4]);
 
             await new PostgreSqlStartupValidator(factory).ValidateAsync();
 

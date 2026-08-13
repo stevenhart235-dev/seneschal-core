@@ -313,6 +313,9 @@ public static class AuditEventDetailPageRenderer
         html.Append("                    <li class=\"resolution-summary-step\"><span>Resolution summary</span><strong>")
             .Append(Encode(BuildPolicyResolution(auditEvent))).AppendLine("</strong></li>");
         AppendResolutionStep(html, "Policy Decision", DisplayDecision(auditEvent.PolicyDecision), "trace-passed");
+        AppendResolutionStep(html, "Governance configuration",
+            auditEvent.GovernanceConfigurationFingerprint ??
+                "Configuration provenance unavailable", "trace-continued");
         if (HasApproval(auditEvent))
         {
             AppendResolutionStep(html, "Human Approval",

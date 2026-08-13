@@ -46,6 +46,7 @@ public static class AuditEventMapper
             RetryGuidance = auditEvent.RetryGuidance,
             ApprovalOperationId = auditEvent.ApprovalOperationId,
             ApprovalCorrelationMode = auditEvent.ApprovalCorrelationMode,
+            GovernanceConfigurationFingerprint = auditEvent.GovernanceConfigurationFingerprint,
             PolicyEvaluations = auditEvent.PolicyEvaluations.Select(policy =>
                 new AuditPolicyEvaluation
                 {

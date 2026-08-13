@@ -48,6 +48,25 @@ public sealed class PostgreSqlAuditEventStore(
         }
     }
 
+    public async Task<AuditEvidenceCoverageBoundary> GetCoverageBoundaryAsync(
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return await contextFactory.ExecuteAsync(async (context, token) =>
+        {
+            var boundary = await context.EvidenceCoverageMetadata.AsNoTracking()
+                .Where(item => item.Id == 1)
+                .Select(item => (DateTimeOffset?)item.CompleteSinceUtc)
+                .SingleOrDefaultAsync(token);
+            return boundary.HasValue
+                ? new AuditEvidenceCoverageBoundary
+                {
+                    CompleteSinceUtc = boundary,
+                    Reason = "PostgreSQL has retained evidence continuously since the recorded persistence boundary."
+                }
+                : AuditEvidenceCoverageBoundary.Unknown;
+        }, cancellationToken);
+    }
     public async Task<AuditEvent?> GetByIdAsync(
         string id,
         CancellationToken cancellationToken = default)

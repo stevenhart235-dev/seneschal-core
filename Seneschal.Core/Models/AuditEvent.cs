@@ -45,4 +45,5 @@ public sealed record AuditEvent
     public string? RetryGuidance { get; init; }
     public string? ApprovalOperationId { get; init; }
     public string? ApprovalCorrelationMode { get; init; }
+    public string? GovernanceConfigurationFingerprint { get; init; }
 }

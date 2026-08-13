@@ -35,6 +35,7 @@ public class AuditEvent
     public string? RetryGuidance { get; set; }
     public string? ApprovalOperationId { get; set; }
     public string? ApprovalCorrelationMode { get; set; }
+    public string? GovernanceConfigurationFingerprint { get; set; }
 }
 
 public class AuditPolicyEvaluation

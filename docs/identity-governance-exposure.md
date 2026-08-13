@@ -70,3 +70,9 @@ provenance unavailable. Seneschal does not backfill them with the current
 fingerprint. This milestone stores fingerprints, matched-policy evidence, and
 policy evaluations, but not complete historical configuration snapshots; old
 configuration contents therefore cannot be reconstructed from the fingerprint.
+
+## Explainable findings
+
+The operator exposure surface derives deterministic, non-prescriptive findings from
+these facts. See [Explainable Exposure Findings v1](explainable-exposure-findings.md)
+and [ADR-0016](adr/0016-deterministic-explainable-exposure-findings.md).

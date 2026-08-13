@@ -89,7 +89,16 @@ public sealed class IdentityExposureAnalysisService
                     StringComparer.OrdinalIgnoreCase).ToList(),
                 observedItems.Count,
                 observedItems.Select(item => (DateTimeOffset?)item.TimestampUtc).Max(),
-                State(isConfigured, isObserved)));
+                State(isConfigured, isObserved),
+                observedItems.Where(item => !string.IsNullOrWhiteSpace(
+                        item.GovernanceConfigurationFingerprint))
+                    .GroupBy(item => item.GovernanceConfigurationFingerprint!,
+                        StringComparer.Ordinal)
+                    .OrderBy(group => group.Key, StringComparer.Ordinal)
+                    .ToDictionary(group => group.Key, group => group.Count(),
+                        StringComparer.Ordinal),
+                observedItems.Count(item => string.IsNullOrWhiteSpace(
+                    item.GovernanceConfigurationFingerprint))));
         }
 
         var allItems = items.OrderBy(item => RiskOrder(item.Risk))
@@ -163,7 +172,9 @@ public sealed record IdentityExposureItem(string CapabilityId, string DisplayNam
     string Technology, string Category, string Risk, string Provenance,
     IReadOnlyCollection<string> Policies, IReadOnlyCollection<string> Decisions,
     IReadOnlyCollection<string> Environments, int ObservedCount,
-    DateTimeOffset? MostRecentObservedUtc, IdentityExposureState State);
+    DateTimeOffset? MostRecentObservedUtc, IdentityExposureState State,
+    IReadOnlyDictionary<string, int> ObservationsByConfigurationFingerprint,
+    int ObservationsWithoutConfigurationProvenance);
 public sealed record IdentityExposureTechnologySummary(string Technology,
     int ConfiguredCount, int ObservedCount);
 public sealed record IdentityExposureSummary(int ConfiguredCount, int ObservedCount,

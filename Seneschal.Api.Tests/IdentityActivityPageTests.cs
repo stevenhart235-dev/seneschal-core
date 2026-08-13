@@ -132,6 +132,13 @@ public sealed class IdentityActivityPageTests :
         Assert.Contains("Neither proves authorization or business necessity", html);
         Assert.Contains("Last 30 days", html);
         Assert.Contains("No recent activity", html);
+        Assert.Contains("Explainable Exposure Findings", html);
+        Assert.Contains("What this does not prove", html);
+        Assert.Contains("Findings are not recommendations or scores", html);
+        Assert.DoesNotContain(">Fix<", html);
+        Assert.DoesNotContain(">Remove<", html);
+        Assert.DoesNotContain(">Revoke<", html);
+        Assert.DoesNotContain(">Apply<", html);
         Assert.DoesNotContain("View Decision Trace", html);
         Assert.DoesNotContain("Overprivileged", html);
         Assert.DoesNotContain("Safe to remove", html);

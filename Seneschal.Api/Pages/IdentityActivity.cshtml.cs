@@ -12,17 +12,20 @@ public sealed class IdentityActivityModel : PageModel
     private readonly IdentityLoader _identityLoader;
     private readonly OperatorGovernanceContextService _governanceContext;
     private readonly IdentityExposureAnalysisService _exposureAnalysis;
+    private readonly IdentityExposureFindingService _findingService;
 
     public IdentityActivityModel(
         IInvestigationActivityReader investigationActivity,
         IdentityLoader identityLoader,
         OperatorGovernanceContextService governanceContext,
-        IdentityExposureAnalysisService exposureAnalysis)
+        IdentityExposureAnalysisService exposureAnalysis,
+        IdentityExposureFindingService findingService)
     {
         _investigationActivity = investigationActivity;
         _identityLoader = identityLoader;
         _governanceContext = governanceContext;
         _exposureAnalysis = exposureAnalysis;
+        _findingService = findingService;
     }
 
     public string? IdentityId { get; private set; }
@@ -36,6 +39,7 @@ public sealed class IdentityActivityModel : PageModel
     public IReadOnlyCollection<ConfiguredCapabilityContext> ConfiguredCapabilities
         { get; private set; } = [];
     public IdentityExposureAnalysis? Exposure { get; private set; }
+    public IReadOnlyCollection<IdentityExposureFinding> Findings { get; private set; } = [];
     public int ObservationDays { get; private set; } = IdentityExposureAnalysisService.DefaultObservationDays;
     public string? ExposureStateFilter { get; private set; }
     public string? ExposureRiskFilter { get; private set; }
@@ -84,6 +88,7 @@ public sealed class IdentityActivityModel : PageModel
             Exposure = await _exposureAnalysis.AnalyzeAsync(new IdentityExposureQuery(
                 identityId, windowEnd.AddDays(-ObservationDays), windowEnd,
                 exposureState, exposureRisk, exposureTechnology), cancellationToken);
+            Findings = _findingService.Generate(Exposure);
         }
     }
 }

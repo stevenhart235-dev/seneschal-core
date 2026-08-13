@@ -29,7 +29,9 @@ public sealed class CapabilityActivityModel : PageModel
     public string? RuntimeModeFilter { get; private set; }
     public IReadOnlyCollection<CapabilityActivity> Capabilities { get; private set; } = [];
     public CapabilityActivity? SelectedCapability { get; private set; }
-    public Capability? SelectedCatalogCapability { get; private set; }
+    public CapabilityCatalogEntry? SelectedCatalogEntry { get; private set; }
+    public Capability? SelectedCatalogCapability => SelectedCatalogEntry?.Capability;
+    public bool SelectedHasObservedActivity { get; private set; }
     public IReadOnlyCollection<CapabilityOperationGroup> OperationGroups { get; private set; } = [];
     public IReadOnlyCollection<CapabilityTimelineEvent> LegacyEvents { get; private set; } = [];
     public IReadOnlyCollection<string> AvailableIdentities { get; private set; } = [];
@@ -65,12 +67,18 @@ public sealed class CapabilityActivityModel : PageModel
             .ThenBy(item => item.CapabilityId).ToList();
 
         if (string.IsNullOrWhiteSpace(capabilityId)) return;
-        SelectedCatalogCapability = (await _capabilityCatalog.GetByIdAsync(
-            capabilityId, cancellationToken))?.Capability;
+        SelectedCatalogEntry = await _capabilityCatalog.GetByIdAsync(
+            capabilityId, cancellationToken);
         var investigation = await _investigationActivity.GetCapabilityAsync(
             capabilityId, 100, cancellationToken);
         SelectedCapability = investigation?.Activity;
-        if (investigation is null) return;
+        SelectedHasObservedActivity = investigation is not null;
+        if (investigation is null)
+        {
+            if (SelectedCatalogEntry is not null)
+                SelectedCapability = new CapabilityActivity { CapabilityId = capabilityId };
+            return;
+        }
         var auditEvents = investigation.RecentEvidence.ToList();
 
         AvailableIdentities = investigation.ObservedIdentities;

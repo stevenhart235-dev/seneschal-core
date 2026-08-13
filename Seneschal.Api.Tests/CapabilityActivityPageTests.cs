@@ -384,4 +384,25 @@ public sealed class CapabilityActivityPageTests :
                 decision == DecisionType.Deny && mode == EnforcementMode.LogOnly
                     ? "ContinueLogOnly" : decision == DecisionType.Deny ? "Block" : "Proceed"
         };
+    [Fact]
+    public async Task CapabilityActivity_ShowsCatalogContextWithoutObservedActivity()
+    {
+        using var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<IActivityStore>();
+                services.AddSingleton<IActivityStore, InMemoryActivityStore>();
+            });
+        }).CreateClient();
+
+        var html = await client.GetStringAsync(
+            "/capability-activity?capabilityId=DeployApplication");
+
+        Assert.Contains("Deploy Application", html);
+        Assert.Contains("Medium risk", html);
+        Assert.Contains("Source: Local catalog", html);
+        Assert.Contains("No observed activity", html);
+        Assert.DoesNotContain("View Decision Trace", html);
+    }
 }

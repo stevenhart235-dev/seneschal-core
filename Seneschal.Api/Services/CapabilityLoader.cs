@@ -115,8 +115,8 @@ public class CapabilityLoader
         if (!Directory.Exists(path))
             throw new DirectoryNotFoundException(
                 $"Capability packs path was not found: {path}");
-        return Directory.EnumerateFiles(path, "*.yaml")
-            .Concat(Directory.EnumerateFiles(path, "*.yml"))
+        return Directory.EnumerateFiles(path, "*.yaml", SearchOption.AllDirectories)
+            .Concat(Directory.EnumerateFiles(path, "*.yml", SearchOption.AllDirectories))
             .OrderBy(file => file, StringComparer.Ordinal);
     }
 

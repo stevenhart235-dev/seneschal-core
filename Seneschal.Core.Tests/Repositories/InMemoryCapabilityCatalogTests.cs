@@ -142,6 +142,7 @@ public sealed class InMemoryCapabilityCatalogTests
             Id = id,
             Name = name,
             Provider = id.Split('.')[0],
+            Technology = id.Split('.')[0],
             Category = id.StartsWith("terraform", StringComparison.Ordinal)
                 ? "infrastructure"
                 : "security",
@@ -152,5 +153,17 @@ public sealed class InMemoryCapabilityCatalogTests
             Version = "1.0",
             Tags = tags
         };
+    }
+    [Fact]
+    public async Task SearchAsync_FiltersByTechnologyAndSortsRiskFirst()
+    {
+        var entries = await _catalog.SearchAsync(new CapabilityCatalogQuery
+        {
+            Technology = "terraform"
+        });
+
+        Assert.Equal(
+            ["terraform.apply", "terraform.plan"],
+            entries.Select(entry => entry.Capability.Id));
     }
 }

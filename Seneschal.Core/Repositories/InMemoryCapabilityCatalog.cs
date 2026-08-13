@@ -1,3 +1,4 @@
+using Seneschal.Core.Enums;
 using Seneschal.Core.Interfaces;
 using Seneschal.Core.Models;
 
@@ -101,6 +102,13 @@ public sealed class InMemoryCapabilityCatalog : ICapabilityCatalog
                 StringComparison.OrdinalIgnoreCase));
         }
 
+        if (!string.IsNullOrWhiteSpace(query.Technology))
+        {
+            matches = matches.Where(entry => string.Equals(
+                entry.Capability.Technology,
+                query.Technology,
+                StringComparison.OrdinalIgnoreCase));
+        }
         if (!string.IsNullOrWhiteSpace(query.Lifecycle))
         {
             matches = matches.Where(entry => string.Equals(
@@ -110,9 +118,20 @@ public sealed class InMemoryCapabilityCatalog : ICapabilityCatalog
         }
 
         return Task.FromResult<IReadOnlyCollection<CapabilityCatalogEntry>>(
-            matches.ToList());
+            matches
+                .OrderBy(entry => RiskOrder(entry.Capability.RiskLevel))
+                .ThenBy(entry => entry.Capability.Id, StringComparer.OrdinalIgnoreCase)
+                .ToList());
     }
 
+    private static int RiskOrder(RiskLevel risk) => risk switch
+    {
+        RiskLevel.Critical => 0,
+        RiskLevel.High => 1,
+        RiskLevel.Medium => 2,
+        RiskLevel.Low => 3,
+        _ => 4
+    };
     private static bool MatchesSearchText(
         Capability capability,
         string searchText)

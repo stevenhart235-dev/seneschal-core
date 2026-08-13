@@ -10,13 +10,16 @@ public sealed class IdentityActivityModel : PageModel
 {
     private readonly IInvestigationActivityReader _investigationActivity;
     private readonly IdentityLoader _identityLoader;
+    private readonly OperatorGovernanceContextService _governanceContext;
 
     public IdentityActivityModel(
         IInvestigationActivityReader investigationActivity,
-        IdentityLoader identityLoader)
+        IdentityLoader identityLoader,
+        OperatorGovernanceContextService governanceContext)
     {
         _investigationActivity = investigationActivity;
         _identityLoader = identityLoader;
+        _governanceContext = governanceContext;
     }
 
     public string? IdentityId { get; private set; }
@@ -27,6 +30,8 @@ public sealed class IdentityActivityModel : PageModel
     public IReadOnlyCollection<Seneschal.Core.Models.AuditEvent> RecentEvidence
         { get; private set; } = [];
     public IReadOnlyCollection<string> Environments { get; private set; } = [];
+    public IReadOnlyCollection<ConfiguredCapabilityContext> ConfiguredCapabilities
+        { get; private set; } = [];
     public bool IdentityWasRequested => !string.IsNullOrWhiteSpace(IdentityId);
     public bool HasActivity => Identities.Count > 0;
 
@@ -57,6 +62,8 @@ public sealed class IdentityActivityModel : PageModel
                     identity.Name,
                     identityId,
                     StringComparison.OrdinalIgnoreCase));
+            ConfiguredCapabilities = await _governanceContext
+                .GetIdentityCapabilitiesAsync(identityId, cancellationToken);
         }
     }
 }

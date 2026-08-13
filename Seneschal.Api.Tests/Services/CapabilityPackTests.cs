@@ -189,4 +189,27 @@ public sealed class CapabilityPackTests : IDisposable
         File.WriteAllText(path, content);
         return path;
     }
+    [Fact]
+    public void PackDirectory_RecursivelyLoadsNestedPacksInDeterministicOrder()
+    {
+        var nested = Path.Combine(_packsPath, "built-in", "postgres");
+        Directory.CreateDirectory(nested);
+        Write("postgres.yaml", """
+            pack:
+              id: postgres
+              version: 1.0.0
+            capabilities:
+              - name: postgres.table.read
+                technology: postgresql
+                risk: Low
+            """, nested);
+
+        var definitions = new CapabilityLoader(_localPath, _packsPath)
+            .GetCatalogDefinitions();
+
+        Assert.Equal(["local.deploy", "postgres.table.read"],
+            definitions.Select(item => item.Capability.Name));
+        var source = Assert.Single(definitions[1].Sources);
+        Assert.Equal("postgres", source.PackId);
+    }
 }

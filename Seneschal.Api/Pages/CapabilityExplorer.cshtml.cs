@@ -42,6 +42,7 @@ public sealed class CapabilityExplorerModel : PageModel
     public string? Owner { get; private set; }
     public string? Risk { get; private set; }
     public string? Category { get; private set; }
+    public string? Technology { get; private set; }
     public string? Lifecycle { get; private set; }
     public IReadOnlyCollection<CapabilityCatalogEntry> SearchResults
         { get; private set; } = [];
@@ -68,6 +69,7 @@ public sealed class CapabilityExplorerModel : PageModel
         string? owner,
         string? risk,
         string? category,
+        string? technology,
         string? lifecycle,
         CancellationToken cancellationToken)
     {
@@ -76,6 +78,7 @@ public sealed class CapabilityExplorerModel : PageModel
         Owner = owner;
         Risk = risk;
         Category = category;
+        Technology = technology;
         Lifecycle = lifecycle;
         RuntimeMode = _governanceModeStore.GetMode().ToString();
         GovernanceWindow = _governanceWindowStore.GetWindow();
@@ -83,6 +86,7 @@ public sealed class CapabilityExplorerModel : PageModel
             !string.IsNullOrWhiteSpace(owner) ||
             !string.IsNullOrWhiteSpace(risk) ||
             !string.IsNullOrWhiteSpace(category) ||
+            !string.IsNullOrWhiteSpace(technology) ||
             !string.IsNullOrWhiteSpace(lifecycle);
         CapabilityWasRequested = !string.IsNullOrWhiteSpace(capabilityId);
 
@@ -100,6 +104,7 @@ public sealed class CapabilityExplorerModel : PageModel
                             ? [riskLevel]
                             : [],
                     Category = category,
+                    Technology = technology,
                     Lifecycle = lifecycle
                 },
                 cancellationToken);

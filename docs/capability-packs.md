@@ -29,8 +29,10 @@ seneschal capability pack validate .\CapabilityPacks\postgres.yaml
 
 Configure either that file or a directory of packs with
 `Seneschal:Configuration:CapabilityPacksPath` (environment variable
-`Seneschal__Configuration__CapabilityPacksPath`). Directory files are loaded in
-ordinal path order after the unchanged local `capabilities.yaml`.
+`Seneschal__Configuration__CapabilityPacksPath`). Directory `.yaml` and `.yml` files are discovered recursively and loaded in
+ordinal path order after the unchanged local `capabilities.yaml`. This allows the
+product-owned `capability-packs/` directory to be configured directly while
+preserving deterministic merge and conflict behavior.
 
 ## Built-in packs
 

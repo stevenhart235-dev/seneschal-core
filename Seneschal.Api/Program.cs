@@ -78,6 +78,7 @@ builder.Services.AddSingleton<IGovernanceGraph>(services =>
                     .GetRequiredService<PolicyLoader>()
                     .GetPolicies())));
 builder.Services.AddSingleton<ICapabilityExplorer, CapabilityExplorer>();
+builder.Services.AddSingleton<OperatorGovernanceContextService>();
 builder.Services.AddSingleton<GraphBuilder>();
 builder.Services.AddSingleton<TechnologyClassifier>();
 builder.Services.AddSingleton<TechnologyActivityService>();

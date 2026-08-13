@@ -191,9 +191,9 @@ public static class PolicyExplorerPageRenderer
         html.AppendLine("                    <section class=\"policy-profile-section\">");
         html.AppendLine("                        <h3>Applies To</h3>");
         html.AppendLine("                        <div class=\"policy-relations compact-policy-relations\">");
-        AppendRelationGroup(html, "Related identities", card.Identities);
-        AppendRelationGroup(html, "Related capabilities", card.Capabilities);
-        AppendRelationGroup(html, "Related resources", card.Resources);
+        AppendRelationGroup(html, "Related identities", card.Identities, "/identity-activity?identityId=");
+        AppendRelationGroup(html, "Related capabilities", card.Capabilities, "/capability-explorer?capabilityId=");
+        AppendRelationGroup(html, "Related resources", card.Resources, null);
         html.AppendLine("                        </div>");
         html.AppendLine("                    </section>");
 
@@ -298,7 +298,8 @@ public static class PolicyExplorerPageRenderer
     private static void AppendRelationGroup(
         StringBuilder html,
         string label,
-        IReadOnlyCollection<string> values)
+        IReadOnlyCollection<string> values,
+        string? routePrefix)
     {
         html.AppendLine("                        <div>");
         html.Append("                            <h3>")
@@ -314,16 +315,19 @@ public static class PolicyExplorerPageRenderer
             html.AppendLine("                            <ul>");
             foreach (var value in values)
             {
-                html.Append("                                <li>")
-                    .Append(Encode(value))
-                    .AppendLine("</li>");
+                html.Append("                                <li>");
+                if (routePrefix is not null)
+                    html.Append("<a href=\"").Append(routePrefix)
+                        .Append(Uri.EscapeDataString(value)).Append("\">");
+                html.Append(Encode(value));
+                if (routePrefix is not null) html.Append("</a>");
+                html.AppendLine("</li>");
             }
             html.AppendLine("                            </ul>");
         }
 
         html.AppendLine("                        </div>");
     }
-
     private static string CssClass(string value)
     {
         return value

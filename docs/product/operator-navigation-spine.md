@@ -20,6 +20,13 @@ Dashboard
 
 Live Monitor, Technology Detail, Capability Explorer, Identity Activity,
 Incidents, and Policies are supporting pivots rather than a separate hierarchy.
+Identity Activity separates **Configured / Governed Capabilities** (static identity,
+policy-target, and catalog context) from **Observed Capability Activity** (runtime
+evidence). A configured policy match is not a claim that evaluation will authorize a
+future request; request context and the evaluator still determine the outcome.
+Capability Activity likewise preserves catalog metadata when there is no observed
+activity, without fabricating evidence. Policy links open the operator-facing Policy
+Explorer while `/policies` continues to return JSON to API clients.
 They let an operator enter or branch from the primary workflow without changing
 its central question: what capability was used, under what governance context,
 and with what result?

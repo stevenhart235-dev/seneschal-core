@@ -75,6 +75,8 @@ public sealed class PolicyExplorerPageTests :
         Assert.Contains("Related capabilities", html);
         Assert.Contains("DeployApplication", html);
         Assert.Contains("Related resources", html);
+        Assert.Contains("/identity-activity?identityId=Developer", html);
+        Assert.Contains("/capability-explorer?capabilityId=DeployApplication", html);
         Assert.Contains("environment:dev", html);
         Assert.Contains("Runtime Summary", html);
         Assert.Contains("Match count", html);

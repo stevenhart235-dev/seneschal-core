@@ -108,4 +108,27 @@ public sealed class IdentityActivityPageTests :
         Assert.Contains("Identity Activity", html);
         Assert.Contains("/identity-activity", html);
     }
+    [Fact]
+    public async Task IdentityActivity_ShowsConfiguredGovernanceWithoutObservedActivity()
+    {
+        using var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<IActivityStore>();
+                services.AddSingleton<IActivityStore, InMemoryActivityStore>();
+            });
+        }).CreateClient();
+
+        var html = await client.GetStringAsync("/identity-activity?identityId=Developer");
+
+        Assert.Contains("Configured / Governed Capabilities", html);
+        Assert.Contains("static policy target matches", html);
+        Assert.Contains("DeployApplication", html);
+        Assert.Contains("Developers can deploy to dev", html);
+        Assert.Contains("Configured decision", html);
+        Assert.Contains("Observed Capability Activity", html);
+        Assert.Contains("No recent activity", html);
+        Assert.DoesNotContain("View Decision Trace", html);
+    }
 }

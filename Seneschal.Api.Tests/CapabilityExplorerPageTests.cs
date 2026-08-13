@@ -264,4 +264,40 @@ public sealed class CapabilityExplorerPageTests : IClassFixture<ApiApplicationFa
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         return await response.Content.ReadAsStringAsync();
     }
+    [Fact]
+    public async Task SearchResults_ShowMetadataProvenanceAndTechnologyFilter()
+    {
+        var root = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", ".."));
+        using var client = _factory.WithWebHostBuilder(builder => builder.UseSetting(
+            "Seneschal:Configuration:CapabilityPacksPath",
+            Path.Combine(root, "capability-packs"))).CreateClient();
+
+        var html = await Get(client,
+            "/capability-explorer?technology=postgresql");
+
+        Assert.Contains("Filter by technology", html);
+        Assert.Contains("postgres.restore.execute", html);
+        Assert.Contains("Critical risk", html);
+        Assert.Contains("Database Recovery", html);
+        Assert.Contains("Pack: postgres 1.0.0", html);
+        Assert.DoesNotContain("kubernetes.workload.deploy", html);
+        Assert.True(html.IndexOf("postgres.restore.execute", StringComparison.Ordinal) <
+            html.IndexOf("postgres.database.connect", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task SearchResults_DescribeMultipleContributingSources()
+    {
+        var root = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", ".."));
+        using var client = _factory.WithWebHostBuilder(builder => builder.UseSetting(
+            "Seneschal:Configuration:CapabilityPacksPath",
+            Path.Combine(root, "capability-packs"))).CreateClient();
+
+        var html = await Get(client,
+            "/capability-explorer?q=github.workflow.dispatch");
+
+        Assert.Contains("Multiple sources: Local catalog, Pack: github-actions 1.0.0", html);
+    }
 }

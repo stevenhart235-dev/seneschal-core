@@ -28,7 +28,7 @@
                 <a class="button-link" href="/identity-explorer">Back to Identities</a>
             </header>
 
-            @if (!Model.HasActivity)
+            @if (!Model.HasActivity && !Model.IdentityWasRequested)
             {
                 <section class="panel">
                     <h2>No Runtime Activity Yet</h2>
@@ -82,7 +82,7 @@
                     </div>
                 </section>
 
-                @if (Model.IdentityWasRequested && Model.SelectedIdentity is null)
+                @if (Model.IdentityWasRequested && Model.SelectedIdentity is null && Model.SelectedIdentityDefinition is null)
                 {
                     <section class="notice">
                         <h2>Identity not found</h2>
@@ -92,9 +92,9 @@
                         </p>
                     </section>
                 }
-                else if (Model.SelectedIdentity is not null)
+                else if (Model.SelectedIdentity is not null || Model.SelectedIdentityDefinition is not null)
                 {
-                    var identity = Model.SelectedIdentity;
+                    var identity = Model.SelectedIdentity ?? new Seneschal.Core.Models.IdentityActivity { IdentityId = Model.IdentityId! };
                     var definition = Model.SelectedIdentityDefinition;
                     <section class="panel identity-detail-panel investigation-actions-panel">
                         <div class="dashboard-section-header">
@@ -159,7 +159,26 @@
                         </section>
 
                         <section class="graph-inspector-section">
-                            <h3>Capabilities Used</h3>
+                            <h3>Configured / Governed Capabilities</h3>
+                            <p class="muted">These are static policy target matches. They describe configured governance context, not a definitive authorization result; runtime request context and policy evaluation still determine the outcome.</p>
+                            @if (Model.ConfiguredCapabilities.Count == 0)
+                            {
+                                <p class="muted">No configured policies directly target this identity.</p>
+                            }
+                            else
+                            {
+                                <div class="table-scroll" tabindex="0" role="region" aria-label="Configured governed capabilities">
+                                <table class="activity-table"><thead><tr><th>Capability</th><th>Technology</th><th>Category</th><th>Risk</th><th>Policy</th><th>Configured decision</th><th>Environment / scope</th><th>Source</th></tr></thead><tbody>
+                                @foreach (var item in Model.ConfiguredCapabilities)
+                                {
+                                    <tr><td><a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(item.CapabilityId)">@item.DisplayName</a><br /><code>@item.CapabilityId</code></td><td>@(string.IsNullOrWhiteSpace(item.Technology) ? "Not specified" : item.Technology)</td><td>@(string.IsNullOrWhiteSpace(item.Category) ? "Not specified" : item.Category)</td><td><span class="badge risk-badge risk-@item.Risk.ToLowerInvariant()">@item.Risk</span></td><td><a href="/policies?policyId=@Uri.EscapeDataString(item.PolicyName)">@item.PolicyName</a></td><td>@item.Decision</td><td>@(item.Environments.Count == 0 ? "Not specified" : string.Join(", ", item.Environments))</td><td>@item.Provenance</td></tr>
+                                }
+                                </tbody></table></div>
+                            }
+                        </section>
+
+                        <section class="graph-inspector-section">
+                            <h3>Observed Capability Activity</h3>
                             @if (identity.DistinctCapabilitiesUsed.Count == 0)
                             {
                                 <p class="muted">

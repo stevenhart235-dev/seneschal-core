@@ -8,5 +8,6 @@ public sealed record CapabilityCatalogQuery
     public string? Owner { get; init; }
     public IReadOnlyCollection<RiskLevel> RiskLevels { get; init; } = [];
     public string? Category { get; init; }
+    public string? Technology { get; init; }
     public string? Lifecycle { get; init; }
 }

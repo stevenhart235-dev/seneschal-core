@@ -20,7 +20,7 @@ Dashboard
 
 Live Monitor, Technology Detail, Capability Explorer, Identity Activity,
 Incidents, and Policies are supporting pivots rather than a separate hierarchy.
-Identity Activity separates **Configured / Governed Capabilities** (static identity,
+Identity Activity includes [governance exposure analysis](../identity-governance-exposure.md) and separates **Configured / Governed Capabilities** (static identity,
 policy-target, and catalog context) from **Observed Capability Activity** (runtime
 evidence). A configured policy match is not a claim that evaluation will authorize a
 future request; request context and the evaluator still determine the outcome.

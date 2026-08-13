@@ -11,15 +11,18 @@ public sealed class IdentityActivityModel : PageModel
     private readonly IInvestigationActivityReader _investigationActivity;
     private readonly IdentityLoader _identityLoader;
     private readonly OperatorGovernanceContextService _governanceContext;
+    private readonly IdentityExposureAnalysisService _exposureAnalysis;
 
     public IdentityActivityModel(
         IInvestigationActivityReader investigationActivity,
         IdentityLoader identityLoader,
-        OperatorGovernanceContextService governanceContext)
+        OperatorGovernanceContextService governanceContext,
+        IdentityExposureAnalysisService exposureAnalysis)
     {
         _investigationActivity = investigationActivity;
         _identityLoader = identityLoader;
         _governanceContext = governanceContext;
+        _exposureAnalysis = exposureAnalysis;
     }
 
     public string? IdentityId { get; private set; }
@@ -32,14 +35,27 @@ public sealed class IdentityActivityModel : PageModel
     public IReadOnlyCollection<string> Environments { get; private set; } = [];
     public IReadOnlyCollection<ConfiguredCapabilityContext> ConfiguredCapabilities
         { get; private set; } = [];
+    public IdentityExposureAnalysis? Exposure { get; private set; }
+    public int ObservationDays { get; private set; } = IdentityExposureAnalysisService.DefaultObservationDays;
+    public string? ExposureStateFilter { get; private set; }
+    public string? ExposureRiskFilter { get; private set; }
+    public string? ExposureTechnologyFilter { get; private set; }
     public bool IdentityWasRequested => !string.IsNullOrWhiteSpace(IdentityId);
     public bool HasActivity => Identities.Count > 0;
 
     public async Task OnGetAsync(
         string? identityId,
+        int? days,
+        string? exposureState,
+        string? exposureRisk,
+        string? exposureTechnology,
         CancellationToken cancellationToken)
     {
         IdentityId = identityId;
+        ObservationDays = Math.Clamp(days ?? IdentityExposureAnalysisService.DefaultObservationDays, 1, 365);
+        ExposureStateFilter = exposureState;
+        ExposureRiskFilter = exposureRisk;
+        ExposureTechnologyFilter = exposureTechnology;
         var snapshot = await _investigationActivity.GetSnapshotAsync(
             cancellationToken);
 
@@ -64,6 +80,10 @@ public sealed class IdentityActivityModel : PageModel
                     StringComparison.OrdinalIgnoreCase));
             ConfiguredCapabilities = await _governanceContext
                 .GetIdentityCapabilitiesAsync(identityId, cancellationToken);
+            var windowEnd = DateTimeOffset.UtcNow;
+            Exposure = await _exposureAnalysis.AnalyzeAsync(new IdentityExposureQuery(
+                identityId, windowEnd.AddDays(-ObservationDays), windowEnd,
+                exposureState, exposureRisk, exposureTechnology), cancellationToken);
         }
     }
 }

@@ -158,26 +158,27 @@
                             </article>
                         </section>
 
-                        <section class="graph-inspector-section">
-                            <h3>Configured / Governed Capabilities</h3>
-                            <p class="muted">These are static policy target matches. They describe configured governance context, not a definitive authorization result; runtime request context and policy evaluation still determine the outcome.</p>
-                            @if (Model.ConfiguredCapabilities.Count == 0)
-                            {
-                                <p class="muted">No configured policies directly target this identity.</p>
-                            }
-                            else
-                            {
-                                <div class="table-scroll" tabindex="0" role="region" aria-label="Configured governed capabilities">
-                                <table class="activity-table"><thead><tr><th>Capability</th><th>Technology</th><th>Category</th><th>Risk</th><th>Policy</th><th>Configured decision</th><th>Environment / scope</th><th>Source</th></tr></thead><tbody>
-                                @foreach (var item in Model.ConfiguredCapabilities)
-                                {
-                                    <tr><td><a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(item.CapabilityId)">@item.DisplayName</a><br /><code>@item.CapabilityId</code></td><td>@(string.IsNullOrWhiteSpace(item.Technology) ? "Not specified" : item.Technology)</td><td>@(string.IsNullOrWhiteSpace(item.Category) ? "Not specified" : item.Category)</td><td><span class="badge risk-badge risk-@item.Risk.ToLowerInvariant()">@item.Risk</span></td><td><a href="/policies?policyId=@Uri.EscapeDataString(item.PolicyName)">@item.PolicyName</a></td><td>@item.Decision</td><td>@(item.Environments.Count == 0 ? "Not specified" : string.Join(", ", item.Environments))</td><td>@item.Provenance</td></tr>
-                                }
-                                </tbody></table></div>
-                            }
-                        </section>
-
-                        <section class="graph-inspector-section">
+                        <section class="graph-inspector-section identity-exposure-analysis">
+@if (Model.Exposure is not null) {
+var exposure = Model.Exposure; var exposureSummary = exposure.Summary;
+<h3>Governance Exposure Analysis</h3>
+<p class="muted">Configured governance context describes current static policy and catalog relationships. Observed capability activity describes retained runtime evidence from @exposure.WindowStartUtc.ToString("u") through @exposure.WindowEndUtc.ToString("u"). Neither proves authorization or business necessity.</p>
+<section class="dashboard-grid activity-metric-grid" aria-label="Exposure summary">
+<article class="dashboard-card activity-card"><strong>@exposureSummary.ConfiguredCount</strong><span>Configured governance capabilities</span></article>
+<article class="dashboard-card activity-card"><strong>@exposureSummary.ObservedCount</strong><span>Observed capabilities</span></article>
+<article class="dashboard-card activity-card"><strong>@exposureSummary.ConfiguredAndObservedCount</strong><span>Configured + observed</span></article>
+<article class="dashboard-card activity-card"><strong>@exposureSummary.ConfiguredNotObservedCount</strong><span>No observed use in selected period</span></article>
+<article class="dashboard-card activity-card"><strong>@exposureSummary.ObservedNotConfiguredCount</strong><span>Observed outside current configured governance context</span></article>
+</section>
+<div class="dashboard-columns"><section><h4>Critical risk context</h4><dl class="evidence-list"><div><dt>Configured</dt><dd>@exposureSummary.CriticalConfiguredCount</dd></div><div><dt>With observed use</dt><dd>@exposureSummary.CriticalObservedCount</dd></div><div><dt>No observed use in selected period</dt><dd>@exposureSummary.CriticalNotObservedCount</dd></div></dl></section><section><h4>Technology context</h4><ul class="compact-list">@foreach (var technology in exposureSummary.Technologies) { <li><strong>@technology.Technology</strong><span>@technology.ConfiguredCount configured / @technology.ObservedCount observed</span></li> }</ul></section></div>
+<form method="get" action="/identity-activity" class="search-panel"><input type="hidden" name="identityId" value="@Model.IdentityId" /><div class="search-row capability-filter-row"><label>Observation period<select name="days">@foreach (var value in new[] { 7, 30, 60, 90, 180, 365 }) { <option value="@value" selected="@(Model.ObservationDays == value)">Last @value days</option> }</select></label><label>Exposure state<select name="exposureState"><option value="">All states</option>@foreach (var value in Enum.GetNames<Seneschal.Api.Services.IdentityExposureState>()) { <option value="@value" selected="@(string.Equals(Model.ExposureStateFilter, value, StringComparison.OrdinalIgnoreCase))">@StateLabel(value)</option> }</select></label><label>Risk<select name="exposureRisk"><option value="">All risk levels</option>@foreach (var value in new[] { "Critical", "High", "Medium", "Low" }) { <option value="@value" selected="@(string.Equals(Model.ExposureRiskFilter, value, StringComparison.OrdinalIgnoreCase))">@value</option> }</select></label><label>Technology<input name="exposureTechnology" value="@Model.ExposureTechnologyFilter" /></label><button type="submit">Apply filters</button></div></form>
+@if (exposure.Items.Count == 0) { <div class="empty-state"><strong>No capabilities match these filters</strong><p>Change or clear filters while preserving the selected identity and period.</p></div> } else {
+<div class="table-scroll" tabindex="0" role="region" aria-label="Identity governance exposure"><table class="activity-table"><thead><tr><th>Capability</th><th>State</th><th>Technology</th><th>Category</th><th>Risk</th><th>Configured policies</th><th>Decision / environment</th><th>Observed evaluations</th><th>Most recent</th><th>Source</th></tr></thead><tbody>
+@foreach (var item in exposure.Items) { <tr><td><a href="/capability-explorer?capabilityId=@Uri.EscapeDataString(item.CapabilityId)">@item.DisplayName</a><br /><code>@item.CapabilityId</code></td><td>@StateLabel(item.State.ToString())</td><td>@(string.IsNullOrWhiteSpace(item.Technology) ? "Not specified" : item.Technology)</td><td>@(string.IsNullOrWhiteSpace(item.Category) ? "Not specified" : item.Category)</td><td><span class="badge risk-badge risk-@item.Risk.ToLowerInvariant()">@item.Risk</span></td><td>@if (item.Policies.Count == 0) { <span>None in current context</span> } else { @foreach (var policy in item.Policies) { <a href="/policies?policyId=@Uri.EscapeDataString(policy)">@policy</a><br /> } }</td><td>@(item.Decisions.Count == 0 ? "Not configured" : string.Join(", ", item.Decisions))<br /><span class="muted">@(item.Environments.Count == 0 ? "No configured environment" : string.Join(", ", item.Environments))</span></td><td>@item.ObservedCount @if (item.ObservedCount > 0) { <br /><a href="/capability-activity?capabilityId=@Uri.EscapeDataString(item.CapabilityId)&identity=@Uri.EscapeDataString(Model.IdentityId!)">View evidence</a> }</td><td>@(item.MostRecentObservedUtc?.ToString("u") ?? "No observed use")</td><td>@item.Provenance</td></tr> }
+</tbody></table></div> }
+}
+</section>
+<section class="graph-inspector-section">
                             <h3>Observed Capability Activity</h3>
                             @if (identity.DistinctCapabilitiesUsed.Count == 0)
                             {
@@ -230,3 +231,11 @@
     </div>
 </body>
 </html>
+
+@functions {
+private static string StateLabel(string value) => value switch {
+"ConfiguredAndObserved" => "Configured + observed",
+"ConfiguredNotObserved" => "No observed use in selected period",
+"ObservedNotConfigured" => "Observed outside current configured governance context",
+_ => value };
+}

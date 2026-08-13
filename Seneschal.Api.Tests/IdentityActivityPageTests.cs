@@ -122,13 +122,19 @@ public sealed class IdentityActivityPageTests :
 
         var html = await client.GetStringAsync("/identity-activity?identityId=Developer");
 
-        Assert.Contains("Configured / Governed Capabilities", html);
-        Assert.Contains("static policy target matches", html);
+        Assert.Contains("Governance Exposure Analysis", html);
+        Assert.Contains("current static policy and catalog relationships", html);
         Assert.Contains("DeployApplication", html);
         Assert.Contains("Developers can deploy to dev", html);
-        Assert.Contains("Configured decision", html);
+        Assert.Contains("Decision / environment", html);
         Assert.Contains("Observed Capability Activity", html);
+        Assert.Contains("No observed use in selected period", html);
+        Assert.Contains("Neither proves authorization or business necessity", html);
+        Assert.Contains("Last 30 days", html);
         Assert.Contains("No recent activity", html);
         Assert.DoesNotContain("View Decision Trace", html);
+        Assert.DoesNotContain("Overprivileged", html);
+        Assert.DoesNotContain("Safe to remove", html);
+        Assert.DoesNotContain("Unauthorized capability", html);
     }
 }

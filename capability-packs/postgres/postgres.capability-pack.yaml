@@ -1,0 +1,136 @@
+pack:
+  id: postgres
+  version: 1.0.0
+  description: Curated PostgreSQL operational capabilities for deterministic governance and investigation.
+  provider: Seneschal
+
+capabilities:
+  - name: postgres.database.connect
+    technology: postgresql
+    displayName: Connect to PostgreSQL Database
+    description: Establish a client connection to a PostgreSQL database.
+    owner: Data Platform
+    risk: Low
+    category: Database Access
+    lifecycle: Active
+    tags: [postgresql, database, connect]
+
+  - name: postgres.database.read
+    technology: postgresql
+    displayName: Read PostgreSQL Database
+    description: Read governed data across a PostgreSQL database.
+    owner: Data Platform
+    risk: Medium
+    category: Database Access
+    lifecycle: Active
+    tags: [postgresql, database, read]
+
+  - name: postgres.schema.read
+    technology: postgresql
+    displayName: Read PostgreSQL Schema
+    description: Inspect PostgreSQL schema definitions and metadata.
+    owner: Data Platform
+    risk: Low
+    category: Schema Management
+    lifecycle: Active
+    tags: [postgresql, schema, read, metadata]
+
+  - name: postgres.schema.modify
+    technology: postgresql
+    displayName: Modify PostgreSQL Schema
+    description: Create or alter PostgreSQL schema objects without dropping tables.
+    owner: Data Platform
+    risk: High
+    category: Schema Management
+    lifecycle: Active
+    tags: [postgresql, schema, modify, ddl]
+
+  - name: postgres.table.read
+    technology: postgresql
+    displayName: Read PostgreSQL Table
+    description: Read governed rows from a PostgreSQL table.
+    owner: Data Platform
+    risk: Low
+    category: Table Data
+    lifecycle: Active
+    tags: [postgresql, table, read]
+
+  - name: postgres.table.write
+    technology: postgresql
+    displayName: Write PostgreSQL Table
+    description: Insert, update, or delete governed rows in a PostgreSQL table.
+    owner: Data Platform
+    risk: High
+    category: Table Data
+    lifecycle: Active
+    tags: [postgresql, table, write, dml]
+
+  - name: postgres.table.truncate
+    technology: postgresql
+    displayName: Truncate PostgreSQL Table
+    description: Remove all rows from a PostgreSQL table while retaining its structure.
+    owner: Data Platform
+    risk: Critical
+    category: Database Change
+    lifecycle: Restricted
+    tags: [postgresql, table, truncate, destructive]
+
+  - name: postgres.table.drop
+    technology: postgresql
+    displayName: Drop PostgreSQL Table
+    description: Drop a production PostgreSQL table and its stored data.
+    owner: Data Platform
+    risk: Critical
+    category: Database Change
+    lifecycle: Restricted
+    tags: [postgresql, table, destructive, production]
+
+  - name: postgres.role.read
+    technology: postgresql
+    displayName: Read PostgreSQL Roles
+    description: Inspect PostgreSQL roles, memberships, and grants.
+    owner: Data Platform
+    risk: Low
+    category: Access Management
+    lifecycle: Active
+    tags: [postgresql, role, grant, read]
+
+  - name: postgres.role.modify
+    technology: postgresql
+    displayName: Modify PostgreSQL Roles
+    description: Create, alter, grant, revoke, or remove PostgreSQL roles.
+    owner: Data Platform
+    risk: Critical
+    category: Access Management
+    lifecycle: Restricted
+    tags: [postgresql, role, grant, modify, privileged]
+
+  - name: postgres.extension.manage
+    technology: postgresql
+    displayName: Manage PostgreSQL Extension
+    description: Install, update, or remove a PostgreSQL extension.
+    owner: Data Platform
+    risk: Critical
+    category: Database Administration
+    lifecycle: Restricted
+    tags: [postgresql, extension, administration, privileged]
+
+  - name: postgres.backup.create
+    technology: postgresql
+    displayName: Create PostgreSQL Backup
+    description: Create a governed backup of a PostgreSQL database.
+    owner: Data Platform
+    risk: Medium
+    category: Database Recovery
+    lifecycle: Active
+    tags: [postgresql, backup, create]
+
+  - name: postgres.restore.execute
+    technology: postgresql
+    displayName: Execute PostgreSQL Restore
+    description: Restore a PostgreSQL database from a selected backup.
+    owner: Data Platform
+    risk: Critical
+    category: Database Recovery
+    lifecycle: Restricted
+    tags: [postgresql, restore, recovery, destructive]

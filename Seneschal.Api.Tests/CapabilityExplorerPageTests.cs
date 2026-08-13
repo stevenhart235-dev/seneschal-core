@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -40,6 +41,27 @@ public sealed class CapabilityExplorerPageTests : IClassFixture<ApiApplicationFa
         Assert.Contains("Investigate Capability Activity", html);
         Assert.Contains("/capability-activity?capabilityId=DeployApplication", html);
         Assert.Contains("aria-current=\"page\"><span>Capabilities", html);
+    }
+
+    [Fact]
+    public async Task BuiltInPostgresCapabilityRendersPackProvenance()
+    {
+        var repositoryRoot = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", ".."));
+        var packPath = Path.Combine(repositoryRoot, "capability-packs",
+            "postgres", "postgres.capability-pack.yaml");
+        using var client = _factory.WithWebHostBuilder(builder =>
+            builder.UseSetting(
+                "Seneschal:Configuration:CapabilityPacksPath", packPath))
+            .CreateClient();
+
+        var html = await Get(client,
+            "/capability-explorer?capabilityId=postgres.table.read");
+
+        Assert.Contains("Read PostgreSQL Table", html);
+        Assert.Contains("postgres.table.read", html);
+        Assert.Contains("postgres 1.0.0", html);
+        Assert.DoesNotContain("Capability not found", html);
     }
 
     [Fact]

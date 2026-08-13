@@ -32,6 +32,14 @@ Configure either that file or a directory of packs with
 `Seneschal__Configuration__CapabilityPacksPath`). Directory files are loaded in
 ordinal path order after the unchanged local `capabilities.yaml`.
 
+## Built-in packs
+
+Maintained built-in packs live under `capability-packs/`. The first built-in
+artifact is the [PostgreSQL Capability Pack](../capability-packs/postgres/README.md)
+(`postgres` version `1.0.0`). Built-in means maintained and validated in this
+repository; packs are still explicit local inputs and are not enabled,
+installed, or downloaded automatically.
+
 ## IDs and conflicts
 
 Capability `name` is the globally stable identifier used by policies, requests,

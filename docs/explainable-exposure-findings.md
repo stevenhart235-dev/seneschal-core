@@ -82,3 +82,9 @@ endpoint is added merely to mirror the UI.
 See [Identity Governance Exposure Analysis](identity-governance-exposure.md),
 [ADR-0014](adr/0014-configured-governance-and-observed-exposure.md), and
 [ADR-0015](adr/0015-immutable-evaluation-configuration-provenance.md).
+
+## Advisory next step
+
+[Explainable Recommendations v1](explainable-recommendations.md) maps each supported
+finding to at most one deterministic investigation prompt while preserving this
+finding's evidence and limitations.

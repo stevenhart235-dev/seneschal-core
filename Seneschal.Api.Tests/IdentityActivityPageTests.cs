@@ -135,6 +135,10 @@ public sealed class IdentityActivityPageTests :
         Assert.Contains("Explainable Exposure Findings", html);
         Assert.Contains("What this does not prove", html);
         Assert.Contains("Findings are not recommendations or scores", html);
+        Assert.Contains("Explainable Recommendations", html);
+        Assert.Contains("Recommendations are advisory investigation prompts", html);
+        Assert.Contains("Source finding", html);
+        Assert.Contains("Consider:", html);
         Assert.DoesNotContain(">Fix<", html);
         Assert.DoesNotContain(">Remove<", html);
         Assert.DoesNotContain(">Revoke<", html);

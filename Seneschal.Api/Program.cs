@@ -81,6 +81,7 @@ builder.Services.AddSingleton<ICapabilityExplorer, CapabilityExplorer>();
 builder.Services.AddSingleton<OperatorGovernanceContextService>();
 builder.Services.AddSingleton<IdentityExposureAnalysisService>();
 builder.Services.AddSingleton<IdentityExposureFindingService>();
+builder.Services.AddSingleton<IdentityExposureRecommendationService>();
 builder.Services.AddSingleton<GovernanceConfigurationFingerprintService>();
 builder.Services.AddSingleton<GraphBuilder>();
 builder.Services.AddSingleton<TechnologyClassifier>();

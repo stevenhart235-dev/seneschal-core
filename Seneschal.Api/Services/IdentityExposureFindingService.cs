@@ -110,7 +110,7 @@ public sealed class IdentityExposureFindingService
             type, title, explanation, doesNotProve, analysis.IdentityId,
             item.CapabilityId, item.Technology, item.Risk, item.Provenance,
             analysis.Coverage.Status, analysis.WindowStartUtc, analysis.WindowEndUtc,
-            facts, analysis.ConfigurationProvenance.CurrentFingerprint,
+            facts, item.Policies, analysis.ConfigurationProvenance.CurrentFingerprint,
             item.ObservationsByConfigurationFingerprint.Keys.OrderBy(value => value,
                 StringComparer.Ordinal).ToList(),
             item.ObservationsWithoutConfigurationProvenance);
@@ -151,6 +151,7 @@ public sealed record IdentityExposureFinding(
     IdentityEvidenceCoverageStatus EvidenceCoverageStatus,
     DateTimeOffset WindowStartUtc, DateTimeOffset WindowEndUtc,
     IReadOnlyCollection<IdentityExposureFindingFact> SupportingFacts,
+    IReadOnlyCollection<string> RelevantPolicies,
     string? CurrentConfigurationFingerprint,
     IReadOnlyCollection<string> ObservedConfigurationFingerprints,
     int ObservationsWithoutConfigurationProvenance);

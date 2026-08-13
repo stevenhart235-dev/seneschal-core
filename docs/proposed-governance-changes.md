@@ -64,3 +64,7 @@ V1 does not persist proposals or status, write policy files, apply changes, prov
 accept/reject workflow, enumerate all runtime contexts, or implement additional
 operations. The first operator interface is CLI/API; Razor proposal interaction is
 deferred to avoid coupling review UI to an unimplemented application workflow.
+
+## Operator review
+
+[Proposed Change Review v1](proposed-change-review.md) composes evidence, findings, recommendations, candidate generation, simulation, and static comparison into one read-only operator route. It does not add application or approval behavior.

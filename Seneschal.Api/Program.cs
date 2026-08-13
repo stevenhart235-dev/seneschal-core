@@ -86,6 +86,7 @@ builder.Services.AddSingleton<ProposedGovernanceChangeContractValidator>();
 builder.Services.AddSingleton<ProposedPolicyConfigurationService>();
 builder.Services.AddSingleton<ProposedGovernanceChangeCandidateService>();
 builder.Services.AddSingleton<ProposedGovernanceChangeSimulationService>();
+builder.Services.AddSingleton<ProposedChangeReviewService>();
 builder.Services.AddSingleton<GovernanceConfigurationFingerprintService>();
 builder.Services.AddSingleton<GraphBuilder>();
 builder.Services.AddSingleton<TechnologyClassifier>();

@@ -14,6 +14,7 @@ public sealed class IdentityActivityModel : PageModel
     private readonly IdentityExposureAnalysisService _exposureAnalysis;
     private readonly IdentityExposureFindingService _findingService;
     private readonly IdentityExposureRecommendationService _recommendationService;
+    private readonly ProposedGovernanceChangeCandidateService _candidateService;
 
     public IdentityActivityModel(
         IInvestigationActivityReader investigationActivity,
@@ -21,7 +22,8 @@ public sealed class IdentityActivityModel : PageModel
         OperatorGovernanceContextService governanceContext,
         IdentityExposureAnalysisService exposureAnalysis,
         IdentityExposureFindingService findingService,
-        IdentityExposureRecommendationService recommendationService)
+        IdentityExposureRecommendationService recommendationService,
+        ProposedGovernanceChangeCandidateService candidateService)
     {
         _investigationActivity = investigationActivity;
         _identityLoader = identityLoader;
@@ -29,6 +31,7 @@ public sealed class IdentityActivityModel : PageModel
         _exposureAnalysis = exposureAnalysis;
         _findingService = findingService;
         _recommendationService = recommendationService;
+        _candidateService = candidateService;
     }
 
     public string? IdentityId { get; private set; }
@@ -44,10 +47,12 @@ public sealed class IdentityActivityModel : PageModel
     public IdentityExposureAnalysis? Exposure { get; private set; }
     public IReadOnlyCollection<IdentityExposureFinding> Findings { get; private set; } = [];
     public IReadOnlyCollection<IdentityExposureRecommendation> Recommendations { get; private set; } = [];
+    public IReadOnlyDictionary<string, ProposedGovernanceChangeCandidateResult> ProposalCandidates { get; private set; } = new Dictionary<string, ProposedGovernanceChangeCandidateResult>();
     public int ObservationDays { get; private set; } = IdentityExposureAnalysisService.DefaultObservationDays;
     public string? ExposureStateFilter { get; private set; }
     public string? ExposureRiskFilter { get; private set; }
     public string? ExposureTechnologyFilter { get; private set; }
+    public static string CandidateKey(IdentityExposureRecommendation item) => $"{item.RecommendationType}|{item.CapabilityId}";
     public bool IdentityWasRequested => !string.IsNullOrWhiteSpace(IdentityId);
     public bool HasActivity => Identities.Count > 0;
 
@@ -94,6 +99,7 @@ public sealed class IdentityActivityModel : PageModel
                 exposureState, exposureRisk, exposureTechnology), cancellationToken);
             Findings = _findingService.Generate(Exposure);
             Recommendations = _recommendationService.Generate(Findings);
+            ProposalCandidates = Recommendations.ToDictionary(CandidateKey, item => _candidateService.Offer(item), StringComparer.OrdinalIgnoreCase);
         }
     }
 }

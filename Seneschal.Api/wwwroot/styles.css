@@ -4171,3 +4171,25 @@ summary:focus-visible,
         flex-direction: column;
     }
 }
+
+.attention-label {
+    color: var(--portal-muted);
+    display: block;
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+}
+
+.attention-review {
+    border-left: 3px solid var(--portal-pending);
+}
+
+.attention-active {
+    border-left: 3px solid var(--portal-border);
+}
+
+.predicted-effect {
+    border-left: 3px solid var(--portal-logonly);
+}

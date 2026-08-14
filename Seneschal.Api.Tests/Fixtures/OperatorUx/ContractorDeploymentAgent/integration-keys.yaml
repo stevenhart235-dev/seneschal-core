@@ -1,0 +1,14 @@
+integrationKeys:
+  - name: contractor-deployment-operator-ux-test
+    key: operator-ux-contractor-key
+    enabled: true
+    allowedIdentities:
+      - contractor-deployment-agent
+    allowedCapabilities:
+      - github.workflow.dispatch
+      - github.deployment.create
+      - kubernetes.workload.deploy
+      - kubernetes.workload.scale
+      - kubernetes.secret.read
+      - kubernetes.secret.modify
+    environment: production

@@ -1,0 +1,13 @@
+policies:
+  - name: contractor-deployment-governance
+    identity: contractor-deployment-agent
+    capabilities:
+      - github.workflow.dispatch
+      - github.deployment.create
+      - kubernetes.workload.deploy
+      - kubernetes.workload.scale
+      - kubernetes.secret.read
+      - kubernetes.secret.modify
+    environment: production
+    decision: allow
+    reason: Operator UX regression fixture.

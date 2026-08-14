@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Seneschal.Api.Services;
+using Seneschal.Core.Enums;
 using Seneschal.Core.Interfaces;
 using Seneschal.Core.Repositories;
 using Xunit;
@@ -59,6 +60,28 @@ public sealed class ProposedChangeReviewPageTests : IDisposable
         Assert.Equal(beforeFingerprint,fingerprint.GetCurrentFingerprint());
     }
 
+    [Theory]
+    [InlineData(EnforcementMode.LogOnly, "ContinueLogOnly", "Yes", "would permit immediate execution")]
+    [InlineData(EnforcementMode.Enforce, "Block", "No", "would not authorize immediate execution")]
+    public async Task PredictedEffectUsesCanonicalSimulationResults(
+        EnforcementMode mode, string proposedGuidance, string proposedShouldProceed,
+        string executionSummary)
+    {
+        await using var factory=CreateFactory(DateTimeOffset.UtcNow.AddDays(-60), mode);
+        using var client=factory.CreateClient();
+        var html=await client.GetStringAsync(
+            "/proposed-change-review?identityId=Developer&capabilityId=DeleteProductionDatabase&days=30");
+
+        Assert.Contains("Predicted effect",html);
+        Assert.Contains($">{mode}<",html);
+        Assert.Contains("policy decision from <strong>allow</strong> to <strong>deny</strong>",html);
+        Assert.Contains("integration guidance changes from <strong>Proceed</strong> to " +
+            $"<strong>{proposedGuidance}</strong>",html);
+        Assert.Contains(executionSummary,html);
+        Assert.Contains($"<dt>ShouldProceed</dt><dd>Yes → {proposedShouldProceed}</dd>",html);
+        Assert.Contains("PROPOSED — NOT APPLIED",html);
+        Assert.Contains("No governance changes have been applied.",html);
+    }
     [Fact]
     public async Task NoQualifyingFindingExplainsNoCandidateWithoutDeadLink()
     {
@@ -79,7 +102,8 @@ public sealed class ProposedChangeReviewPageTests : IDisposable
         Assert.Contains("/proposed-change-review?identityId=Developer",html);
     }
 
-    private WebApplicationFactory<Program> CreateFactory(DateTimeOffset completeSince) =>
+    private WebApplicationFactory<Program> CreateFactory(DateTimeOffset completeSince,
+        EnforcementMode mode = EnforcementMode.Enforce) =>
         _factory.WithWebHostBuilder(builder=>
         {
             builder.UseSetting("Seneschal:Configuration:PoliciesPath",Path.Combine(_directory,"policies.yaml"));
@@ -89,7 +113,7 @@ public sealed class ProposedChangeReviewPageTests : IDisposable
                 services.AddSingleton<IAuditEventStore>(new InMemoryAuditEventStore(completeSinceUtc:completeSince));
                 services.RemoveAll<IGovernanceModeStore>();
                 services.AddSingleton<IGovernanceModeStore>(new InMemoryGovernanceModeStore(
-                    new Seneschal.Api.Services.RuntimeSettings{Mode=Seneschal.Core.Enums.EnforcementMode.Enforce}));
+                    new Seneschal.Api.Services.RuntimeSettings{Mode=mode}));
             });
         });
     public void Dispose(){_factory.Dispose();Directory.Delete(_directory,true);}

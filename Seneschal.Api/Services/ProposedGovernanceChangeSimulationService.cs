@@ -40,7 +40,7 @@ public sealed class ProposedGovernanceChangeSimulationService
             Context=new Dictionary<string,string>(request.Context) };
         var compared = _decisions.ComparePreview(decisionRequest, proposed);
         var staticComparison = StaticComparison(request.Proposal, _policies.GetPolicies(), applied.Policies);
-        return new(true, null, [], current.Fingerprint, proposedFingerprint,
+        return new(true, null, [], current.Mode, current.Fingerprint, proposedFingerprint,
             compared.Timestamp, Project(compared.Current, current.Fingerprint),
             Project(compared.Proposed, proposedFingerprint),
             Differences(compared.Current, compared.Proposed), staticComparison);
@@ -84,11 +84,12 @@ public sealed class ProposedGovernanceChangeSimulationService
             .Select(v => new SimulationDifference(v.Item1,v.Item2,v.Item3)).ToList();
     }
     private static ProposedChangeSimulationOutcome Failed(string code, IReadOnlyCollection<string> errors) =>
-        new(false, code, errors, null, null, null, null, null, [], null);
+        new(false, code, errors, null, null, null, null, null, null, [], null);
 }
 
 public sealed record ProposedChangeSimulationOutcome(bool IsValid, string? ErrorCode,
-    IReadOnlyCollection<string> Errors, string? CurrentGovernanceConfigurationFingerprint,
+    IReadOnlyCollection<string> Errors, EnforcementMode? RuntimeMode,
+    string? CurrentGovernanceConfigurationFingerprint,
     string? ProposedGovernanceConfigurationFingerprint, DateTimeOffset? EvaluationTimestamp,
     SimulatedGovernanceResult? Current, SimulatedGovernanceResult? Proposed,
     IReadOnlyCollection<SimulationDifference> Differences,

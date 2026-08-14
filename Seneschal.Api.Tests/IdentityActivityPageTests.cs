@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -148,4 +149,68 @@ public sealed class IdentityActivityPageTests :
         Assert.DoesNotContain("Safe to remove", html);
         Assert.DoesNotContain("Unauthorized capability", html);
     }
+
+    [Fact]
+    public async Task IdentityActivity_DogfoodShapeDistinguishesReviewFromActiveContext()
+    {
+        var root=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"..","..","..",".."));
+        var fixture=Path.Combine(root,"Seneschal.Api.Tests","Fixtures","OperatorUx",
+            "ContractorDeploymentAgent");
+        await using var fixtureFactory=_factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("Seneschal:Configuration:PoliciesPath",Path.Combine(fixture,"policies.yaml"));
+            builder.UseSetting("Seneschal:Configuration:IdentitiesPath",Path.Combine(fixture,"identities.yaml"));
+            builder.UseSetting("Seneschal:Configuration:IntegrationKeysPath",Path.Combine(fixture,"integration-keys.yaml"));
+            builder.UseSetting("Seneschal:Configuration:CapabilityPacksPath",Path.Combine(root,"capability-packs"));
+            builder.ConfigureTestServices(services =>
+            {
+                var audit=new InMemoryAuditEventStore(
+                    completeSinceUtc:DateTimeOffset.UtcNow.AddDays(-5));
+                services.RemoveAll<InMemoryAuditEventStore>();
+                services.RemoveAll<IAuditEventStore>();
+                services.RemoveAll<IAuditSink>();
+                services.RemoveAll<IEvaluationCommitCoordinator>();
+                services.AddSingleton(audit);
+                services.AddSingleton<IAuditEventStore>(audit);
+                services.AddSingleton<IAuditSink>(audit);
+                services.AddSingleton<IEvaluationCommitCoordinator>(provider =>
+                    new InMemoryEvaluationCommitCoordinator(audit,
+                        provider.GetRequiredService<InMemoryApprovalStore>()));
+                services.RemoveAll<IActivityStore>();
+                services.AddSingleton<IActivityStore,InMemoryActivityStore>();
+            });
+        });
+        using var client=fixtureFactory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Seneschal-Api-Key","operator-ux-contractor-key");
+
+        foreach(var capability in new[]{"github.workflow.dispatch","github.deployment.create",
+            "kubernetes.workload.deploy","kubernetes.workload.scale","kubernetes.secret.read"})
+        {
+            using var response=await client.PostAsJsonAsync("/evaluate",new
+            {
+                identity="contractor-deployment-agent", capability,
+                operationId=$"ux-{capability}",
+                context=new{environment="production",resource="contractor-production-delivery"}
+            });
+            Assert.Equal(HttpStatusCode.OK,response.StatusCode);
+        }
+
+        var html=await client.GetStringAsync(
+            "/identity-activity?identityId=contractor-deployment-agent");
+
+        Assert.Contains("<strong>6</strong><span>Configured governance capabilities</span>",html);
+        Assert.Contains("<strong>5</strong><span>Observed capabilities</span>",html);
+        Assert.Contains("capabilityId=kubernetes.secret.modify",html);
+        Assert.Equal(1,Count(html,"finding-highriskconfigurednotobserved"));
+        Assert.Equal(4,Count(html,"finding-highriskcapabilityactivelyobserved"));
+        Assert.Equal(1,Count(html,"recommendation-reviewcurrentgovernancerelationship"));
+        Assert.Equal(4,Count(html,"recommendation-reviewactivehighriskgovernancepath"));
+        Assert.Equal(2,Count(html,">Review attention<"));
+        Assert.Equal(8,Count(html,">Active governance context<"));
+        Assert.Contains("attention-review",html);
+        Assert.Contains("attention-active",html);
+    }
+
+    private static int Count(string value,string fragment) =>
+        value.Split(fragment,StringSplitOptions.None).Length-1;
 }

@@ -133,15 +133,12 @@ try {
     $registry = "$AwsAccountId.dkr.ecr.$AwsRegion.amazonaws.com"
     $runtimeRepository = 'seneschal/core'
     $migrationRepository = 'seneschal/migrations'
-    $workerRepository = 'seneschal/demo-deployment-worker'
     $runtimeImage = "${registry}/${runtimeRepository}:$Tag"
     $migrationImage = "${registry}/${migrationRepository}:$Tag"
-    $workerImage = "${registry}/${workerRepository}:$Tag"
 
     foreach ($repositoryName in @(
         $runtimeRepository,
-        $migrationRepository,
-        $workerRepository)) {
+        $migrationRepository)) {
         $existingDigest = & aws ecr describe-images `
             --region $AwsRegion `
             --repository-name $repositoryName `
@@ -179,16 +176,8 @@ try {
     )
     Assert-SourceUnchanged 'after the migration build'
 
-    Write-Host "Building deployment worker image: $workerImage"
-    Invoke-NativeCommand docker @(
-        'build', '--file', 'Dockerfile.deployment-worker', '--tag', $workerImage,
-        '--label', "org.opencontainers.image.revision=$commitSha", '.'
-    )
-    Assert-SourceUnchanged 'after the deployment worker build'
-
     Assert-ImageRevision $runtimeImage
     Assert-ImageRevision $migrationImage
-    Assert-ImageRevision $workerImage
 
     Write-Host "Authenticating Docker to $registry"
     $ecrPassword = & aws ecr get-login-password --region $AwsRegion
@@ -207,12 +196,8 @@ try {
     Write-Host "Pushing migration image: $migrationImage"
     Invoke-NativeCommand docker @('push', $migrationImage)
 
-    Write-Host "Pushing deployment worker image: $workerImage"
-    Invoke-NativeCommand docker @('push', $workerImage)
-
     $runtimeDigest = Get-EcrImageDigest $runtimeRepository
     $migrationDigest = Get-EcrImageDigest $migrationRepository
-    $workerDigest = Get-EcrImageDigest $workerRepository
 
     Write-Host 'Release-matched images published successfully:'
     Write-Output "Git commit: $commitSha"
@@ -220,8 +205,6 @@ try {
     Write-Output "Runtime digest: ${registry}/${runtimeRepository}@$runtimeDigest"
     Write-Output "Migrations: $migrationImage"
     Write-Output "Migrations digest: ${registry}/${migrationRepository}@$migrationDigest"
-    Write-Output "Deployment worker: $workerImage"
-    Write-Output "Deployment worker digest: ${registry}/${workerRepository}@$workerDigest"
 }
 finally {
     Pop-Location

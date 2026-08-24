@@ -17,7 +17,12 @@ Dockerfile*
 README.md
 docs
 labs
-integrations
+integrations/*
+!integrations/contracts/
+integrations/contracts/*
+!integrations/contracts/policy/
+integrations/contracts/policy/*
+!integrations/contracts/policy/policy-schema.v1.json
 Seneschal.*.Tests
 Seneschal.Client
 Seneschal.AspNetCore

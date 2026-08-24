@@ -11,6 +11,7 @@ RUN dotnet restore Seneschal.Api/Seneschal.Api.csproj
 COPY Seneschal.Core/ Seneschal.Core/
 COPY Seneschal.Persistence.PostgreSql/ Seneschal.Persistence.PostgreSql/
 COPY Seneschal.Api/ Seneschal.Api/
+COPY integrations/contracts/policy/policy-schema.v1.json integrations/contracts/policy/
 RUN dotnet publish Seneschal.Api/Seneschal.Api.csproj \
     --configuration Release \
     --no-restore \

@@ -21,6 +21,10 @@
     <None Update="Policies\*.yaml"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\integrations\contracts\policy\policy-schema.v1.json"
+          Link="contracts\policy\policy-schema.v1.json"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

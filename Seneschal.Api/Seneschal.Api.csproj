@@ -25,6 +25,10 @@
           Link="contracts\policy\policy-schema.v1.json"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\integrations\contracts\proposed-governance-change\proposed-governance-change.v1.schema.json"
+          Link="contracts\proposed-governance-change\proposed-governance-change.v1.schema.json"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

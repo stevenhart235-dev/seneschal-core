@@ -16,42 +16,57 @@ public sealed class RuntimeImagePackagingTests : IDisposable
         $"seneschal-packaged-runtime-{Guid.NewGuid():N}");
 
     [Fact]
-    public void ApiPublishAndContainerUseAuthoritativePolicySchema()
+    public void ApiPublishAndContainerUseAuthoritativeRuntimeContracts()
     {
         var root = RepositoryRoot();
-        var authoritative = Path.Combine(root, "integrations", "contracts",
-            "policy", "policy-schema.v1.json");
-        var packaged = Path.Combine(AppContext.BaseDirectory, "contracts",
-            "policy", "policy-schema.v1.json");
-
-        Assert.True(File.Exists(packaged), $"Packaged schema not found: {packaged}");
-        Assert.Equal(File.ReadAllBytes(authoritative), File.ReadAllBytes(packaged));
+        var contracts = new[]
+        {
+            new
+            {
+                Include = @"..\integrations\contracts\policy\policy-schema.v1.json",
+                Link = @"contracts\policy\policy-schema.v1.json",
+                DockerPath = "integrations/contracts/policy/policy-schema.v1.json"
+            },
+            new
+            {
+                Include = @"..\integrations\contracts\proposed-governance-change\proposed-governance-change.v1.schema.json",
+                Link = @"contracts\proposed-governance-change\proposed-governance-change.v1.schema.json",
+                DockerPath = "integrations/contracts/proposed-governance-change/proposed-governance-change.v1.schema.json"
+            }
+        };
 
         var project = XDocument.Load(Path.Combine(root, "Seneschal.Api",
             "Seneschal.Api.csproj"));
-        var schemaItem = Assert.Single(project.Descendants(), element =>
-            element.Name.LocalName == "None" &&
-            string.Equals((string?)element.Attribute("Include"),
-                @"..\integrations\contracts\policy\policy-schema.v1.json",
-                StringComparison.Ordinal));
-        Assert.Equal(@"contracts\policy\policy-schema.v1.json",
-            (string?)schemaItem.Attribute("Link"));
-        Assert.Equal("PreserveNewest",
-            (string?)schemaItem.Attribute("CopyToOutputDirectory"));
-        Assert.Equal("PreserveNewest",
-            (string?)schemaItem.Attribute("CopyToPublishDirectory"));
-
         var dockerfile = File.ReadAllText(Path.Combine(root, "Dockerfile"));
-        var copy = "COPY integrations/contracts/policy/policy-schema.v1.json " +
-            "integrations/contracts/policy/";
-        Assert.Contains(copy, dockerfile);
-        Assert.True(dockerfile.IndexOf(copy, StringComparison.Ordinal) <
-            dockerfile.IndexOf("RUN dotnet publish", StringComparison.Ordinal));
-
         var dockerignore = File.ReadAllText(Path.Combine(root, ".dockerignore"));
-        Assert.Contains(
-            "!integrations/contracts/policy/policy-schema.v1.json",
-            dockerignore);
+
+        foreach (var contract in contracts)
+        {
+            var authoritative = Path.GetFullPath(Path.Combine(root,
+                "Seneschal.Api", contract.Include));
+            var packaged = Path.Combine(AppContext.BaseDirectory,
+                contract.Link.Replace('\\', Path.DirectorySeparatorChar));
+            Assert.True(File.Exists(packaged),
+                $"Packaged contract not found: {packaged}");
+            Assert.Equal(File.ReadAllBytes(authoritative), File.ReadAllBytes(packaged));
+
+            var projectItem = Assert.Single(project.Descendants(), element =>
+                element.Name.LocalName == "None" &&
+                string.Equals((string?)element.Attribute("Include"),
+                    contract.Include, StringComparison.Ordinal));
+            Assert.Equal(contract.Link, (string?)projectItem.Attribute("Link"));
+            Assert.Equal("PreserveNewest",
+                (string?)projectItem.Attribute("CopyToOutputDirectory"));
+            Assert.Equal("PreserveNewest",
+                (string?)projectItem.Attribute("CopyToPublishDirectory"));
+
+            var copy = $"COPY {contract.DockerPath} " +
+                contract.DockerPath[..(contract.DockerPath.LastIndexOf('/') + 1)];
+            Assert.Contains(copy, dockerfile);
+            Assert.True(dockerfile.IndexOf(copy, StringComparison.Ordinal) <
+                dockerfile.IndexOf("RUN dotnet publish", StringComparison.Ordinal));
+            Assert.Contains($"!{contract.DockerPath}", dockerignore);
+        }
     }
 
     [Fact]

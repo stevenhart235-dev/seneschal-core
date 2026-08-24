@@ -12,6 +12,7 @@ COPY Seneschal.Core/ Seneschal.Core/
 COPY Seneschal.Persistence.PostgreSql/ Seneschal.Persistence.PostgreSql/
 COPY Seneschal.Api/ Seneschal.Api/
 COPY integrations/contracts/policy/policy-schema.v1.json integrations/contracts/policy/
+COPY integrations/contracts/proposed-governance-change/proposed-governance-change.v1.schema.json integrations/contracts/proposed-governance-change/
 RUN dotnet publish Seneschal.Api/Seneschal.Api.csproj \
     --configuration Release \
     --no-restore \

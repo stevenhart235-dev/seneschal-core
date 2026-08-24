@@ -52,6 +52,7 @@ public sealed class ApiContractTests :
             root.GetProperty("policyMatched").GetString());
         Assert.Equal("LogOnly", root.GetProperty("mode").GetString());
         Assert.Equal("ContinueLogOnly", root.GetProperty("executionGuidance").GetString());
+        Assert.False(root.TryGetProperty("shouldProceed", out _));
     }
 
     [Fact]
@@ -74,6 +75,7 @@ public sealed class ApiContractTests :
             "logged_only",
             root.GetProperty("effectiveAction").GetString());
         Assert.Equal("ContinueLogOnly", root.GetProperty("executionGuidance").GetString());
+        Assert.False(root.TryGetProperty("shouldProceed", out _));
         Assert.False(string.IsNullOrWhiteSpace(root.GetProperty("approvalId").GetString()));
         Assert.Equal("Pending", root.GetProperty("approvalStatus").GetString());
         Assert.Equal("LegacyContext", root.GetProperty("approvalCorrelationMode").GetString());

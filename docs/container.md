@@ -61,9 +61,12 @@ configuration loaded.
 ## Configuration
 
 The image contains the product's checked-in `appsettings.json`, Razor Pages,
-static web assets, the authoritative Policy Schema v1 contract at
-`/app/contracts/policy/policy-schema.v1.json`, and these non-secret or
-development/sample YAML defaults:
+static web assets, and the authoritative runtime contracts at:
+
+- `/app/contracts/policy/policy-schema.v1.json`
+- `/app/contracts/proposed-governance-change/proposed-governance-change.v1.schema.json`
+
+It also contains these non-secret or development/sample YAML defaults:
 
 - `Policies/capabilities.yaml`
 - `Policies/identities.yaml`

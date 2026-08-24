@@ -23,6 +23,9 @@ integrations/contracts/*
 !integrations/contracts/policy/
 integrations/contracts/policy/*
 !integrations/contracts/policy/policy-schema.v1.json
+!integrations/contracts/proposed-governance-change/
+integrations/contracts/proposed-governance-change/*
+!integrations/contracts/proposed-governance-change/proposed-governance-change.v1.schema.json
 Seneschal.*.Tests
 Seneschal.Client
 Seneschal.AspNetCore
